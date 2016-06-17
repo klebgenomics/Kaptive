@@ -1,6 +1,6 @@
 # Kaptive
 
-Kaptive reports information about capsular (K) loci found in genome assemblies. 
+Kaptive reports information about capsular (K) loci found in genome assemblies.
 
 Given a novel genome and a database of known K loci, Kaptive will help a user to decide whether their sample has a known or novel K locus. It carries out the following for each input assembly:
 * BLAST for all known K locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
