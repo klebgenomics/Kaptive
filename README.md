@@ -220,3 +220,5 @@ If you are running this script on a cluster using [SLURM](http://slurm.schedmd.c
 ## License
 
 GNU General Public License, version 3
+
+http://dx.doi.org/10.5281/zenodo.55773
