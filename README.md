@@ -1,14 +1,14 @@
 # Kaptive
 
-This is a tool which reports information about the K locus for genome assemblies of capsule locus-containing bacterial species. It will help a user to decide whether their sample has a known or novel K locus.
+Kaptive reports information about capsular (K) loci found in genome assemblies.
 
-It carries out the following for each input assembly:
+Given a novel genome and a database of known K loci, Kaptive will help a user to decide whether their sample has a known or novel K locus. It carries out the following for each input assembly:
 * BLAST for all known K locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
 * Extract the region(s) of the assembly which correspond to the BLAST hits (i.e. the K locus sequence in the assembly) and save it to a FASTA file.
 * BLAST for all known K locus genes (using `tblastn`) to identify which expected genes (genes in the best matching K locus) are present/missing and whether any unexpected genes (genes from other K loci) are present.
 * Output a summary to a table file.
 
-In cases where your input assembly closely matches a known K locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate K locus sequences for totally novel types – if it indicates a novel K locus is present then extracting an annotating the sequence is up to you! Poor assemblies can also confound the results, so be sure to closely examine any case where the K locus sequence in your assembly is broken into multiple pieces.
+In cases where your input assembly closely matches a known K locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate K locus sequences for totally novel types – if it indicates a novel K locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the K locus sequence in your assembly is broken into multiple pieces.
 
 
 ## Table of Contents
@@ -57,7 +57,7 @@ Character codes in the output indicate problems with the K locus match:
 
 ## Installation
 
-No explicit installation is required – simply clone (or download) from GitHub and run the script.
+No explicit installation is required – simply clone (or download) from GitHub and run the Python script.
 
 Kaptive has two dependencies:
 * [Biopython](http://biopython.org/wiki/Main_Page) (installation instructions are [here](http://biopython.org/DIST/docs/install/Installation.html)).
@@ -72,7 +72,7 @@ Using the `-a` (or `--assembly`) argument, you must provide one or more FASTA fi
 
 #### K locus references
 
-Using the `-k` (or `--k_refs`) argument, you must provide a Genbank file containing the known K loci.
+Using the `-k` (or `--k_refs`) argument, you must provide a Genbank file containing one record for each known K locus.
 
 This input Genbank has the following requirements:
 * The `source` feature must contain a `note` qualifier which begins with 'K locus:'. Whatever follows is used as the K locus name.
@@ -220,3 +220,5 @@ If you are running this script on a cluster using [SLURM](http://slurm.schedmd.c
 ## License
 
 GNU General Public License, version 3
+
+http://dx.doi.org/10.5281/zenodo.55773
