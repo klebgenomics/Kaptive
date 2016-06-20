@@ -40,7 +40,7 @@ Kaptive needs the following input files to run (included in this repository):
 
 Example command:
 
-`kaptive.py -a path/to/assemblies/*.fasta -k k_loci_refs.fasta -g k_loci_gene_list.txt -s genes.fasta -o output_directory`
+`kaptive.py -a path/to/assemblies/*.fasta -k database.gbk -o output_directory/prefix`
 
 For each input assembly file, Kaptive will identify the closest known K locus type and report information about the corresponding locus genes.
 
