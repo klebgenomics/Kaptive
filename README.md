@@ -216,6 +216,20 @@ Each of these options has a default and is not required on the command line, but
 
 If you are running this script on a cluster using [SLURM](http://slurm.schedmd.com/), then you can make use of the extra script: `kaptive_slurm.py`. This will create one SLURM job for each assembly so the jobs can run in parallel. All simultaneous jobs can write to the same output table. It may be necessary to modify this script to suit the details of your cluster.
 
+## Databases distributed with Kaptive
+
+#### Klebsiella K locus databases
+
+The primary reference database comprises full-length (galF to ugd) annotated sequences for each distinct Klebsiella K locus, where available:
+* KL1 - KL77 correspond to the loci associated with each of the 77 serologically defined K-type references.
+* KL101 and above are defined from DNA sequence data on the basis of gene content.
+Note that insertion sequences (IS) are excluded from this database since we assume that the ancestral sequence was likely IS-free and IS transposase genes are not specific to the K locus.
+Synthetic IS-free K locus sequences were generated for K loci for which no naturally occurring IS-free variants have been identified to date.
+
+The variants database comprises full-length annotated sequences for variants of the distinct loci:
+* IS variants are named as KLN -1, -2 etc e.g. KL15-1 is an IS variant of KL15.
+* Deletion variants are named KLN-D1, -D2 etc e.g. KL15-D1 is a deletion variant of KL15.
+Note that KL156-D1 is included in the primary reference database since no full-length version of this locus has been identified to date. 
 
 ## License
 
