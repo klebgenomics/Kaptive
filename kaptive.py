@@ -181,6 +181,8 @@ def parse_genbank(genbank, temp_dir, locus_label):
                 k_ref_genes[k_locus_name].append(gene)
                 gene_num += 1
                 gene_seqs.write(gene.get_fasta())
+    k_ref_seqs.close()
+    gene_seqs.close()
     return k_ref_seqs_filename, gene_seqs_filename, k_ref_genes
 
 def find_locus_label(genbank):
@@ -383,26 +385,24 @@ def create_table_file(output_prefix):
                               'Expected genes outside locus, details\tOther genes outside locus\t'
                               'Other genes outside locus, details'):
                 return
-    table = open(table_path, 'w')
-    headers = []
-    headers.append('Assembly')
-    headers.append('Best match locus')
-    headers.append('Problems')
-    headers.append('Coverage')
-    headers.append('Identity')
-    headers.append('Length discrepancy')
-    headers.append('Expected genes in locus')
-    headers.append('Expected genes in locus, details')
-    headers.append('Missing expected genes')
-    headers.append('Other genes in locus')
-    headers.append('Other genes in locus, details')
-    headers.append('Expected genes outside locus')
-    headers.append('Expected genes outside locus, details')
-    headers.append('Other genes outside locus')
-    headers.append('Other genes outside locus, details')
-    table.write('\t'.join(headers))
-    table.write('\n')
-    table.close()
+    headers = ['Assembly',
+               'Best match locus',
+               'Problems',
+               'Coverage',
+               'Identity',
+               'Length discrepancy',
+               'Expected genes in locus',
+               'Expected genes in locus, details',
+               'Missing expected genes',
+               'Other genes in locus',
+               'Other genes in locus, details',
+               'Expected genes outside locus',
+               'Expected genes outside locus, details',
+               'Other genes outside locus',
+               'Other genes outside locus, details']
+    with open(table_path, 'w') as table:
+        table.write('\t'.join(headers))
+        table.write('\n')
 
 def output(output_prefix, assembly, k_locus, args):
     '''
@@ -660,10 +660,10 @@ def save_assembly_pieces_to_file(k_locus, assembly, output_prefix):
     if not k_locus.assembly_pieces:
         return
     fasta_file_name = output_prefix + '_' + assembly.name + '.fasta'
-    fasta_file = open(fasta_file_name, 'w')
-    for piece in k_locus.assembly_pieces:
-        fasta_file.write('>' + assembly.name + '_' + piece.get_header() + '\n')
-        fasta_file.write(add_line_breaks_to_sequence(piece.get_sequence(), 60))
+    with open(fasta_file_name, 'w') as fasta_file:
+        for piece in k_locus.assembly_pieces:
+            fasta_file.write('>' + assembly.name + '_' + piece.get_header() + '\n')
+            fasta_file.write(add_line_breaks_to_sequence(piece.get_sequence(), 60))
 
 def add_line_breaks_to_sequence(sequence, length):
     '''Wraps sequences to the defined length. All resulting sequences end in a line break.'''
@@ -693,23 +693,23 @@ def load_k_locus_references(fasta, k_ref_genes): # type: (str, str) -> dict[str,
 def load_fasta(filename): # type: (str) -> list[tuple[str, str]]
     '''Returns the names and sequences for the given fasta file.'''
     fasta_seqs = []
-    fasta_file = open(filename, 'r')
-    name = ''
-    sequence = ''
-    for line in fasta_file:
-        line = line.strip()
-        if not line:
-            continue
-        if line[0] == '>': # Header line = start of new contig
-            if name:
-                fasta_seqs.append((name.split()[0], sequence))
-                name = ''
-                sequence = ''
-            name = line[1:]
-        else:
-            sequence += line
-    if name:
-        fasta_seqs.append((name.split()[0], sequence))
+    with open(filename, 'r') as fasta_file:
+        name = ''
+        sequence = ''
+        for line in fasta_file:
+            line = line.strip()
+            if not line:
+                continue
+            if line[0] == '>': # Header line = start of new contig
+                if name:
+                    fasta_seqs.append((name.split()[0], sequence))
+                    name = ''
+                    sequence = ''
+                name = line[1:]
+            else:
+                sequence += line
+        if name:
+            fasta_seqs.append((name.split()[0], sequence))
     return fasta_seqs
 
 def good_start_and_end(start, end, k_length, allowed_margin):
