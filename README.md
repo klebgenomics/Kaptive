@@ -75,7 +75,7 @@ Using the `-a` (or `--assembly`) argument, you must provide one or more FASTA fi
 Using the `-k` (or `--k_refs`) argument, you must provide a Genbank file containing one record for each known K locus.
 
 This input Genbank has the following requirements:
-* The `source` feature must contain a `note` qualifier which begins with 'K locus:'. Whatever follows is used as the K locus name.
+* The `source` feature must contain a `note` qualifier which begins with a label such as 'K locus:'. Whatever follows is used as the K locus name. The label is automatically determined, and any consistent label ending in a colon will work. However, the user can specify exactly which label to use with `--locus_label`, if desired.
 * Any K locus gene should be annotated as `CDS` features. All `CDS` features will be used and any other type of feature will be ignored.
 * If the gene has a name, it should be specified in a `gene` qualifier. This is not required, but if absent the gene will only be named using its numbered position in the K locus.
 
