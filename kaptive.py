@@ -49,7 +49,7 @@ def main():
     check_files_exist(args.assembly + [args.k_refs])
     fix_paths(args)
     temp_dir = make_temp_dir(args)
-    k_ref_seqs, gene_seqs, k_ref_genes = parse_genbank(args.k_refs, temp_dir)
+    k_ref_seqs, gene_seqs, k_ref_genes = parse_genbank(args.k_refs, temp_dir, args.locus_label)
     k_refs = load_k_locus_references(k_ref_seqs, k_ref_genes) # type: dict[str, KLocus]
     create_table_file(args.out)
     for fasta_file in args.assembly:
@@ -91,6 +91,11 @@ def get_argument_parser():
     parser.add_argument('--gap_fill_size', type=int, required=False, default=100,
                         help='when separate parts of the assembly are found within this distance, '
                              'they will be merged')
+    parser.add_argument('--locus_label', type=str, required=False,
+                        default='automatically determined',
+                        help='In the Genbank file, the source feature must have a note '
+                             'identifying the locus name, starting with this label followed by '
+                             'a colon (e.g. /note="K locus: K1")')
     return parser
 
 def check_for_blast(): # type: () -> bool
@@ -139,7 +144,7 @@ def clean_up(k_ref_seqs, gene_seqs, temp_dir):
     if not os.listdir(temp_dir):
         os.rmdir(temp_dir)
 
-def parse_genbank(genbank, temp_dir):
+def parse_genbank(genbank, temp_dir, locus_label):
     '''
     This function reads the input Genbank file and produces two temporary FASTA files: one with the
     K loci nucleotide sequences and one with the gene sequences.
@@ -151,15 +156,18 @@ def parse_genbank(genbank, temp_dir):
     gene_seqs_filename = os.path.join(temp_dir, 'temp_gene_seqs.fasta')
     k_ref_seqs = open(k_ref_seqs_filename, 'w')
     gene_seqs = open(gene_seqs_filename, 'w')
+    if locus_label == 'automatically determined':
+        locus_label = find_locus_label(genbank)
+    else:
+        check_locus_label(genbank, locus_label)
     for record in SeqIO.parse(genbank, 'genbank'):
         k_locus_name = ''
+        possible_locus_labels = []
         for feature in record.features:
             if feature.type == 'source' and 'note' in feature.qualifiers:
                 for note in feature.qualifiers['note']:
-                    if note.startswith('K locus:'):
-                        k_locus_name = note[8:].strip()
-        if not k_locus_name:
-            quit_with_error('Genbank record missing K locus name')
+                    if note.startswith(locus_label):
+                        k_locus_name = get_locus_name_from_note(note, locus_label)
         if k_locus_name in k_ref_genes:
             quit_with_error('Duplicate reference K locus name: ' + k_locus_name)
         k_ref_genes[k_locus_name] = []
@@ -174,6 +182,80 @@ def parse_genbank(genbank, temp_dir):
                 gene_num += 1
                 gene_seqs.write(gene.get_fasta())
     return k_ref_seqs_filename, gene_seqs_filename, k_ref_genes
+
+def find_locus_label(genbank):
+    '''
+    Automatically finds the label for the K locus sequences. The Genbank file must have exactly one
+    possible label that is present in a note qualifier in the source feature for every record. If
+    not, Kaptive will quit with an error.
+    '''
+    possible_locus_labels = set()
+    for record in SeqIO.parse(genbank, 'genbank'):
+        for feature in record.features:
+            if feature.type == 'source' and 'note' in feature.qualifiers:
+                for note in feature.qualifiers['note']:
+                    if ':' in note:
+                        possible_locus_labels.add(note.split(':')[0].strip())
+                    if '=' in note:
+                        possible_locus_labels.add(note.split('=')[0].strip())
+    if not possible_locus_labels:
+        quit_with_error('None of the records contain a valid locus label')
+    available_locus_labels = possible_locus_labels.copy()
+    for record in SeqIO.parse(genbank, 'genbank'):
+        locus_labels = set()
+        for feature in record.features:
+            if feature.type == 'source' and 'note' in feature.qualifiers:
+                for note in feature.qualifiers['note']:
+                    if ':' in note:
+                        locus_labels.add(note.split(':')[0].strip())
+                    if '=' in note:
+                        locus_labels.add(note.split('=')[0].strip())
+        if not locus_labels:
+            quit_with_error('no possible locus labels were found for ' + record.name)
+        previous_labels = available_locus_labels.copy()
+        available_locus_labels = available_locus_labels.intersection(locus_labels)
+        if not available_locus_labels:
+            error_message = record.name + ' does not have a locus label matching the previous ' \
+                            'records\n'
+            error_message += 'Previous record labels: ' + ', '.join(list(previous_labels)) + '\n'
+            error_message += 'Labels in ' + record.name + ': ' + ', '.join(list(locus_labels))
+            quit_with_error(error_message)
+    if len(available_locus_labels) > 1:
+        error_message = 'multiple possible locus labels were found: ' + \
+                        ', '.join(list(available_locus_labels)) + '\n'
+        error_message += 'Please use the --locus_label option to specify which to use'
+        quit_with_error(error_message)
+    return list(available_locus_labels)[0]
+
+def check_locus_label(genbank, locus_label):
+    '''
+    Makes sure that every record in the Genbank file contains a note in the source feature
+    beginning with the given label.
+    '''
+    for record in SeqIO.parse(genbank, 'genbank'):
+        found_label = False
+        for feature in record.features:
+            if feature.type == 'source' and 'note' in feature.qualifiers:
+                for note in feature.qualifiers['note']:
+                    if note.startswith(locus_label):
+                        k_locus_name = get_locus_name_from_note(note, locus_label)
+                        if k_locus_name:
+                            found_label = True
+        if not found_label:
+            error_message = record.name + ' is missing a locus label\n'
+            error_message += 'The source feature must have a note qualifier beginning with "' + \
+                             locus_label + ':" followed by the locus name'
+            quit_with_error(error_message)
+
+def get_locus_name_from_note(full_note, locus_label):
+    '''
+    Extracts the part of the note following the label (and any colons, spaces or equals signs).
+    '''
+    locus_name = full_note[len(locus_label):].strip()
+    while locus_name.startswith(':') or locus_name.startswith(' ') or \
+            locus_name.startswith('='):
+        locus_name = locus_name[1:]
+    return locus_name
 
 def check_files_exist(filenames): # type: (list[str]) -> bool
     '''Checks to make sure each file in the given list exists.'''
