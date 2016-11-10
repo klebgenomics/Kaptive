@@ -1,4 +1,5 @@
-# Kaptive
+<p align="center"><img src="extras/kaptive_logo.png" alt="Kaptive" width="400"></p>
+
 
 Kaptive reports information about capsular (K) loci found in genome assemblies.
 
