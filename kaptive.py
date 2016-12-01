@@ -45,7 +45,7 @@ from Bio import SeqIO
 
 def main():
     """Script execution starts here."""
-    args = get_args()
+    args = get_argument_parser().parse_args()
     check_for_blast()
     check_files_exist(args.assembly + [args.k_refs] + [args.type_genes])
     fix_paths(args)
@@ -71,10 +71,15 @@ def main():
     sys.exit(0)
 
 
-def get_args():
+def get_argument_parser():
     """Specifies the command line arguments required by the script."""
     parser = argparse.ArgumentParser(description='Kaptive',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    add_arguments_to_parser(parser)
+    return parser
+
+
+def add_arguments_to_parser(parser):
     parser.add_argument('-a', '--assembly', nargs='+', type=str, required=True,
                         help='Fasta file(s) for assemblies')
     parser.add_argument('-k', '--k_refs', type=str, required=True,
@@ -85,9 +90,9 @@ def get_args():
                         help='Output directory/prefix')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Display detailed information about each assembly in stdout')
-    parser.add_argument('-t', '--threads', type=int, required=False, default=argparse.SUPPRESS,
-                        help='The number of threads to use for the BLAST searches (default: '
-                             'number of CPUs, up to 4)')
+    parser.add_argument('-t', '--threads', type=int, required=False,
+                        default=min(multiprocessing.cpu_count(), 4),
+                        help='The number of threads to use for the BLAST searches')
     parser.add_argument('--no_seq_out', action='store_true',
                         help='Suppress output files of sequences matching K locus')
     parser.add_argument('--start_end_margin', type=int, required=False, default=10,
@@ -109,14 +114,6 @@ def get_args():
                         help='In the Genbank file, the source feature must have a note '
                              'identifying the locus name, starting with this label followed by '
                              'a colon (e.g. /note="K locus: K1")')
-
-    args = parser.parse_args()
-    try:
-        args.threads
-    except AttributeError:
-        args.threads = min(multiprocessing.cpu_count(), 4)
-
-    return args
 
 
 def check_for_blast():
