@@ -90,6 +90,7 @@ def main():
                  '#SBATCH --time=' + args.walltime,
                  'module load BLAST+/2.2.30-vlsci_intel-2015.08.25-Python-2.7.10',
                  'module load Python/3.5.2-vlsci_intel-2015.08.25',
+                 'module load Biopython/1.67-iccifort-2015.2.164-GCC-4.9.2-Python-3.5.2',
                  kaptive_command]
 
         slurm_string = '\n'.join(slurm)
