@@ -60,8 +60,7 @@ def main():
         best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
         find_assembly_pieces(assembly, best_k, args)
         assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
-        type_gene_results = specific_gene_search(assembly_pieces_fasta, type_gene_names,
-                                                 args.type_genes, args.threads)
+        type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
         if args.no_seq_out:
             os.remove(assembly_pieces_fasta)
         protein_blast(assembly, best_k, gene_seqs, args)
@@ -332,16 +331,20 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
     return best_k_ref
 
 
-def specific_gene_search(assembly_pieces_fasta, type_gene_names, type_gene_fasta, threads):
-    if not type_gene_names or not type_gene_fasta:
+def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
+    if not type_gene_names or not args.type_genes:
         return {}
 
     makeblastdb(assembly_pieces_fasta)
-    all_gene_blast_hits = get_blast_hits(assembly_pieces_fasta, type_gene_fasta, threads,
+    all_gene_blast_hits = get_blast_hits(assembly_pieces_fasta, args.type_genes, args.threads,
                                          type_genes=True)
     clean_blast_db(assembly_pieces_fasta)
 
-    type_gene_results = {x: '' for x in type_gene_names}
+    # Filter out small hits.
+    all_gene_blast_hits = [x for x in all_gene_blast_hits
+                           if x.query_cov >= args.min_gene_cov and x.pident >= args.min_gene_id]
+
+    type_gene_results = {x: 'None' for x in type_gene_names}
     for gene_name in type_gene_names:
         blast_hits = sorted([x for x in all_gene_blast_hits if x.gene_name == gene_name],
                             reverse=True, key=lambda x: x.bitscore)
@@ -525,7 +528,8 @@ def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_re
             get_gene_info_string(k_locus.other_hits_outside_locus)]
 
     for gene_name in type_gene_names:
-        line.append(type_gene_results[gene_name])
+        allele = type_gene_results[gene_name]
+        line.append('-' if allele == 'None' else allele)
 
     table_path = output_prefix + '_table.txt'
     table = open(table_path, 'a')
