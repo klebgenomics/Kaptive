@@ -38,33 +38,40 @@ from __future__ import division
 import argparse
 import sys
 import os
+import multiprocessing
 import subprocess
 from Bio import SeqIO
 
 
 def main():
     """Script execution starts here."""
-    args = get_argument_parser().parse_args()
+    args = get_args()
     check_for_blast()
-    check_files_exist(args.assembly + [args.k_refs])
+    check_files_exist(args.assembly + [args.k_refs] + [args.type_genes])
     fix_paths(args)
     temp_dir = make_temp_dir(args)
     k_ref_seqs, gene_seqs, k_ref_genes = parse_genbank(args.k_refs, temp_dir, args.locus_label)
     k_refs = load_k_locus_references(k_ref_seqs, k_ref_genes)
-    create_table_file(args.out)
+    type_gene_names = get_type_gene_names(args.type_genes)
+    create_table_file(args.out, type_gene_names)
+
     for fasta_file in args.assembly:
         assembly = Assembly(fasta_file)
-        best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs)
+        best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
         find_assembly_pieces(assembly, best_k, args)
+        assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
+        type_gene_results = specific_gene_search(assembly_pieces_fasta, type_gene_names,
+                                                 args.type_genes, args.threads)
+        if args.no_seq_out:
+            os.remove(assembly_pieces_fasta)
         protein_blast(assembly, best_k, gene_seqs, args)
-        output(args.out, assembly, best_k, args)
-        if not args.no_seq_out:
-            save_assembly_pieces_to_file(best_k, assembly, args.out)
+        output(args.out, assembly, best_k, args, type_gene_names, type_gene_results)
+
     clean_up(k_ref_seqs, gene_seqs, temp_dir)
     sys.exit(0)
 
 
-def get_argument_parser():
+def get_args():
     """Specifies the command line arguments required by the script."""
     parser = argparse.ArgumentParser(description='Kaptive',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -72,10 +79,15 @@ def get_argument_parser():
                         help='Fasta file(s) for assemblies')
     parser.add_argument('-k', '--k_refs', type=str, required=True,
                         help='Genbank file with reference K loci')
+    parser.add_argument('-g', '--type_genes', type=str, required=False,
+                        help='SRST2-formatted FASTA file of type genes to include in results')
     parser.add_argument('-o', '--out', type=str, required=False, default='./k_locus_results',
                         help='Output directory/prefix')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Display detailed information about each assembly in stdout')
+    parser.add_argument('-t', '--threads', type=int, required=False, default=argparse.SUPPRESS,
+                        help='The number of threads to use for the BLAST searches (default: '
+                             'number of CPUs, up to 4)')
     parser.add_argument('--no_seq_out', action='store_true',
                         help='Suppress output files of sequences matching K locus')
     parser.add_argument('--start_end_margin', type=int, required=False, default=10,
@@ -97,7 +109,14 @@ def get_argument_parser():
                         help='In the Genbank file, the source feature must have a note '
                              'identifying the locus name, starting with this label followed by '
                              'a colon (e.g. /note="K locus: K1")')
-    return parser
+
+    args = parser.parse_args()
+    try:
+        args.threads
+    except AttributeError:
+        args.threads = min(multiprocessing.cpu_count(), 4)
+
+    return args
 
 
 def check_for_blast():
@@ -272,7 +291,8 @@ def get_locus_name_from_note(full_note, locus_label):
 def check_files_exist(filenames):
     """Checks to make sure each file in the given list exists."""
     for filename in filenames:
-        check_file_exists(filename)
+        if filename is not None:
+            check_file_exists(filename)
 
 
 def check_file_exists(filename):
@@ -287,7 +307,7 @@ def quit_with_error(message):
     sys.exit(1)
 
 
-def get_best_k_type_match(assembly, k_refs_fasta, k_refs):
+def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
     """
     Searches for all known K types in the given assembly and returns the best match.
     Best match is defined as the K type for which the largest fraction of the K type has a BLAST
@@ -296,7 +316,7 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs):
     """
     for k_ref in k_refs.values():
         k_ref.clear()
-    blast_hits = get_blast_hits(assembly.fasta, k_refs_fasta)
+    blast_hits = get_blast_hits(assembly.fasta, k_refs_fasta, threads)
     for hit in blast_hits:
         if hit.qseqid not in k_refs:
             quit_with_error('BLAST hit (' + hit.qseqid + ') not found in K locus references')
@@ -313,6 +333,34 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs):
             best_k_ref = k_ref
     best_k_ref.clean_up_blast_hits()
     return best_k_ref
+
+
+def specific_gene_search(assembly_pieces_fasta, type_gene_names, type_gene_fasta, threads):
+    if not type_gene_names or not type_gene_fasta:
+        return {}
+
+    makeblastdb(assembly_pieces_fasta)
+    all_gene_blast_hits = get_blast_hits(assembly_pieces_fasta, type_gene_fasta, threads,
+                                         type_genes=True)
+    clean_blast_db(assembly_pieces_fasta)
+
+    type_gene_results = {x: '' for x in type_gene_names}
+    for gene_name in type_gene_names:
+        blast_hits = sorted([x for x in all_gene_blast_hits if x.gene_name == gene_name],
+                            reverse=True, key=lambda x: x.bitscore)
+        if not blast_hits:
+            continue
+        perfect_match = None
+        for hit in blast_hits:
+            if hit.pident == 100.0 and hit.query_cov == 100.0:
+                perfect_match = hit
+                break
+        if perfect_match:
+            type_gene_results[gene_name] = str(perfect_match.allele_number)
+        else:
+            type_gene_results[gene_name] = str(blast_hits[0].allele_number) + '*'
+
+    return type_gene_results
 
 
 def find_assembly_pieces(assembly, k_locus, args):
@@ -358,7 +406,7 @@ def protein_blast(assembly, k_locus, gene_seqs, args):
     Conducts a BLAST search of all known K locus proteins. Stores the results in the KLocus
     object.
     """
-    hits = get_blast_hits(assembly.fasta, gene_seqs, genes=True)
+    hits = get_blast_hits(assembly.fasta, gene_seqs, args.threads, genes=True)
     hits = [x for x in hits if x.query_cov >= args.min_gene_cov and x.pident >= args.min_gene_id]
     expected_hits = []
     for expected_gene in k_locus.gene_names:
@@ -382,7 +430,7 @@ def protein_blast(assembly, k_locus, gene_seqs, args):
                                         if not x.in_assembly_pieces(k_locus.assembly_pieces)]
 
 
-def create_table_file(output_prefix):
+def create_table_file(output_prefix, type_gene_names):
     """
     Creates the table file and writes a header line if necessary.
     If the file already exists and the header line is correct, then it does nothing (to allow
@@ -400,6 +448,7 @@ def create_table_file(output_prefix):
                               'Expected genes outside locus, details\tOther genes outside locus\t'
                               'Other genes outside locus, details'):
                 return
+
     headers = ['Assembly',
                'Best match locus',
                'Problems',
@@ -415,12 +464,34 @@ def create_table_file(output_prefix):
                'Expected genes outside locus, details',
                'Other genes outside locus',
                'Other genes outside locus, details']
+
+    if type_gene_names:
+        headers += type_gene_names
+
     with open(table_path, 'w') as table:
         table.write('\t'.join(headers))
         table.write('\n')
 
 
-def output(output_prefix, assembly, k_locus, args):
+def get_type_gene_names(type_genes_fasta):
+    gene_names = []
+    if type_genes_fasta:
+        gene_names = set()
+        with open(type_genes_fasta, 'rt') as type_genes_db:
+            for line in type_genes_db:
+                if line.startswith('>'):
+                    try:
+                        gene_names.add(line.split('>')[1].split('__')[1])
+                    except IndexError:
+                        quit_with_error(type_genes_fasta + ' not formatted as an SRST2 database '
+                                                           'FASTA file')
+        if not gene_names:
+            quit_with_error(type_genes_fasta + ' not formatted as an SRST2 database FASTA file')
+        gene_names = sorted(list(gene_names))
+    return gene_names
+
+
+def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_results):
     """
     Writes a line to the output table describing all that we've learned about the given K locus and
     writes to stdout as well.
@@ -456,6 +527,9 @@ def output(output_prefix, assembly, k_locus, args):
             str(len(k_locus.other_hits_outside_locus)),
             get_gene_info_string(k_locus.other_hits_outside_locus)]
 
+    for gene_name in type_gene_names:
+        line.append(type_gene_results[gene_name])
+
     table_path = output_prefix + '_table.txt'
     table = open(table_path, 'a')
     table.write('\t'.join(line))
@@ -463,7 +537,10 @@ def output(output_prefix, assembly, k_locus, args):
     table.close()
 
     if not args.verbose:
-        print(assembly.name + ': ' + k_locus.name + uncertainty_chars)
+        simple_output = assembly.name + ': ' + k_locus.name + uncertainty_chars
+        for gene_name in type_gene_names:
+            simple_output += ', ' + gene_name + '=' + type_gene_results[gene_name]
+        print(simple_output)
     if args.verbose:
         print()
         assembly_name_line = 'Assembly: ' + assembly.name
@@ -488,6 +565,9 @@ def output(output_prefix, assembly, k_locus, args):
                         k_locus.other_hits_inside_locus)
         print_gene_hits('Other genes outside locus: ' + str(len(k_locus.other_hits_outside_locus)),
                         k_locus.other_hits_outside_locus)
+
+        for gene_name in type_gene_names:
+            print('    ' + gene_name + ' allele: ' + type_gene_results[gene_name])
 
 
 def print_assembly_pieces(pieces):
@@ -532,13 +612,13 @@ def float_to_str(float_in):
         return '%.1f' % float_in
 
 
-def get_blast_hits(database, query, genes=False):
+def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     """Returns a list BlastHit objects for a search of the given query in the given database."""
     if genes:
         command = ['tblastn']
     else:
         command = ['blastn', '-task', 'blastn']
-    command += ['-db', database, '-query', query, '-outfmt',
+    command += ['-db', database, '-query', query, '-num_threads', str(threads), '-outfmt',
                 '6 qseqid sseqid qstart qend sstart send evalue bitscore length pident qlen qseq']
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = process.communicate()
@@ -548,6 +628,8 @@ def get_blast_hits(database, query, genes=False):
         quit_with_error('blastn encountered an error:\n' + err)
     if genes:
         blast_hits = [GeneBlastHit(line) for line in line_iterator(out)]
+    elif type_genes:
+        blast_hits = [TypeGeneBlastHit(line) for line in line_iterator(out)]
     else:
         blast_hits = [BlastHit(line) for line in line_iterator(out)]
     return blast_hits
@@ -690,6 +772,7 @@ def save_assembly_pieces_to_file(k_locus, assembly, output_prefix):
         for piece in k_locus.assembly_pieces:
             fasta_file.write('>' + assembly.name + '_' + piece.get_header() + '\n')
             fasta_file.write(add_line_breaks_to_sequence(piece.get_sequence(), 60))
+    return fasta_file_name
 
 
 def add_line_breaks_to_sequence(sequence, length):
@@ -885,6 +968,19 @@ class GeneBlastHit(BlastHit):
         return frac_overlap > 0.5
 
 
+class TypeGeneBlastHit(BlastHit):
+    """This class adds a couple type gene-specific things to the BlastHit class."""
+    def __init__(self, hit_string):
+        BlastHit.__init__(self, hit_string)
+        try:
+            name_parts = self.qseqid.split('__')
+            self.gene_name = name_parts[1]
+            self.allele_number = int(name_parts[2])
+        except (IndexError, ValueError):
+            self.gene_name = ''
+            self.allele_number = 0
+
+
 class KLocus(object):
     def __init__(self, name, seq, genes):
         self.name = name
@@ -1038,8 +1134,13 @@ class Assembly(object):
         self.fasta = fasta_file
         self.name = os.path.splitext(os.path.basename(fasta_file))[0]
         self.contigs = {x[0]: x[1] for x in load_fasta(fasta_file)}  # key = name, value = sequence
-        if not self.blast_database_exists():
-            self.make_blast_database()
+        self.blast_db_already_present = self.blast_database_exists()
+        if not self.blast_db_already_present:
+            makeblastdb(self.fasta)
+
+    def __del__(self):
+        if not self.blast_db_already_present:
+            clean_blast_db(self.fasta)
 
     def __repr__(self):
         return self.name
@@ -1049,26 +1150,20 @@ class Assembly(object):
         return os.path.isfile(self.fasta + '.nin') and os.path.isfile(self.fasta + '.nhr') and \
             os.path.isfile(self.fasta + '.nsq')
 
-    def make_blast_database(self):
-        """Runs makeblastdb on the assembly."""
-        command = ['makeblastdb', '-dbtype', 'nucl', '-in', self.fasta]
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _, err = process.communicate()
-        if err:
-            quit_with_error('makeblastdb encountered an error:\n' + convert_bytes_to_str(err))
-
 
 class AssemblyPiece(object):
     """
     This class describes a piece of an assembly: which contig the piece is on and what the range
     is.
     """
-    def __init__(self, assembly, contig_name, contig_start, contig_end, strand, blast_hits=[]):
+    def __init__(self, assembly, contig_name, contig_start, contig_end, strand, blast_hits=None):
         self.assembly = assembly
         self.contig_name = contig_name
         self.start = contig_start
         self.end = contig_end
         self.strand = strand
+        if not blast_hits:
+            blast_hits = []
         self.blast_hits = blast_hits
 
     def __repr__(self):
@@ -1156,7 +1251,9 @@ class IntRange(object):
     It stores its ranges in a Python-like fashion where the last value in each range is
     exclusive.
     """
-    def __init__(self, ranges=[]):
+    def __init__(self, ranges=None):
+        if not ranges:
+            ranges = []
         self.ranges = []
         self.add_ranges(ranges)
         self.simplify()
@@ -1253,6 +1350,27 @@ def convert_bytes_to_str(bytes_or_str):
         return bytes_or_str
     else:
         return bytes_or_str.decode()
+
+
+def makeblastdb(fasta):
+    command = ['makeblastdb', '-dbtype', 'nucl', '-in', fasta]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, err = process.communicate()
+    if err:
+        quit_with_error('makeblastdb encountered an error:\n' + convert_bytes_to_str(err))
+
+
+def remove_if_exists(filename):
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+
+
+def clean_blast_db(fasta):
+    remove_if_exists(fasta + '.nsq')
+    remove_if_exists(fasta + '.nhr')
+    remove_if_exists(fasta + '.nin')
 
 
 if __name__ == '__main__':

@@ -94,6 +94,12 @@ CDS             1..897
                 /gene="galF"
 ```
 
+#### Type genes
+
+You can also supply Kaptive with a FASTA file of gene alleles using the `-g` (or `--type_genes`) argument. For example, `wzi_wzc_db.fasta` (included with Kaptive) contains wzi and wzc alleles. This file must be formatted as an [SRST2](https://github.com/katholt/srst2) database with integers for allele names.
+
+If used, Kaptive will report the number of the best allele for each type gene. If there is no perfect match, Kaptive reports the best match and adds a `*` to the allele number.
+
 
 ## Standard output
 
@@ -104,11 +110,18 @@ Kaptive will write a simple line to stdout for each assembly:
 * the best K locus match
 * character codes for any match problems
 
-Example:
+Example (no type genes supplied):
 ```
 assembly_1: K2*
 assembly_2: K4
-assembly_3: K17?-*
+assembly_3: KL17?-*
+```
+
+Example (with type genes):
+```
+assembly_1: K2*, wzc=2, wzi=2
+assembly_2: K4, wzc=1, wzi=127
+assembly_3: KL17?-*, wzc=18*, wzi=137*
 ```
 
 #### Verbose
@@ -124,6 +137,7 @@ If run without the `-v` or `--verbose` option, Kaptive will give detailed inform
   * Whether they were found inside or outside the K locus matching sequence
   * % Coverage and % identity
   * Contig names and coordinates for matching sequences
+* Best alleles for each type gene (if the user supplied a type gene database)
 
 
 ## Output files
@@ -150,8 +164,9 @@ Kaptive produces a single tab-delimited table summarising the results of all inp
 * **Expected genes outside locus, details**: gene names and percent identity (from the BLAST hits) for the expected genes found outside the K locus part of the assembly.
 * **Other genes outside locus**: the number of unexpected genes (genes from K loci other than the best match) which were found outside the K locus part of the assembly.
 * **Other genes outside locus, details**: gene names and percent identity (from the BLAST hits) for the other genes found outside the K locus part of the assembly.
+* One column for each type gene (if the user supplied a type gene database)
 
-If the summary table already exists when Kaptive is run, it will append to it (not overwrite). This allows you to run Kaptive in parallel on many assemblies, all outputting to the same table file.
+If the summary table already exists, Kaptive will append to it (not overwrite it). This allows you to run Kaptive in parallel on many assemblies, all outputting to the same table file.
 
 #### K locus matching sequences
 
