@@ -88,8 +88,8 @@ def main():
                  '#SBATCH --ntasks=1',
                  '#SBATCH --mem-per-cpu=' + args.memory,
                  '#SBATCH --time=' + args.walltime,
-                 'module load Python/2.7.10-vlsci_intel-2015.08.25',
                  'module load BLAST+/2.2.30-vlsci_intel-2015.08.25-Python-2.7.10',
+                 'module load Python/3.5.2-vlsci_intel-2015.08.25',
                  kaptive_command]
 
         slurm_string = '\n'.join(slurm)
