@@ -41,7 +41,7 @@ Read more about Kaptive and how it was used to classifying K loci in Klebsiella 
 
 Kaptive needs the following input files to run (included in this repository):
 * A multi-record Genbank file with your known K loci (nucleotide sequences for each whole locus and protein sequences for their genes)
-* One or more Klebsiella assemblies in FASTA format
+* One or more assemblies in FASTA format
 
 Example command:
 
@@ -94,9 +94,10 @@ CDS             1..897
                 /gene="galF"
 ```
 
-#### Type genes
+#### Allelic typing
 
-You can also supply Kaptive with a FASTA file of gene alleles using the `-g` (or `--type_genes`) argument. For example, `wzi_wzc_db.fasta` (included with Kaptive) contains wzi and wzc alleles. This file must be formatted as an [SRST2](https://github.com/katholt/srst2) database with integers for allele names.
+You can also supply Kaptive with a FASTA file of gene alleles using the `-g` (or `--allelic_typing`) 
+argument. For example, `wzi_wzc_db.fasta` (included with Kaptive) contains wzi and wzc alleles. This file must be formatted as an [SRST2](https://github.com/katholt/srst2) database with integers for allele names.
 
 If used, Kaptive will report the number of the best allele for each type gene. If there is no perfect match, Kaptive reports the best match and adds a `*` to the allele number.
 
@@ -147,6 +148,13 @@ If run without the `-v` or `--verbose` option, Kaptive will give detailed inform
 Kaptive produces a single tab-delimited table summarising the results of all input assemblies. It has the following columns:
 * **Assembly**: the name of the input assembly, taken from the assembly filename.
 * **Best match locus**: the K locus type which most closely matches the assembly, based on BLAST coverage.
+* **Match confidence**: a categorical measure of match quality:
+  * `Perfect` = the K locus was found in a single piece with 100% coverage and 100% identity.
+  * `Very high` = the K locus was found in a single piece with ≥99% coverage and ≥95% identity, with no missing genes and no extra genes.
+  * `High` = the K locus was found in a single piece with ≥99% coverage, with ≤ 3 missing genes and no extra genes.
+  * `Good` = the K locus was found in a single piece or with ≥95% coverage, with ≤ 3 missing genes and ≤ 1 extra genes.
+  * `Low` = the K locus was found in a single piece or with ≥90% coverage, with ≤ 3 missing genes and ≤ 2 extra genes.
+  * `None` = did not qualify for any of the above.
 * **Problems**: characters indicating issues with the K locus match. An absence of any such characters indicates a very good match.
   * `?` = the match was not in a single piece, possible due to a poor match or discontiguous assembly.
   * `-` = genes expected in the K locus were not found.
@@ -168,11 +176,21 @@ Kaptive produces a single tab-delimited table summarising the results of all inp
 
 If the summary table already exists, Kaptive will append to it (not overwrite it). This allows you to run Kaptive in parallel on many assemblies, all outputting to the same table file.
 
+To disable the table file output, run Kaptive with `--no_table`.
+
+
+#### JSON
+
+Kaptive also outputs its results in a JSON file which contains all information from the above table, as well as more detail about BLAST results and reference sequences.
+
+To disable JSON output, run Kaptive with `--no_json`.
+
+
 #### K locus matching sequences
 
 For each input assembly, Kaptive produces a Genbank file of the region(s) of the assembly which correspond to the best K locus match. This may be a single piece (in cases of a good assembly and a strong match) or it may be in multiple pieces (in cases of poor assembly and/or a novel K locus). The file is named using the output prefix and the assembly name.
 
-These output files can be suppressed by using the `--no_seq_out` option, in which case Kaptive will only produce the summary table.
+To these output files, run Kaptive with `--no_seq_out`.
 
 
 ## Example results and interpretation

@@ -40,20 +40,35 @@ import sys
 import os
 import multiprocessing
 import subprocess
+import json
+from collections import OrderedDict
 from Bio import SeqIO
 
 
 def main():
     """Script execution starts here."""
     args = get_argument_parser().parse_args()
+
     check_for_blast()
-    check_files_exist(args.assembly + [args.k_refs] + [args.type_genes])
+    check_files_exist(args.assembly + [args.k_refs] + [args.allelic_typing])
     fix_paths(args)
+
+    output_table = not args.no_table
+    output_json = not args.no_json
+
     temp_dir = make_temp_dir(args)
     k_ref_seqs, gene_seqs, k_ref_genes = parse_genbank(args.k_refs, temp_dir, args.locus_label)
+    all_gene_dict = {}
+    for gene_list in k_ref_genes.values():
+        for gene in gene_list:
+            all_gene_dict[gene.full_name] = gene
+
     k_refs = load_k_locus_references(k_ref_seqs, k_ref_genes)
-    type_gene_names = get_type_gene_names(args.type_genes)
-    create_table_file(args.out, type_gene_names)
+    type_gene_names = get_type_gene_names(args.allelic_typing)
+
+    if output_table:
+        create_table_file(args.out, type_gene_names)
+    json_list = []
 
     for fasta_file in args.assembly:
         assembly = Assembly(fasta_file)
@@ -64,7 +79,12 @@ def main():
         if args.no_seq_out:
             os.remove(assembly_pieces_fasta)
         protein_blast(assembly, best_k, gene_seqs, args)
-        output(args.out, assembly, best_k, args, type_gene_names, type_gene_results)
+
+        output(args.out, assembly, best_k, args, type_gene_names, type_gene_results,
+               json_list, output_table, output_json, all_gene_dict)
+
+    if output_json:
+        write_json_file(args.out, json_list)
 
     clean_up(k_ref_seqs, gene_seqs, temp_dir)
     sys.exit(0)
@@ -83,9 +103,10 @@ def add_arguments_to_parser(parser):
                         help='Fasta file(s) for assemblies')
     parser.add_argument('-k', '--k_refs', type=str, required=True,
                         help='Genbank file with reference K loci')
-    parser.add_argument('-g', '--type_genes', type=str, required=False,
-                        help='SRST2-formatted FASTA file of type genes to include in results')
-    parser.add_argument('-o', '--out', type=str, required=False, default='./k_locus_results',
+    parser.add_argument('-g', '--allelic_typing', type=str, required=False,
+                        help='SRST2-formatted FASTA file of allelic typing genes to include in '
+                             'results')
+    parser.add_argument('-o', '--out', type=str, required=False, default='./kaptive_results',
                         help='Output directory/prefix')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Display detailed information about each assembly in stdout')
@@ -94,6 +115,10 @@ def add_arguments_to_parser(parser):
                         help='The number of threads to use for the BLAST searches')
     parser.add_argument('--no_seq_out', action='store_true',
                         help='Suppress output files of sequences matching K locus')
+    parser.add_argument('--no_table', action='store_true',
+                        help='Suppress output of tab-delimited table')
+    parser.add_argument('--no_json', action='store_true',
+                        help='Suppress output of JSON file')
     parser.add_argument('--start_end_margin', type=int, required=False, default=10,
                         help='Missing bases at the ends of K locus allowed in a perfect match.')
     parser.add_argument('--min_gene_cov', type=float, required=False, default=90.0,
@@ -140,7 +165,7 @@ def fix_paths(args):
     args.assembly = [os.path.abspath(x) for x in args.assembly]
     args.k_refs = os.path.abspath(args.k_refs)
     if args.out[-1] == '/':
-        args.out += 'k_locus_results' 
+        args.out += 'kaptive_results'
     args.out = os.path.abspath(args.out)
     out_dir = os.path.dirname(args.out)
     if not os.path.exists(out_dir):
@@ -332,11 +357,11 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
 
 
 def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
-    if not type_gene_names or not args.type_genes:
+    if not type_gene_names or not args.allelic_typing:
         return {}
 
     makeblastdb(assembly_pieces_fasta)
-    all_gene_blast_hits = get_blast_hits(assembly_pieces_fasta, args.type_genes, args.threads,
+    all_gene_blast_hits = get_blast_hits(assembly_pieces_fasta, args.allelic_typing, args.threads,
                                          type_genes=True)
     clean_blast_db(assembly_pieces_fasta)
 
@@ -344,21 +369,25 @@ def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
     all_gene_blast_hits = [x for x in all_gene_blast_hits
                            if x.query_cov >= args.min_gene_cov and x.pident >= args.min_gene_id]
 
-    type_gene_results = {x: 'None' for x in type_gene_names}
+    type_gene_results = {}
     for gene_name in type_gene_names:
         blast_hits = sorted([x for x in all_gene_blast_hits if x.gene_name == gene_name],
-                            reverse=True, key=lambda x: x.bitscore)
+                            reverse=True, key=lambda z: z.bitscore)
         if not blast_hits:
-            continue
-        perfect_match = None
-        for hit in blast_hits:
-            if hit.pident == 100.0 and hit.query_cov == 100.0:
-                perfect_match = hit
-                break
-        if perfect_match:
-            type_gene_results[gene_name] = str(perfect_match.allele_number)
+            hit = None
         else:
-            type_gene_results[gene_name] = str(blast_hits[0].allele_number) + '*'
+            perfect_match = None
+            for hit in blast_hits:
+                if hit.pident == 100.0 and hit.query_cov == 100.0:
+                    perfect_match = hit
+                    break
+            if perfect_match:
+                hit = perfect_match
+                hit.result = str(perfect_match.allele_number)
+            else:
+                hit = blast_hits[0]
+                hit.result = str(blast_hits[0].allele_number) + '*'
+        type_gene_results[gene_name] = hit
 
     return type_gene_results
 
@@ -437,20 +466,17 @@ def create_table_file(output_prefix, type_gene_names):
     multiple independent processes to append to the file).
     """
     table_path = output_prefix + '_table.txt'
+
+    # If the table already exists, we don't need to do anything.
     if os.path.isfile(table_path):
         with open(table_path, 'r') as existing_table:
             first_line = existing_table.readline().strip()
-            if first_line == ('Assembly\tBest match locus\tProblems\tCoverage\tIdentity\t'
-                              'Length discrepancy\tExpected genes in locus\t'
-                              'Expected genes in locus, details\tMissing expected genes\t'
-                              'Other genes in locus\tOther genes in locus, details\t'
-                              'Expected genes outside locus\t'
-                              'Expected genes outside locus, details\tOther genes outside locus\t'
-                              'Other genes outside locus, details'):
+            if first_line.startswith('Assembly\tBest match locus'):
                 return
 
     headers = ['Assembly',
                'Best match locus',
+               'Match confidence',
                'Problems',
                'Coverage',
                'Identity',
@@ -491,12 +517,14 @@ def get_type_gene_names(type_genes_fasta):
     return gene_names
 
 
-def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_results):
+def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_results,
+           json_list, output_table, output_json, all_gene_dict):
     """
     Writes a line to the output table describing all that we've learned about the given K locus and
     writes to stdout as well.
     """
     uncertainty_chars = k_locus.get_match_uncertainty_chars()
+
     expected_in_locus_per = 100.0 * len(k_locus.expected_hits_inside_locus) / \
         len(k_locus.gene_names)
     expected_out_locus_per = 100.0 * len(k_locus.expected_hits_outside_locus) / \
@@ -508,14 +536,27 @@ def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_re
     missing_per = 100.0 * len(k_locus.missing_expected_genes) / len(k_locus.gene_names)
     missing_genes_str = str(len(k_locus.missing_expected_genes)) + ' / ' + \
         str(len(k_locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
-    coverage_str = '%.2f' % k_locus.get_coverage() + '%'
-    identity_str = '%.2f' % k_locus.identity + '%'
 
+    output_to_stdout(assembly, k_locus, args.verbose, type_gene_names, type_gene_results,
+                     uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str,
+                     missing_genes_str)
+    if output_table:
+        output_to_table(output_prefix, assembly, k_locus, type_gene_names, type_gene_results,
+                        uncertainty_chars, expected_genes_in_locus_str,
+                        expected_genes_out_locus_str)
+    if output_json:
+        add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list,
+                    uncertainty_chars, all_gene_dict)
+
+
+def output_to_table(output_prefix, assembly, k_locus, type_gene_names, type_gene_results,
+                    uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str):
     line = [assembly.name,
             k_locus.name,
+            k_locus.get_match_confidence(),
             uncertainty_chars,
-            coverage_str,
-            identity_str,
+            k_locus.get_coverage_string(),
+            k_locus.get_identity_string(),
             k_locus.get_length_discrepancy_string(),
             expected_genes_in_locus_str,
             get_gene_info_string(k_locus.expected_hits_inside_locus),
@@ -528,8 +569,8 @@ def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_re
             get_gene_info_string(k_locus.other_hits_outside_locus)]
 
     for gene_name in type_gene_names:
-        allele = type_gene_results[gene_name]
-        line.append('-' if allele == 'None' else allele)
+        hit = type_gene_results[gene_name]
+        line.append('-' if not hit else hit.result)
 
     table_path = output_prefix + '_table.txt'
     table = open(table_path, 'a')
@@ -537,20 +578,138 @@ def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_re
     table.write('\n')
     table.close()
 
-    if not args.verbose:
-        simple_output = assembly.name + ': ' + k_locus.name + uncertainty_chars
-        for gene_name in type_gene_names:
-            simple_output += ', ' + gene_name + '=' + type_gene_results[gene_name]
-        print(simple_output)
-    if args.verbose:
+
+def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list,
+                uncertainty_chars, all_gene_dict):
+    json_record = OrderedDict()
+    json_record['Assembly name'] = assembly.name
+
+    match_dict = OrderedDict()
+    match_dict['Locus name'] = k_locus.name
+    match_dict['Match confidence'] = k_locus.get_match_confidence()
+
+    reference_dict = OrderedDict()
+    reference_dict['Length'] = len(k_locus.seq)
+    reference_dict['Sequence'] = k_locus.seq
+    match_dict['Reference'] = reference_dict
+    json_record['Best match'] = match_dict
+
+    problems = OrderedDict()
+    problems['Locus assembled in multiple pieces'] = str('?' in uncertainty_chars)
+    problems['Missing genes in locus'] = str('-' in uncertainty_chars)
+    problems['Extra genes in locus'] = str('+' in uncertainty_chars)
+    problems['At least one low identity gene'] = str('*' in uncertainty_chars)
+    json_record['Problems'] = problems
+
+    blast_results = OrderedDict()
+    blast_results['Coverage'] = k_locus.get_coverage_string()
+    blast_results['Identity'] = k_locus.get_identity_string()
+    blast_results['Length discrepancy'] = k_locus.get_length_discrepancy_string()
+    assembly_pieces = []
+    for i, piece in enumerate(k_locus.assembly_pieces):
+        assembly_piece = OrderedDict()
+        assembly_piece['Contig name'] = piece.contig_name
+        assembly_piece['Contig start position'] = piece.start
+        assembly_piece['Contig end position'] = piece.end
+        assembly_piece['Contig strand'] = piece.strand
+        piece_seq = piece.get_sequence()
+        assembly_piece['Length'] = len(piece_seq)
+        assembly_piece['Sequence'] = piece_seq
+        assembly_pieces.append(assembly_piece)
+    blast_results['Locus assembly pieces'] = assembly_pieces
+    json_record['blastn result'] = blast_results
+
+    expected_genes_in_locus = {x.qseqid: x for x in k_locus.expected_hits_inside_locus}
+    expected_hits_outside_locus = {x.qseqid: x for x in k_locus.expected_hits_outside_locus}
+    other_hits_inside_locus = {x.qseqid: x for x in k_locus.other_hits_inside_locus}
+    other_hits_outside_locus = {x.qseqid: x for x in k_locus.other_hits_outside_locus}
+
+    k_locus_genes = OrderedDict()
+    for gene in k_locus.genes:
+        gene_dict = OrderedDict()
+        gene_name = gene.full_name
+
+        if gene_name in expected_genes_in_locus:
+            gene_dict['Result'] = 'Found in locus'
+        elif gene_name in expected_hits_outside_locus:
+            gene_dict['Result'] = 'Found outside locus'
+        else:
+            gene_dict['Result'] = 'Not found'
+        gene_dict['Reference'] = gene.get_reference_info_json_dict()
+
+        if gene_name in expected_genes_in_locus or gene_name in expected_hits_outside_locus:
+            if gene_name in expected_genes_in_locus:
+                hit = expected_genes_in_locus[gene_name]
+            else:
+                hit = expected_hits_outside_locus[gene_name]
+            gene_dict['tblastn result'] = hit.get_blast_result_json_dict(assembly)
+
+        k_locus_genes[gene_name] = gene_dict
+    json_record['K locus genes'] = k_locus_genes
+
+    extra_genes = OrderedDict()
+    for gene_name, hit in other_hits_inside_locus.items():
+        gene_dict = OrderedDict()
+        gene = all_gene_dict[gene_name]
+        gene_dict['Reference'] = gene.get_reference_info_json_dict()
+        gene_dict['tblastn result'] = hit.get_blast_result_json_dict(assembly)
+        extra_genes[gene_name] = gene_dict
+    json_record['Other genes in locus'] = extra_genes
+
+    other_genes = OrderedDict()
+    for gene_name, hit in other_hits_outside_locus.items():
+        gene_dict = OrderedDict()
+        gene = all_gene_dict[gene_name]
+        gene_dict['Reference'] = gene.get_reference_info_json_dict()
+        gene_dict['tblastn result'] = hit.get_blast_result_json_dict(assembly)
+        other_genes[gene_name] = gene_dict
+    json_record['Other genes outside locus'] = other_genes
+
+    allelic_typing = OrderedDict()
+    for gene_name in type_gene_names:
+        allelic_type = OrderedDict()
+        if not type_gene_results[gene_name]:
+            allelic_type['Allele'] = 'Not found'
+        else:
+            blast_hit = type_gene_results[gene_name]
+            allele = blast_hit.result
+            if allele.endswith('*'):
+                perfect_match = False
+                allele = allele[:-1]
+            else:
+                perfect_match = True
+            try:
+                allele = int(allele)
+            except ValueError:
+                pass
+            allelic_type['Allele'] = allele
+            allelic_type['Perfect match'] = str(perfect_match)
+            allelic_type['blastn result'] = blast_hit.get_blast_result_json_dict(assembly)
+        allelic_typing[gene_name] = allelic_type
+    json_record['Allelic_typing'] = allelic_typing
+
+    json_list.append(json_record)
+
+
+def write_json_file(output_prefix, json_list):
+    with open(output_prefix + '.json', 'wt') as json_out:
+        json_out.write(json.dumps(json_list, indent=4))
+        json_out.write('\n')
+
+
+def output_to_stdout(assembly, k_locus, verbose, type_gene_names, type_gene_results,
+                     uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str,
+                     missing_genes_str):
+    if verbose:
         print()
         assembly_name_line = 'Assembly: ' + assembly.name
         print(assembly_name_line)
         print('-' * len(assembly_name_line))
         print('    Best match locus: ' + k_locus.name)
-        print('    Problems: ' + uncertainty_chars)
-        print('    Coverage: ' + coverage_str)
-        print('    Identity: ' + identity_str)
+        print('    Match confidence: ' + k_locus.get_match_confidence())
+        print('    Problems: ' + (uncertainty_chars if uncertainty_chars else 'None'))
+        print('    Coverage: ' + k_locus.get_coverage_string())
+        print('    Identity: ' + k_locus.get_identity_string())
         print('    Length discrepancy: ' + k_locus.get_length_discrepancy_string())
         print()
         print_assembly_pieces(k_locus.assembly_pieces)
@@ -568,7 +727,18 @@ def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_re
                         k_locus.other_hits_outside_locus)
 
         for gene_name in type_gene_names:
-            print('    ' + gene_name + ' allele: ' + type_gene_results[gene_name])
+            result = 'Not found' if not type_gene_results[gene_name] \
+                else type_gene_results[gene_name].result
+            print('    ' + gene_name + ' allele: ' + result)
+        print()
+
+    else:  # not verbose
+        simple_output = assembly.name + ': ' + k_locus.name + uncertainty_chars
+        for gene_name in type_gene_names:
+            result = 'Not found' if not type_gene_results[gene_name] \
+                else type_gene_results[gene_name].result
+            simple_output += ', ' + gene_name + '=' + result
+        print(simple_output)
 
 
 def print_assembly_pieces(pieces):
@@ -620,7 +790,8 @@ def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     else:
         command = ['blastn', '-task', 'blastn']
     command += ['-db', database, '-query', query, '-num_threads', str(threads), '-outfmt',
-                '6 qseqid sseqid qstart qend sstart send evalue bitscore length pident qlen qseq']
+                '6 qseqid sseqid qstart qend sstart send evalue bitscore length pident qlen qseq '
+                'sseq']
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = process.communicate()
     out = convert_bytes_to_str(out)
@@ -887,6 +1058,7 @@ class BlastHit(object):
         self.length = int(parts[8])
         self.pident = float(parts[9])
         self.query_cov = 100.0 * len(parts[11]) / float(parts[10])
+        self.sseq = parts[12]
 
     def __repr__(self):
         return self.qseqid + ', ' + self.get_contig_details_string() + ', ' + \
@@ -897,18 +1069,22 @@ class BlastHit(object):
         return 'Contig: ' + get_nice_contig_name(self.sseqid) + ' (' + str(self.sstart) + '-' + \
                str(self.send) + ', ' + self.strand + ' strand)'
 
+    def get_coverage_string(self):
+        return '%.2f' % self.query_cov + '%'
+
     def get_coverage_details_string(self, extra_space=False):
-        """Returns a string describing the hit coverage."""
         first_part = 'Cov: '
-        second_part = '%.2f' % self.query_cov + '%'
+        second_part = self.get_coverage_string()
         if len(second_part) == 6 and extra_space:
             first_part += ' '
         return first_part + second_part
 
+    def get_identity_string(self):
+        return '%.2f' % self.pident + '%'
+
     def get_identity_details_string(self, extra_space=False):
-        """Returns a string describing the hit identity."""
         first_part = 'ID: '
-        second_part = '%.2f' % self.pident + '%'
+        second_part = self.get_identity_string()
         if len(second_part) == 6 and extra_space:
             first_part += ' '
         return first_part + second_part
@@ -941,6 +1117,18 @@ class BlastHit(object):
                 return True
         return False
 
+    def get_blast_result_json_dict(self, assembly):
+        blast_results = OrderedDict()
+        blast_results['Coverage'] = self.get_coverage_string()
+        blast_results['Identity'] = self.get_identity_string()
+        blast_results['Contig name'] = self.sseqid
+        blast_results['Contig start position'] = self.sstart
+        blast_results['Contig end position'] = self.send
+        blast_results['Contig strand'] = self.strand
+        blast_results['Bit score'] = self.bitscore
+        blast_results['E-value'] = self.evalue
+        return blast_results
+
 
 class GeneBlastHit(BlastHit):
     """This class adds a few gene-specific things to the BlastHit class."""
@@ -968,6 +1156,17 @@ class GeneBlastHit(BlastHit):
         frac_overlap = overlap / min_length
         return frac_overlap > 0.5
 
+    def get_blast_result_json_dict(self, assembly):
+        blast_results = super(GeneBlastHit, self).get_blast_result_json_dict(assembly)
+        nuc_seq = assembly.contigs[self.sseqid][self.sstart:self.send]
+        if self.strand == '-':
+            nuc_seq = reverse_complement(nuc_seq)
+        blast_results['Nucleotide length'] = len(nuc_seq)
+        blast_results['Protein length'] = len(self.sseq)
+        blast_results['Nucleotide sequence'] = nuc_seq
+        blast_results['Protein sequence'] = self.sseq
+        return blast_results
+
 
 class TypeGeneBlastHit(BlastHit):
     """This class adds a couple type gene-specific things to the BlastHit class."""
@@ -981,11 +1180,26 @@ class TypeGeneBlastHit(BlastHit):
             self.gene_name = ''
             self.allele_number = 0
 
+    def get_blast_result_json_dict(self, assembly):
+        blast_results = OrderedDict()
+        blast_results['Coverage'] = self.get_coverage_string()
+        blast_results['Identity'] = self.get_identity_string()
+        blast_results['Assembly piece name'] = self.sseqid
+        blast_results['Assembly piece start position'] = self.sstart
+        blast_results['Assembly piece end position'] = self.send
+        blast_results['Assembly piece strand'] = self.strand
+        blast_results['Bit score'] = self.bitscore
+        blast_results['E-value'] = self.evalue
+        blast_results['Length'] = len(self.sseq)
+        blast_results['Sequence'] = self.sseq
+        return blast_results
+
 
 class KLocus(object):
     def __init__(self, name, seq, genes):
         self.name = name
         self.seq = seq
+        self.genes = genes
         self.gene_names = [x.full_name for x in genes]
         self.blast_hits = []
         self.hit_ranges = IntRange()
@@ -1039,7 +1253,13 @@ class KLocus(object):
     def get_coverage(self):
         """Returns the % of this K locus which is covered by BLAST hits in the given assembly."""
         return 100.0 * self.hit_ranges.get_total_length() / len(self.seq)
+    
+    def get_coverage_string(self):
+        return '%.2f' % self.get_coverage() + '%'
 
+    def get_identity_string(self):
+        return '%.2f' % self.identity + '%'
+    
     def clean_up_blast_hits(self):
         """
         This function removes unnecessary BLAST hits from self.blast_hits.
@@ -1127,6 +1347,30 @@ class KLocus(object):
             elif earliest_piece.strand == '-' and earliest_piece.start < latest_piece.end:
                 same_contig_and_strand = False
         return earliest_piece, latest_piece, same_contig_and_strand
+
+    def get_match_confidence(self):
+        """
+        These confidence thresholds match those specified in the paper supp. text, with the
+        addition of two new top-level categories: perfect and very high
+        """
+        single_piece = len(self.assembly_pieces) == 1
+        cov = self.get_coverage()
+        ident = self.identity
+        missing = len(self.missing_expected_genes)
+        extra = len(self.other_hits_inside_locus)
+        if single_piece and cov == 100.0 and ident == 100.0 and missing == 0 and extra == 0:
+            confidence = 'Perfect'
+        elif single_piece and cov >= 99.0 and ident >= 95.0 and missing == 0 and extra == 0:
+            confidence = 'Very high'
+        elif single_piece and cov >= 99.0 and missing <= 3 and extra == 0:
+            confidence = 'High'
+        elif (single_piece or cov >= 95.0) and missing <= 3 and extra <= 1:
+            confidence = 'Good'
+        elif (single_piece or cov >= 90.0) and missing <= 3 and extra <= 2:
+            confidence = 'Low'
+        else:
+            confidence = 'None'
+        return confidence
 
 
 class Assembly(object):
@@ -1329,9 +1573,21 @@ class Gene(object):
         gene_num_string = str(num).zfill(2)
         self.full_name = k_locus_name + '_' + gene_num_string
         if 'gene' in feature.qualifiers:
-            self.full_name += '_' + feature.qualifiers['gene'][0]
+            self.gene_name = feature.qualifiers['gene'][0]
+            self.full_name += '_' + self.gene_name
+        else:
+            self.gene_name = None
+        if 'product' in feature.qualifiers:
+            self.product = feature.qualifiers['product'][0]
+        else:
+            self.product = None
+        if 'EC_number' in feature.qualifiers:
+            self.ec_number = feature.qualifiers['EC_number'][0]
+        else:
+            self.ec_number = None
         self.nuc_seq = feature.extract(k_locus_seq)
-        self.prot_seq = self.nuc_seq.translate(table=11)
+        self.prot_seq = str(self.nuc_seq.translate(table=11))
+        self.nuc_seq = str(self.nuc_seq)
 
     def get_fasta(self):
         """
@@ -1339,7 +1595,21 @@ class Gene(object):
         protein sequence) ending in a line break.
         """
         return '>' + self.full_name + '\n' + \
-               add_line_breaks_to_sequence(str(self.prot_seq), 60)
+               add_line_breaks_to_sequence(self.prot_seq, 60)
+
+    def get_reference_info_json_dict(self):
+        reference_dict = OrderedDict()
+        if self.gene_name:
+            reference_dict['Gene'] = self.gene_name
+        if self.product:
+            reference_dict['Product'] = self.product
+        if self.ec_number:
+            reference_dict['EC number'] = self.ec_number
+        reference_dict['Nucleotide length'] = len(self.nuc_seq)
+        reference_dict['Protein length'] = len(self.prot_seq)
+        reference_dict['Nucleotide sequence'] = self.nuc_seq
+        reference_dict['Protein sequence'] = self.prot_seq
+        return reference_dict
 
 
 def convert_bytes_to_str(bytes_or_str):
