@@ -665,28 +665,29 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
         other_genes[gene_name] = gene_dict
     json_record['Other genes outside locus'] = other_genes
 
-    allelic_typing = OrderedDict()
-    for gene_name in type_gene_names:
-        allelic_type = OrderedDict()
-        if not type_gene_results[gene_name]:
-            allelic_type['Allele'] = 'Not found'
-        else:
-            blast_hit = type_gene_results[gene_name]
-            allele = blast_hit.result
-            if allele.endswith('*'):
-                perfect_match = False
-                allele = allele[:-1]
+    if type_gene_names:
+        allelic_typing = OrderedDict()
+        for gene_name in type_gene_names:
+            allelic_type = OrderedDict()
+            if not type_gene_results[gene_name]:
+                allelic_type['Allele'] = 'Not found'
             else:
-                perfect_match = True
-            try:
-                allele = int(allele)
-            except ValueError:
-                pass
-            allelic_type['Allele'] = allele
-            allelic_type['Perfect match'] = str(perfect_match)
-            allelic_type['blastn result'] = blast_hit.get_blast_result_json_dict(assembly)
-        allelic_typing[gene_name] = allelic_type
-    json_record['Allelic_typing'] = allelic_typing
+                blast_hit = type_gene_results[gene_name]
+                allele = blast_hit.result
+                if allele.endswith('*'):
+                    perfect_match = False
+                    allele = allele[:-1]
+                else:
+                    perfect_match = True
+                try:
+                    allele = int(allele)
+                except ValueError:
+                    pass
+                allelic_type['Allele'] = allele
+                allelic_type['Perfect match'] = str(perfect_match)
+                allelic_type['blastn result'] = blast_hit.get_blast_result_json_dict(assembly)
+            allelic_typing[gene_name] = allelic_type
+        json_record['Allelic_typing'] = allelic_typing
 
     json_list.append(json_record)
 
@@ -1358,7 +1359,8 @@ class KLocus(object):
         ident = self.identity
         missing = len(self.missing_expected_genes)
         extra = len(self.other_hits_inside_locus)
-        if single_piece and cov == 100.0 and ident == 100.0 and missing == 0 and extra == 0:
+        if single_piece and cov == 100.0 and ident == 100.0 and missing == 0 and extra == 0 and \
+                self.get_length_discrepancy() == 0:
             confidence = 'Perfect'
         elif single_piece and cov >= 99.0 and ident >= 95.0 and missing == 0 and extra == 0:
             confidence = 'Very high'
