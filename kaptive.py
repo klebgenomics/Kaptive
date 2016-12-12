@@ -41,6 +41,7 @@ import os
 import multiprocessing
 import subprocess
 import json
+import fcntl
 from collections import OrderedDict
 from Bio import SeqIO
 
@@ -573,7 +574,7 @@ def output_to_table(output_prefix, assembly, k_locus, type_gene_names, type_gene
         line.append('-' if not hit else hit.result)
 
     table_path = output_prefix + '_table.txt'
-    table = open(table_path, 'a')
+    table = open(table_path, 'at')
     table.write('\t'.join(line))
     table.write('\n')
     table.close()
@@ -693,9 +694,36 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
 
 
 def write_json_file(output_prefix, json_list):
-    with open(output_prefix + '.json', 'wt') as json_out:
-        json_out.write(json.dumps(json_list, indent=4))
-        json_out.write('\n')
+    json_filename = output_prefix + '.json'
+    if not os.path.isfile(json_filename):
+        with open(output_prefix + '.json', 'wt') as json_out:
+            fcntl.flock(json_out, fcntl.LOCK_EX)
+            json_out.write(json.dumps(json_list, indent=4))
+            json_out.write('\n')
+            fcntl.flock(json_out, fcntl.LOCK_UN)
+    else:
+        with open(output_prefix + '.json', 'r+t') as json_out:
+            fcntl.flock(json_out, fcntl.LOCK_EX)
+            file_data = json_out.read()
+            try:
+                existing_json_list = json.loads(file_data)
+                json_list = existing_json_list + json_list
+            except json.decoder.JSONDecodeError:
+                pass
+
+            json_out.seek(0)
+            json_out.write(json.dumps(json_list, indent=4))
+            json_out.write('\n')
+            json_out.truncate()
+
+            # # Add the new data and fix up the boundaries between records so the JSON is valid.
+            # file_data += json.dumps(json_list, indent=4) + '\n'
+            # file_data = file_data.replace('}\n]\n[\n', '},\n')
+            #
+            # json_out.seek(0)
+            # json_out.write(file_data)
+            # json_out.truncate()
+            fcntl.flock(json_out, fcntl.LOCK_UN)
 
 
 def output_to_stdout(assembly, k_locus, verbose, type_gene_names, type_gene_results,
