@@ -59,8 +59,8 @@ def main():
         kaptive_command = script_path
         kaptive_command += ' --assembly ' + os.path.abspath(assembly_filename)
         kaptive_command += ' --k_refs ' + os.path.abspath(args.k_refs)
-        if args.type_genes:
-            kaptive_command += ' --type_genes ' + os.path.abspath(args.type_genes)
+        if args.allelic_typing:
+            kaptive_command += ' --allelic_typing ' + os.path.abspath(args.allelic_typing)
         kaptive_command += ' --out ' + os.path.abspath(args.out)
         if args.verbose:
             kaptive_command += ' --verbose'
