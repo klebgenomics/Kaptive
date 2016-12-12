@@ -706,7 +706,7 @@ def write_json_file(output_prefix, json_list):
             fcntl.flock(json_out, fcntl.LOCK_EX)
             file_data = json_out.read()
             try:
-                existing_json_list = json.loads(file_data)
+                existing_json_list = json.loads(file_data, object_pairs_hook=OrderedDict)
                 json_list = existing_json_list + json_list
             except json.decoder.JSONDecodeError:
                 pass
