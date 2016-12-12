@@ -710,19 +710,10 @@ def write_json_file(output_prefix, json_list):
                 json_list = existing_json_list + json_list
             except json.decoder.JSONDecodeError:
                 pass
-
             json_out.seek(0)
             json_out.write(json.dumps(json_list, indent=4))
             json_out.write('\n')
             json_out.truncate()
-
-            # # Add the new data and fix up the boundaries between records so the JSON is valid.
-            # file_data += json.dumps(json_list, indent=4) + '\n'
-            # file_data = file_data.replace('}\n]\n[\n', '},\n')
-            #
-            # json_out.seek(0)
-            # json_out.write(file_data)
-            # json_out.truncate()
             fcntl.flock(json_out, fcntl.LOCK_UN)
 
 
