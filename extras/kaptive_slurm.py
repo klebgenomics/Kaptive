@@ -68,6 +68,10 @@ def main():
             kaptive_command += ' --threads ' + str(args.threads)
         if args.no_seq_out:
             kaptive_command += ' --no_seq_out'
+        if args.no_table:
+            kaptive_command += ' --no_table'
+        if args.no_json:
+            kaptive_command += ' --no_json'
         if using_start_end_margin:
             kaptive_command += ' --start_end_margin ' + str(args.start_end_margin)
         if using_min_gene_cov:
