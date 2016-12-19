@@ -625,11 +625,11 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
     other_hits_inside_locus = {x.qseqid: x for x in k_locus.other_hits_inside_locus}
     other_hits_outside_locus = {x.qseqid: x for x in k_locus.other_hits_outside_locus}
 
-    k_locus_genes = OrderedDict()
+    k_locus_genes = []
     for gene in k_locus.genes:
         gene_dict = OrderedDict()
         gene_name = gene.full_name
-
+        gene_dict['Name'] = gene_name
         if gene_name in expected_genes_in_locus:
             gene_dict['Result'] = 'Found in locus'
         elif gene_name in expected_hits_outside_locus:
@@ -645,7 +645,7 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
                 hit = expected_hits_outside_locus[gene_name]
             gene_dict['tblastn result'] = hit.get_blast_result_json_dict(assembly)
 
-        k_locus_genes[gene_name] = gene_dict
+        k_locus_genes.append(gene_dict)
     json_record['K locus genes'] = k_locus_genes
 
     extra_genes = OrderedDict()
