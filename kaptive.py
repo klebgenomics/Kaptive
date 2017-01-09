@@ -73,7 +73,7 @@ def main():
     json_list = []
 
     for fasta_file in args.assembly:
-        assembly = Assembly(fasta_file, temp_dir)
+        assembly = Assembly(fasta_file)
         best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
         find_assembly_pieces(assembly, best_k, args)
         assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
@@ -999,7 +999,11 @@ def load_k_locus_references(fasta, k_ref_genes):
 def load_fasta(filename):
     """Returns the names and sequences for the given fasta file."""
     fasta_seqs = []
-    with open(filename, 'rt') as fasta_file:
+    if get_compression_type(filename) == 'gz':
+        open_func = gzip.open
+    else:  # plain text
+        open_func = open
+    with open_func(filename, 'rt') as fasta_file:
         name = ''
         sequence = ''
         for line in fasta_file:
@@ -1396,25 +1400,12 @@ class KLocus(object):
 
 
 class Assembly(object):
-    def __init__(self, fasta_file, temp_dir):
+    def __init__(self, fasta_file):
         """Loads in an assembly and builds a BLAST database for it (if necessary)."""
-
-        compression = get_compression_type(fasta_file)
-        if compression == 'gz':
-            compressed_fasta = gzip.GzipFile(fasta_file, 'rb')
-            s = compressed_fasta.read()
-            compressed_fasta.close()
-            decompressed_fasta_filename = os.path.basename(fasta_file) + '.decompressed.fasta'
-            self.fasta = os.path.join(temp_dir, decompressed_fasta_filename)
-            with open(self.fasta, 'wb') as decompressed_fasta:
-                decompressed_fasta.write(s)
-            self.temp_decompressed_fasta = True
-        else:
-            self.fasta = fasta_file
-            self.temp_decompressed_fasta = False
-
-        self.name = os.path.splitext(os.path.basename(fasta_file))[0]
-        self.contigs = {x[0]: x[1] for x in load_fasta(self.fasta)}  # key = name, value = sequence
+        self.fasta = fasta_file
+        self.name = fasta_file
+        self.name = strip_extensions(fasta_file)
+        self.contigs = {x[0]: x[1] for x in load_fasta(fasta_file)}  # key = name, value = sequence
         self.blast_db_already_present = self.blast_database_exists()
         if not self.blast_db_already_present:
             makeblastdb(self.fasta)
@@ -1422,8 +1413,6 @@ class Assembly(object):
     def __del__(self):
         if not self.blast_db_already_present:
             clean_blast_db(self.fasta)
-        if self.temp_decompressed_fasta:
-            os.remove(self.fasta)
 
     def __repr__(self):
         return self.name
@@ -1662,9 +1651,25 @@ def convert_bytes_to_str(bytes_or_str):
 
 
 def makeblastdb(fasta):
-    command = ['makeblastdb', '-dbtype', 'nucl', '-in', fasta]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, err = process.communicate()
+    """
+    If the FASTA file is not compressed, this just runs makeblastdb. If it is compressed,
+    it runs gunzip and pipes into makeblastdb.
+    """
+    if get_compression_type(fasta) == 'gz':
+        gunzip_command = ['gunzip', '-c', fasta]
+        makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', '-', '-out', fasta,
+                               '-title', fasta]
+
+        gunzip = subprocess.Popen(gunzip_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        makeblastdb_process = subprocess.Popen(makeblastdb_command, stdin=gunzip.stdout,
+                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        gunzip.stdout.close()
+        _, err = makeblastdb_process.communicate()
+    else:  # plain text
+        makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', fasta]
+        makeblastdb_process = subprocess.Popen(makeblastdb_command, stdout=subprocess.PIPE,
+                                               stderr=subprocess.PIPE)
+        _, err = makeblastdb_process.communicate()
     if err:
         quit_with_error('makeblastdb encountered an error:\n' + convert_bytes_to_str(err))
 
@@ -1704,6 +1709,21 @@ def get_compression_type(filename):
     if compression_type == 'zip':
         quit_with_error('cannot use zip format - use gzip instead')
     return compression_type
+
+
+def strip_extensions(filename):
+    """
+    This function removes extensions from a file name. Examples:
+      assembly.fasta -> assembly
+      assembly.fa.gz -> assembly
+      genome.assembly.fa.gz -> genome.assembly
+    """
+    base_name = os.path.basename(filename)
+    name_parts = base_name.split('.')
+    for i in range(2):
+        if len(name_parts) > 1 and len(name_parts[-1]) <= 5:
+            name_parts = name_parts[:-1]
+    return '.'.join(name_parts)
 
 
 if __name__ == '__main__':
