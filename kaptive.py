@@ -42,6 +42,7 @@ import multiprocessing
 import subprocess
 import json
 import fcntl
+import gzip
 from collections import OrderedDict
 from Bio import SeqIO
 
@@ -72,7 +73,7 @@ def main():
     json_list = []
 
     for fasta_file in args.assembly:
-        assembly = Assembly(fasta_file)
+        assembly = Assembly(fasta_file, temp_dir)
         best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
         find_assembly_pieces(assembly, best_k, args)
         assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
@@ -998,7 +999,7 @@ def load_k_locus_references(fasta, k_ref_genes):
 def load_fasta(filename):
     """Returns the names and sequences for the given fasta file."""
     fasta_seqs = []
-    with open(filename, 'r') as fasta_file:
+    with open(filename, 'rt') as fasta_file:
         name = ''
         sequence = ''
         for line in fasta_file:
@@ -1395,11 +1396,25 @@ class KLocus(object):
 
 
 class Assembly(object):
-    def __init__(self, fasta_file):
+    def __init__(self, fasta_file, temp_dir):
         """Loads in an assembly and builds a BLAST database for it (if necessary)."""
-        self.fasta = fasta_file
+
+        compression = get_compression_type(fasta_file)
+        if compression == 'gz':
+            compressed_fasta = gzip.GzipFile(fasta_file, 'rb')
+            s = compressed_fasta.read()
+            compressed_fasta.close()
+            decompressed_fasta_filename = os.path.basename(fasta_file) + '.decompressed.fasta'
+            self.fasta = os.path.join(temp_dir, decompressed_fasta_filename)
+            with open(self.fasta, 'wb') as decompressed_fasta:
+                decompressed_fasta.write(s)
+            self.temp_decompressed_fasta = True
+        else:
+            self.fasta = fasta_file
+            self.temp_decompressed_fasta = False
+
         self.name = os.path.splitext(os.path.basename(fasta_file))[0]
-        self.contigs = {x[0]: x[1] for x in load_fasta(fasta_file)}  # key = name, value = sequence
+        self.contigs = {x[0]: x[1] for x in load_fasta(self.fasta)}  # key = name, value = sequence
         self.blast_db_already_present = self.blast_database_exists()
         if not self.blast_db_already_present:
             makeblastdb(self.fasta)
@@ -1407,6 +1422,8 @@ class Assembly(object):
     def __del__(self):
         if not self.blast_db_already_present:
             clean_blast_db(self.fasta)
+        if self.temp_decompressed_fasta:
+            os.remove(self.fasta)
 
     def __repr__(self):
         return self.name
@@ -1663,6 +1680,30 @@ def clean_blast_db(fasta):
     remove_if_exists(fasta + '.nsq')
     remove_if_exists(fasta + '.nhr')
     remove_if_exists(fasta + '.nin')
+
+
+def get_compression_type(filename):
+    """
+    Attempts to guess the compression (if any) on a file using the first few bytes.
+    http://stackoverflow.com/questions/13044562
+    """
+    magic_dict = {'gz': (b'\x1f', b'\x8b', b'\x08'),
+                  'bz2': (b'\x42', b'\x5a', b'\x68'),
+                  'zip': (b'\x50', b'\x4b', b'\x03', b'\x04')}
+    max_len = max(len(x) for x in magic_dict)
+
+    unknown_file = open(filename, 'rb')
+    file_start = unknown_file.read(max_len)
+    unknown_file.close()
+    compression_type = 'plain'
+    for filetype, magic_bytes in magic_dict.items():
+        if file_start.startswith(magic_bytes):
+            compression_type = filetype
+    if compression_type == 'bz2':
+        quit_with_error('cannot use bzip2 format - use gzip instead')
+    if compression_type == 'zip':
+        quit_with_error('cannot use zip format - use gzip instead')
+    return compression_type
 
 
 if __name__ == '__main__':
