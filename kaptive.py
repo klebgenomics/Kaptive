@@ -331,6 +331,11 @@ def check_assembly_format(filenames):
         fasta = load_fasta(assembly)
         if len(fasta) < 1:
             quit_with_error('invalid FASTA file: ' + assembly)
+        for record in fasta:
+            header, seq = record
+            if len(seq) == 0:
+                quit_with_error('invalid FASTA file (contains a zero-length sequence): ' +
+                                assembly)
 
 
 def quit_with_error(message):
@@ -370,6 +375,8 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
 def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
     if not type_gene_names or not args.allelic_typing:
         return {}
+    if not assembly_pieces_fasta:
+        return {x: None for x in type_gene_names}
 
     makeblastdb(assembly_pieces_fasta)
     all_gene_blast_hits = get_blast_hits(assembly_pieces_fasta, args.allelic_typing, args.threads,
@@ -968,7 +975,7 @@ def save_assembly_pieces_to_file(k_locus, assembly, output_prefix):
     Assumes all assembly pieces are from the same assembly.
     """
     if not k_locus.assembly_pieces:
-        return
+        return None
     fasta_file_name = output_prefix + '_' + assembly.name + '.fasta'
     with open(fasta_file_name, 'w') as fasta_file:
         for piece in k_locus.assembly_pieces:
