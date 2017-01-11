@@ -53,6 +53,7 @@ def main():
 
     check_for_blast()
     check_files_exist(args.assembly + [args.k_refs] + [args.allelic_typing])
+    check_assembly_format(args.assembly)
     fix_paths(args)
 
     output_table = not args.no_table
@@ -102,9 +103,9 @@ def get_argument_parser():
 
 def add_arguments_to_parser(parser):
     parser.add_argument('-a', '--assembly', nargs='+', type=str, required=True,
-                        help='Fasta file(s) for assemblies')
+                        help='FASTA file(s) for assemblies')
     parser.add_argument('-k', '--k_refs', type=str, required=True,
-                        help='Genbank file with reference K loci')
+                        help='GenBank file with reference K loci')
     parser.add_argument('-g', '--allelic_typing', type=str, required=False,
                         help='SRST2-formatted FASTA file of allelic typing genes to include in '
                              'results')
@@ -322,6 +323,14 @@ def check_file_exists(filename):
     """Checks to make sure the single given file exists."""
     if not os.path.isfile(filename):
         quit_with_error('could not find ' + filename)
+
+
+def check_assembly_format(filenames):
+    """Tries to load each assembly and shows an error if it did not successfully load."""
+    for assembly in filenames:
+        fasta = load_fasta(assembly)
+        if len(fasta) < 1:
+            quit_with_error('invalid FASTA file: ' + assembly)
 
 
 def quit_with_error(message):
