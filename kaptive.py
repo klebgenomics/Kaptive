@@ -834,7 +834,22 @@ def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     out = convert_bytes_to_str(out)
     err = convert_bytes_to_str(err)
     if err:
-        quit_with_error('blastn encountered an error:\n' + err)
+        quit_with_error(command[0] + ' encountered an error:\n' + err)
+    if process.returncode != 0:
+        msg = command[0] + ' crashed!\n'
+
+        # A known crash can occur with tblastn and recent versions of BLAST+ when multiple threads
+        # are used. Check for this case and display an informative error message if so.
+        version = get_blast_version(command[0])
+        bad_version = (version == '2.4.0') or (version == '2.5.0') or (version == '2.6.0')
+        if threads > 1 and bad_version:
+            msg += '\nYou are using BLAST+ v' + version + ' which may crash when running with '
+            msg += 'multiple threads.\n\n'
+            msg += 'To avoid this issue, try one of the following:\n'
+            msg += '  1) Use an unaffected version of BLAST+ (v2.3.0 or earlier should work)\n'
+            msg += '  2) Run Kaptive with "--threads 1" (will probably be slower)\n'
+        quit_with_error(msg)
+
     if genes:
         blast_hits = [GeneBlastHit(line) for line in line_iterator(out)]
     elif type_genes:
@@ -842,6 +857,18 @@ def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     else:
         blast_hits = [BlastHit(line) for line in line_iterator(out)]
     return blast_hits
+
+
+def get_blast_version(program):
+    command = [program, '-version']
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    out = convert_bytes_to_str(out)
+    err = convert_bytes_to_str(err)
+    try:
+        return out.split(': ')[1].split()[0].split('+')[0]
+    except IndexError:
+        return ''
 
 
 def get_best_hit_for_query(blast_hits, query_name, k_locus):
