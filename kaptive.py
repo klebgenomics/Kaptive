@@ -826,7 +826,9 @@ def float_to_str(float_in):
 def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     """Returns a list BlastHit objects for a search of the given query in the given database."""
     if genes:
-        command = ['tblastn']
+        command = ['tblastn',
+                   '-db_gencode', '11',  # bacterial translation table
+                   '-seg', 'no']         # don't filter out low complexity regions
     else:
         command = ['blastn', '-task', 'blastn']
     command += ['-db', database, '-query', query, '-num_threads', str(threads), '-outfmt',
