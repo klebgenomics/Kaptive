@@ -661,6 +661,9 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
             else:
                 hit = expected_hits_outside_locus[gene_name]
             gene_dict['tblastn result'] = hit.get_blast_result_json_dict(assembly)
+            gene_dict['Match confidence'] = hit.get_match_confidence()
+        else:
+            gene_dict['Match confidence'] = 'Not found'
 
         k_locus_genes.append(gene_dict)
     json_record['K locus genes'] = k_locus_genes
@@ -1234,6 +1237,21 @@ class GeneBlastHit(BlastHit):
         blast_results['Nucleotide sequence'] = nuc_seq
         blast_results['Protein sequence'] = self.sseq
         return blast_results
+
+    def get_match_confidence(self):
+        cov = self.query_cov
+        ident = self.pident
+        if cov == 100.0 and ident >= 99.0:
+            confidence = 'Very high'
+        elif cov >= 99.0 and ident >= 95.0:
+            confidence = 'High'
+        elif cov >= 97.0 and ident >= 95.0:
+            confidence = 'Good'
+        elif cov >= 95.0 and ident >= 85.0:
+            confidence = 'Low'
+        else:
+            confidence = 'None'
+        return confidence
 
 
 class TypeGeneBlastHit(BlastHit):
