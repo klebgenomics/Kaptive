@@ -33,6 +33,7 @@ Read more about Kaptive and how it was used to classifying K loci in Klebsiella 
   * [Poor match](https://github.com/katholt/kaptive#poor-match)
 * [Advanced options](https://github.com/katholt/kaptive#advanced-options)
 * [SLURM jobs](https://github.com/katholt/kaptive#slurm-jobs)
+* [FAQs](https://github.com/katholt/kaptive#faqs)
 * [Citation](https://github.com/katholt/kaptive#citation)
 * [License](https://github.com/katholt/kaptive#license)
 
@@ -271,6 +272,21 @@ Note that KL156-D1 is included in the primary reference database since no full-l
 
 We recommend screening your data with the primary reference database first to find the best-matching K-locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
 WARNING: If you use the variant database please inspect your results carefully and decide for yourself what constitutes a confident match! Kaptive is not optimised for accurate variant detection. 
+
+## FAQs
+
+#### Why are there K-locus genes found outside the K-locus?
+
+A number of the K-locus genes are orthologous to genes outside of the K-locus region of the genome. E.g the Klebsiella K-locus <i>man</i> and <i>rml</i> genes have orthologues in the LPS (lipopolysacharide) locus; so it is not unusual to find a small number of genes "outside" the locus.
+However, if you have a large number of genes (>5) outside the locus it may mean that there is a problem with the locus match, or that your assembly is very fragmented or contaminated (contains more than one sample).
+
+#### How can my sample be missing K-locus genes when it has a full-length, high identity K-locus match?
+
+Kaptive uses 'tblastn' to screen for the presence of each K-locus gene with a coverage threshold of 90%. A single non-sense mutation or small indel in the centre of a gene will interrupt the 'tblastn' match and cause it to fall below the 90% threshold. However, such a small change has only a minor effect on the nucleotide 'blast' match across the full locus.
+
+#### Why does the K-locus region of my sample contain a <i>ugd</i> gene matching another locus?
+
+A small number of the original K-locus references are truncated, containing only a partial <i>ugd</i> sequence. The reference annotations for these loci do not include <i>ugd</i>, so are not identified by the 'tblastn' search. Instead <b>Kaptive</b> reports the closest match to the partial sequence (if it exceeds the 90% coverage threshold). 
 
 
 ## Citation
