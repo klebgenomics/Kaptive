@@ -269,6 +269,9 @@ The variants database comprises full-length annotated sequences for variants of 
 * Deletion variants are named KLN-D1, -D2 etc e.g. KL15-D1 is a deletion variant of KL15.
 Note that KL156-D1 is included in the primary reference database since no full-length version of this locus has been identified to date. 
 
+We recommend screening your data with the primary reference database first to find the best-matching K-locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
+WARNING: If you use the variant database please inspect your results carefully and decide for yourself what constitutes a confident match! Kaptive is not optimised for accurate variant detection. 
+
 
 ## Citation
 
