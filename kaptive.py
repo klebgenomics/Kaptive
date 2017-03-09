@@ -661,6 +661,9 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
             else:
                 hit = expected_hits_outside_locus[gene_name]
             gene_dict['tblastn result'] = hit.get_blast_result_json_dict(assembly)
+            gene_dict['Match confidence'] = hit.get_match_confidence()
+        else:
+            gene_dict['Match confidence'] = 'Not found'
 
         k_locus_genes.append(gene_dict)
     json_record['K locus genes'] = k_locus_genes
@@ -823,7 +826,9 @@ def float_to_str(float_in):
 def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     """Returns a list BlastHit objects for a search of the given query in the given database."""
     if genes:
-        command = ['tblastn']
+        command = ['tblastn',
+                   '-db_gencode', '11',  # bacterial translation table
+                   '-seg', 'no']         # don't filter out low complexity regions
     else:
         command = ['blastn', '-task', 'blastn']
     command += ['-db', database, '-query', query, '-num_threads', str(threads), '-outfmt',
@@ -834,7 +839,22 @@ def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     out = convert_bytes_to_str(out)
     err = convert_bytes_to_str(err)
     if err:
-        quit_with_error('blastn encountered an error:\n' + err)
+        quit_with_error(command[0] + ' encountered an error:\n' + err)
+    if process.returncode != 0:
+        msg = command[0] + ' crashed!\n'
+
+        # A known crash can occur with tblastn and recent versions of BLAST+ when multiple threads
+        # are used. Check for this case and display an informative error message if so.
+        version = get_blast_version(command[0])
+        bad_version = (version == '2.4.0') or (version == '2.5.0') or (version == '2.6.0')
+        if threads > 1 and bad_version:
+            msg += '\nYou are using BLAST+ v' + version + ' which may crash when running with '
+            msg += 'multiple threads.\n\n'
+            msg += 'To avoid this issue, try one of the following:\n'
+            msg += '  1) Use an unaffected version of BLAST+ (v2.3.0 or earlier should work)\n'
+            msg += '  2) Run Kaptive with "--threads 1" (will probably be slower)\n'
+        quit_with_error(msg)
+
     if genes:
         blast_hits = [GeneBlastHit(line) for line in line_iterator(out)]
     elif type_genes:
@@ -842,6 +862,18 @@ def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     else:
         blast_hits = [BlastHit(line) for line in line_iterator(out)]
     return blast_hits
+
+
+def get_blast_version(program):
+    command = [program, '-version']
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    out = convert_bytes_to_str(out)
+    err = convert_bytes_to_str(err)
+    try:
+        return out.split(': ')[1].split()[0].split('+')[0]
+    except IndexError:
+        return ''
 
 
 def get_best_hit_for_query(blast_hits, query_name, k_locus):
@@ -1207,6 +1239,21 @@ class GeneBlastHit(BlastHit):
         blast_results['Nucleotide sequence'] = nuc_seq
         blast_results['Protein sequence'] = self.sseq
         return blast_results
+
+    def get_match_confidence(self):
+        cov = self.query_cov
+        ident = self.pident
+        if cov == 100.0 and ident >= 99.0:
+            confidence = 'Very high'
+        elif cov >= 99.0 and ident >= 95.0:
+            confidence = 'High'
+        elif cov >= 97.0 and ident >= 95.0:
+            confidence = 'Good'
+        elif cov >= 95.0 and ident >= 85.0:
+            confidence = 'Low'
+        else:
+            confidence = 'None'
+        return confidence
 
 
 class TypeGeneBlastHit(BlastHit):
