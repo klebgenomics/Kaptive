@@ -627,7 +627,7 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
     for i, piece in enumerate(k_locus.assembly_pieces):
         assembly_piece = OrderedDict()
         assembly_piece['Contig name'] = piece.contig_name
-        assembly_piece['Contig start position'] = piece.start
+        assembly_piece['Contig start position'] = piece.start + 1
         assembly_piece['Contig end position'] = piece.end
         assembly_piece['Contig strand'] = piece.strand
         piece_seq = piece.get_sequence()
