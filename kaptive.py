@@ -46,6 +46,8 @@ import gzip
 from collections import OrderedDict
 from Bio import SeqIO
 
+__version__ = '0.3'
+
 
 def main():
     """Script execution starts here."""
@@ -102,6 +104,8 @@ def get_argument_parser():
 
 
 def add_arguments_to_parser(parser):
+    parser.add_argument('--version', action='version', version='Kaptive ' + __version__,
+                        help="Show Kaptive's version number and exit")
     parser.add_argument('-a', '--assembly', nargs='+', type=str, required=True,
                         help='FASTA file(s) for assemblies')
     parser.add_argument('-k', '--k_refs', type=str, required=True,
