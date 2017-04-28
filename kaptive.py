@@ -1785,12 +1785,18 @@ def strip_extensions(filename):
       assembly.fa.gz -> assembly
       genome.assembly.fa.gz -> genome.assembly
     """
-    base_name = os.path.basename(filename)
-    name_parts = base_name.split('.')
-    for i in range(2):
-        if len(name_parts) > 1 and len(name_parts[-1]) <= 5:
-            name_parts = name_parts[:-1]
-    return '.'.join(name_parts)
+    name = os.path.basename(filename)
+    if name.lower().endswith('.gz'):
+        name = name[:-3]
+    if name.lower().endswith('.fa'):
+        name = name[:-3]
+    elif name.lower().endswith('.fna'):
+        name = name[:-4]
+    elif name.lower().endswith('.fas'):
+        name = name[:-4]
+    elif name.lower().endswith('.fasta'):
+        name = name[:-6]
+    return name
 
 
 if __name__ == '__main__':
