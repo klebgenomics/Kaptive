@@ -109,7 +109,7 @@ def add_arguments_to_parser(parser):
     parser.add_argument('-a', '--assembly', nargs='+', type=str, required=True,
                         help='FASTA file(s) for assemblies')
     parser.add_argument('-k', '--k_refs', type=str, required=True,
-                        help='GenBank file with reference K loci')
+                        help='GenBank file with reference loci')
     parser.add_argument('-g', '--allelic_typing', type=str, required=False,
                         help='SRST2-formatted FASTA file of allelic typing genes to include in '
                              'results')
@@ -221,12 +221,17 @@ def parse_genbank(genbank, temp_dir, locus_label):
                 for note in feature.qualifiers['note']:
                     if note.startswith(locus_label):
                         k_locus_name = get_locus_name_from_note(note, locus_label)
+                    elif note.startswith('Extra genes'):
+                        k_locus_name = note.replace(':', '').replace(' ', '_')
         if k_locus_name in k_ref_genes:
             quit_with_error('Duplicate reference K locus name: ' + k_locus_name)
         k_ref_genes[k_locus_name] = []
-        k_ref_seqs.write('>' + k_locus_name + '\n')
-        k_ref_seqs.write(add_line_breaks_to_sequence(str(record.seq), 60))
-        
+
+        # Extra genes are only used for the gene search, not the nucleotide search.
+        if not k_locus_name.startswith('Extra_genes'):
+            k_ref_seqs.write('>' + k_locus_name + '\n')
+            k_ref_seqs.write(add_line_breaks_to_sequence(str(record.seq), 60))
+
         gene_num = 1
         for feature in record.features:
             if feature.type == 'CDS':
@@ -241,7 +246,7 @@ def parse_genbank(genbank, temp_dir, locus_label):
 
 def find_locus_label(genbank):
     """
-    Automatically finds the label for the K locus sequences. The Genbank file must have exactly one
+    Automatically finds the label for the locus sequences. The Genbank file must have exactly one
     possible label that is present in a note qualifier in the source feature for every record. If
     not, Kaptive will quit with an error.
     """
@@ -266,6 +271,8 @@ def find_locus_label(genbank):
                         locus_labels.add(note.split(':')[0].strip())
                     if '=' in note:
                         locus_labels.add(note.split('=')[0].strip())
+        if any(x == 'Extra genes' for x in locus_labels):
+            continue
         if not locus_labels:
             quit_with_error('no possible locus labels were found for ' + record.name)
         previous_labels = available_locus_labels.copy()
