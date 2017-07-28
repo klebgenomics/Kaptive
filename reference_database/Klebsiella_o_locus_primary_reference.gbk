@@ -3210,7 +3210,7 @@ ORIGIN
     11761 gaagagatgt ttacagccga ccatatgatt gacgcttacg tcaatctcta cactacgctg
     11821 ctggaaagca aatcctga
 //
-LOCUS       LT174605               9449 bp    DNA     linear   BCT 13-JUN-2016
+LOCUS       LT174605                9449 bp    DNA     linear   BCT 13-JUN-2016
 DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
             gene cluster, type: O4.
 ACCESSION   LT174605
@@ -3918,7 +3918,7 @@ ORIGIN
     12001 cgttttgaag agatgtttac tgccgaccat atgattgacg cttacgtcaa tctctacact
     12061 acgctgctgg aaagcaaatc ctga
 //
-LOCUS       AB819963               9395 bp    DNA     linear   BCT 02-APR-2016
+LOCUS       AB819963                9395 bp    DNA     linear   BCT 02-APR-2016
 DEFINITION  Klebsiella pneumoniae DNA, lipopolysaccharide biosynthesis gene
             cluster, serotype: O8, complete sequence, strain: 889.
 ACCESSION   AB819963
@@ -4237,7 +4237,7 @@ ORIGIN
      9301 actacccgct gtacaaagcg ttaaaaaggc taatatcaaa aatgtcctgg ccaggtgcta
      9361 aaaaagatta ccgtggtaat cttttaaatc aataa
 //
-LOCUS       LT174607               3130 bp    DNA     linear   BCT 13-JUN-2016
+LOCUS       LT174607                3130 bp    DNA     linear   BCT 13-JUN-2016
 DEFINITION  Klebsiella pneumoniae D-Gal II biosynthesis gene cluster wbbYZ.
 ACCESSION   LT174607
 VERSION     LT174607.1  GI:1036211132
