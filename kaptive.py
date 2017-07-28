@@ -351,7 +351,7 @@ def quit_with_error(message):
 def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
     """
     Searches for all known K types in the given assembly and returns the best match.
-    Best match is defined as the K type for which the largest fraction of the K type has a BLAST
+    Best match is defined as the K type for which the largest fraction of the K locus has a BLAST
     hit to the assembly. In cases of a tie, the mean identity of the K type BLAST hits are used to
     determine the best.
     """
