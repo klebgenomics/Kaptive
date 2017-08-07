@@ -84,6 +84,7 @@ def main():
         if args.no_seq_out:
             os.remove(assembly_pieces_fasta)
         protein_blast(assembly, best_k, gene_seqs, args)
+        check_name_for_O1_O2(best_k)
 
         output(args.out, assembly, best_k, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
@@ -544,6 +545,25 @@ def get_type_gene_names(type_genes_fasta):
             quit_with_error(type_genes_fasta + ' not formatted as an SRST2 database FASTA file')
         gene_names = sorted(list(gene_names))
     return gene_names
+
+
+def check_name_for_O1_O2(k_locus):
+    """
+    This function has special logic for dealing with the O1/O2 locus. If the wbbY and wbbZ genes
+    are both found, then we call the locus O2 (instead of O1/O2). If neither are found, then we
+    call the locus O1.
+    """
+    if not (k_locus.name == 'O1/O2v1' or k_locus.name == 'O1/O2v2'):
+        return
+    other_gene_names = [x.qseqid for x in k_locus.other_hits_outside_locus]
+    both_absent = ('Extra_genes_wbbY/wbbZ_01_wbbY' not in other_gene_names and
+                   'Extra_genes_wbbY/wbbZ_02_wbbZ' not in other_gene_names)
+    both_present = ('Extra_genes_wbbY/wbbZ_01_wbbY' in other_gene_names and
+                    'Extra_genes_wbbY/wbbZ_02_wbbZ' in other_gene_names)
+    if both_absent:
+        k_locus.name = k_locus.name.replace('O1/O2', 'O1')
+    elif both_present:
+        k_locus.name = k_locus.name.replace('O1/O2', 'O2')
 
 
 def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_results,
