@@ -43,6 +43,7 @@ import subprocess
 import json
 import fcntl
 import gzip
+import copy
 from collections import OrderedDict
 from Bio import SeqIO
 
@@ -84,7 +85,7 @@ def main():
         if args.no_seq_out:
             os.remove(assembly_pieces_fasta)
         protein_blast(assembly, best_k, gene_seqs, args)
-        check_name_for_O1_O2(best_k)
+        check_name_for_o1_o2(best_k)
 
         output(args.out, assembly, best_k, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
@@ -381,7 +382,7 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
                 k_ref.get_mean_blast_hit_identity() > best_k_ref.get_mean_blast_hit_identity():
             best_k_ref = k_ref
     best_k_ref.clean_up_blast_hits()
-    return best_k_ref
+    return copy.copy(best_k_ref)
 
 
 def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
@@ -547,7 +548,7 @@ def get_type_gene_names(type_genes_fasta):
     return gene_names
 
 
-def check_name_for_O1_O2(k_locus):
+def check_name_for_o1_o2(k_locus):
     """
     This function has special logic for dealing with the O1/O2 locus. If the wbbY and wbbZ genes
     are both found, then we call the locus O2 (instead of O1/O2). If neither are found, then we
@@ -556,13 +557,13 @@ def check_name_for_O1_O2(k_locus):
     if not (k_locus.name == 'O1/O2v1' or k_locus.name == 'O1/O2v2'):
         return
     other_gene_names = [x.qseqid for x in k_locus.other_hits_outside_locus]
-    both_absent = ('Extra_genes_wbbY/wbbZ_01_wbbY' not in other_gene_names and
-                   'Extra_genes_wbbY/wbbZ_02_wbbZ' not in other_gene_names)
     both_present = ('Extra_genes_wbbY/wbbZ_01_wbbY' in other_gene_names and
                     'Extra_genes_wbbY/wbbZ_02_wbbZ' in other_gene_names)
-    if both_absent:
+    both_absent = ('Extra_genes_wbbY/wbbZ_01_wbbY' not in other_gene_names and
+                   'Extra_genes_wbbY/wbbZ_02_wbbZ' not in other_gene_names)
+    if both_present:
         k_locus.name = k_locus.name.replace('O1/O2', 'O1')
-    elif both_present:
+    elif both_absent:
         k_locus.name = k_locus.name.replace('O1/O2', 'O2')
 
 
