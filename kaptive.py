@@ -47,7 +47,7 @@ import copy
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '0.3'
+__version__ = '0.4'
 
 
 def main():
