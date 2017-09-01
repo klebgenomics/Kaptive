@@ -11,31 +11,37 @@ Given a novel genome and a database of known K loci, Kaptive will help a user to
 
 In cases where your input assembly closely matches a known K locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate K locus sequences for totally novel types – if it indicates a novel K locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the K locus sequence in your assembly is broken into multiple pieces.
 
-Read more about Kaptive and how it was used to classifying K loci in Klebsiella here:
-[Wyres, K. et al. Identification of Klebsiella capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
+__Update__: as of v0.4, Kaptive now includes a [_Klebsiella_ O locus database](#klebsiella-o-locus-database) as well!
+
+Read more about Kaptive and how it was used to classify K loci in _Klebsiella_ here:
+[Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
 
 
 ## Table of Contents
 
-* [Quick version (for the impatient)](https://github.com/katholt/kaptive#quick-version-for-the-impatient)
-* [Installation](https://github.com/katholt/kaptive#installation)
-* [Input files](https://github.com/katholt/kaptive#input-files)
-* [Standard output](https://github.com/katholt/kaptive#standard-output)
-  * [Basic](https://github.com/katholt/kaptive#basic)
-  * [Verbose](https://github.com/katholt/kaptive#verbose)
-* [Output files](https://github.com/katholt/kaptive#output-files)
-  * [Summary table](https://github.com/katholt/kaptive#summary-table)
-  * [K locus matching sequences](https://github.com/katholt/kaptive#K-locus-matching-sequences)
-* [Example results and interpretation](https://github.com/katholt/kaptive#example-results-and-interpretation)
-  * [Very close match](https://github.com/katholt/kaptive#very-close-match)
-  * [More distant match](https://github.com/katholt/kaptive#more-distant-match)
-  * [Broken assembly](https://github.com/katholt/kaptive#broken-assembly)
-  * [Poor match](https://github.com/katholt/kaptive#poor-match)
-* [Advanced options](https://github.com/katholt/kaptive#advanced-options)
-* [SLURM jobs](https://github.com/katholt/kaptive#slurm-jobs)
-* [FAQs](https://github.com/katholt/kaptive#faqs)
-* [Citation](https://github.com/katholt/kaptive#citation)
-* [License](https://github.com/katholt/kaptive#license)
+* [Quick version (for the impatient)](#quick-version-for-the-impatient)
+* [Installation](#installation)
+* [Input files](#input-files)
+* [Standard output](#standard-output)
+    * [Basic](#basic)
+    * [Verbose](#verbose)
+* [Output files](#output-files)
+    * [Summary table](#summary-table)
+    * [JSON](#json)
+    * [K locus matching sequences](#k-locus-matching-sequences)
+* [Example results and interpretation](#example-results-and-interpretation)
+    * [Very close match](#very-close-match)
+    * [More distant match](#more-distant-match)
+    * [Broken assembly](#broken-assembly)
+    * [Poor match](#poor-match)
+* [Advanced options](#advanced-options)
+* [SLURM jobs](#slurm-jobs)
+* [Databases distributed with Kaptive](#databases-distributed-with-kaptive)
+    * [_Klebsiella_ K locus databases](#klebsiella-k-locus-databases)
+    * [_Klebsiella_ O locus database](#klebsiella-o-locus-database)
+* [FAQs](#faqs)
+* [Citation](#citation)
+* [License](#license)
 
 
 ## Quick version (for the impatient)
@@ -226,7 +232,7 @@ assembly_3 | K2 | ?- | 99.95% | 98.38% | n/a | 17 / 18 (94.4%) | ... | K2-CDS17-
 
 Here is a case where our assembly matched a known K locus type well (high coverage and identity) but with a couple of problems. First, the `?` character indicates that the K locus sequence was not found in one piece in the assembly. Second, one of the expected genes (K2-CDS17-manB) was not found in the gene BLAST search.
 
-In cases like this, it is worth examining the case in more detail outside of Kaptive. For this example, such an examination revealed that the assembly was poor (broken into many small pieces) and the manB gene happened to be split between two contigs. So the manB gene isn't really missing, it's just broken in two. Our sample most likely is a very good match for K2, but the poor assembly quality made it difficult for Kaptive to determine that automatically.
+In cases like this, it is worth examining the case in more detail outside of Kaptive. For this example, such an examination revealed that the assembly was poor (broken into many small pieces) and the _manB_ gene happened to be split between two contigs. So the _manB_ gene isn't really missing, it's just broken in two. Our sample most likely is a very good match for K2, but the poor assembly quality made it difficult for Kaptive to determine that automatically.
 
 #### Poor match
 
@@ -255,17 +261,19 @@ Each of these options has a default and is not required on the command line, but
 
 If you are running this script on a cluster using [SLURM](http://slurm.schedmd.com/), then you can make use of the extra script: `kaptive_slurm.py`. This will create one SLURM job for each assembly so the jobs can run in parallel. All simultaneous jobs can write to the same output table. It may be necessary to modify this script to suit the details of your cluster.
 
+
+
 ## Databases distributed with Kaptive
 
-#### Klebsiella K locus databases
+#### _Klebsiella_ K locus databases
 
-The primary reference database comprises full-length (galF to ugd) annotated sequences for each distinct Klebsiella K locus, where available:
+The primary reference database (`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length (_galF_ to _ugd_) annotated sequences for each distinct _Klebsiella_ K locus, where available:
 * KL1 - KL77 correspond to the loci associated with each of the 77 serologically defined K-type references.
 * KL101 and above are defined from DNA sequence data on the basis of gene content.
 Note that insertion sequences (IS) are excluded from this database since we assume that the ancestral sequence was likely IS-free and IS transposase genes are not specific to the K locus.
 Synthetic IS-free K locus sequences were generated for K loci for which no naturally occurring IS-free variants have been identified to date.
 
-The variants database comprises full-length annotated sequences for variants of the distinct loci:
+The variants database (`Klebsiella_k_locus_variant_reference.gbk`) comprises full-length annotated sequences for variants of the distinct loci:
 * IS variants are named as KLN -1, -2 etc e.g. KL15-1 is an IS variant of KL15.
 * Deletion variants are named KLN-D1, -D2 etc e.g. KL15-D1 is a deletion variant of KL15.
 Note that KL156-D1 is included in the primary reference database since no full-length version of this locus has been identified to date. 
@@ -273,11 +281,22 @@ Note that KL156-D1 is included in the primary reference database since no full-l
 We recommend screening your data with the primary reference database first to find the best-matching K-locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
 WARNING: If you use the variant database please inspect your results carefully and decide for yourself what constitutes a confident match! Kaptive is not optimised for accurate variant detection. 
 
+
+#### _Klebsiella_ O locus database
+
+The O locus database (`Klebsiella_o_locus_primary_reference.gbk`) contains annotated sequences for 12 distinct _Klebsiella_ O loci.
+
+O locus classification requires some special logic, as the O1 and O2 serotypes contain the same locus genes. It is two additional genes elsewhere in the chromosome (_wbbY_ and _wbbZ_) which results in the O1 antigen. Kaptive therefore looks for these genes to properly call an assembly as either O1 or O2. When only one of the two additional genes can be found, the result is ambiguous and Kaptive will report a locus type of O1/O2.
+
+Read more about the O locus and its classification here: [The diversity of _Klebsiella_ pneumoniae surface polysaccharides](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5320592/).
+
+
+
 ## FAQs
 
 #### Why are there K-locus genes found outside the K-locus?
 
-A number of the K-locus genes are orthologous to genes outside of the K-locus region of the genome. E.g the Klebsiella K-locus <i>man</i> and <i>rml</i> genes have orthologues in the LPS (lipopolysacharide) locus; so it is not unusual to find a small number of genes "outside" the locus.
+A number of the K-locus genes are orthologous to genes outside of the K-locus region of the genome. E.g the _Klebsiella_ K-locus <i>man</i> and <i>rml</i> genes have orthologues in the LPS (lipopolysacharide) locus; so it is not unusual to find a small number of genes "outside" the locus.
 However, if you have a large number of genes (>5) outside the locus it may mean that there is a problem with the locus match, or that your assembly is very fragmented or contaminated (contains more than one sample).
 
 #### How can my sample be missing K-locus genes when it has a full-length, high identity K-locus match?
@@ -292,11 +311,11 @@ A small number of the original K-locus references are truncated, containing only
 ## Citation
 
 If you use Kaptive in your research, please cite this paper:
-[Wyres, K. et al. Identification of Klebsiella capsule synthesis loci from whole genome data. bioRxiv (2016).](http://biorxiv.org/content/early/2016/08/24/071415)
+[Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
 
 
 ## License
 
 GNU General Public License, version 3
 
-http://dx.doi.org/10.5281/zenodo.55773
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.495263.svg)](https://doi.org/10.5281/zenodo.495263)
