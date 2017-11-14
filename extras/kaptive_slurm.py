@@ -14,6 +14,7 @@ from __future__ import division
 import sys
 import argparse
 import os
+import time
 
 
 def find_script():
@@ -101,6 +102,7 @@ def main():
         print(slurm_string)
         print()
         os.system('echo "' + slurm_string + '" | sbatch')
+        time.sleep(0.1)
         print()
 
 
