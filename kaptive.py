@@ -82,7 +82,7 @@ def main():
         find_assembly_pieces(assembly, best_k, args)
         assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
         type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
-        if args.no_seq_out:
+        if args.no_seq_out and assembly_pieces_fasta is not None:
             os.remove(assembly_pieces_fasta)
         protein_blast(assembly, best_k, gene_seqs, args)
         check_name_for_o1_o2(best_k)
