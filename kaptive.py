@@ -79,13 +79,17 @@ def main():
     for fasta_file in args.assembly:
         assembly = Assembly(fasta_file)
         best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
-        find_assembly_pieces(assembly, best_k, args)
-        assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
-        type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
-        if args.no_seq_out and assembly_pieces_fasta is not None:
-            os.remove(assembly_pieces_fasta)
-        protein_blast(assembly, best_k, gene_seqs, args)
-        check_name_for_o1_o2(best_k)
+        if best_k is None:
+            type_gene_results = {}
+            best_k = KLocus('None', '', [])
+        else:
+            find_assembly_pieces(assembly, best_k, args)
+            assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
+            type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
+            if args.no_seq_out and assembly_pieces_fasta is not None:
+                os.remove(assembly_pieces_fasta)
+            protein_blast(assembly, best_k, gene_seqs, args)
+            check_name_for_o1_o2(best_k)
 
         output(args.out, assembly, best_k, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
@@ -367,6 +371,7 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
     for k_ref in k_refs.values():
         k_ref.clear()
     blast_hits = get_blast_hits(assembly.fasta, k_refs_fasta, threads)
+
     for hit in blast_hits:
         if hit.qseqid not in k_refs:
             quit_with_error('BLAST hit (' + hit.qseqid + ') not found in K locus references')
@@ -381,7 +386,8 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
         elif cov == best_cov and best_k_ref and \
                 k_ref.get_mean_blast_hit_identity() > best_k_ref.get_mean_blast_hit_identity():
             best_k_ref = k_ref
-    best_k_ref.clean_up_blast_hits()
+    if best_k_ref is not None:
+        best_k_ref.clean_up_blast_hits()
     return copy.copy(best_k_ref)
 
 
@@ -575,17 +581,20 @@ def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_re
     """
     uncertainty_chars = k_locus.get_match_uncertainty_chars()
 
-    expected_in_locus_per = 100.0 * len(k_locus.expected_hits_inside_locus) / \
-        len(k_locus.gene_names)
-    expected_out_locus_per = 100.0 * len(k_locus.expected_hits_outside_locus) / \
-        len(k_locus.gene_names)
-    expected_genes_in_locus_str = str(len(k_locus.expected_hits_inside_locus)) + ' / ' + \
-        str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_in_locus_per) + '%)'
-    expected_genes_out_locus_str = str(len(k_locus.expected_hits_outside_locus)) + ' / ' + \
-        str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_out_locus_per) + '%)'
-    missing_per = 100.0 * len(k_locus.missing_expected_genes) / len(k_locus.gene_names)
-    missing_genes_str = str(len(k_locus.missing_expected_genes)) + ' / ' + \
-        str(len(k_locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
+    try:
+        expected_in_locus_per = 100.0 * len(k_locus.expected_hits_inside_locus) / \
+            len(k_locus.gene_names)
+        expected_out_locus_per = 100.0 * len(k_locus.expected_hits_outside_locus) / \
+            len(k_locus.gene_names)
+        expected_genes_in_locus_str = str(len(k_locus.expected_hits_inside_locus)) + ' / ' + \
+            str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_in_locus_per) + '%)'
+        expected_genes_out_locus_str = str(len(k_locus.expected_hits_outside_locus)) + ' / ' + \
+            str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_out_locus_per) + '%)'
+        missing_per = 100.0 * len(k_locus.missing_expected_genes) / len(k_locus.gene_names)
+        missing_genes_str = str(len(k_locus.missing_expected_genes)) + ' / ' + \
+            str(len(k_locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
+    except ZeroDivisionError:
+        expected_genes_in_locus_str, expected_genes_out_locus_str, missing_genes_str = '', '', ''
 
     output_to_stdout(assembly, k_locus, args.verbose, type_gene_names, type_gene_results,
                      uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str,
@@ -1372,7 +1381,10 @@ class KLocus(object):
 
     def get_coverage(self):
         """Returns the % of this K locus which is covered by BLAST hits in the given assembly."""
-        return 100.0 * self.hit_ranges.get_total_length() / len(self.seq)
+        try:
+            return 100.0 * self.hit_ranges.get_total_length() / len(self.seq)
+        except ZeroDivisionError:
+            return 0.0
     
     def get_coverage_string(self):
         return '%.2f' % self.get_coverage() + '%'
