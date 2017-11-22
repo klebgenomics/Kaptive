@@ -769,7 +769,7 @@ def write_json_file(output_prefix, json_list):
             try:
                 existing_json_list = json.loads(file_data, object_pairs_hook=OrderedDict)
                 json_list = existing_json_list + json_list
-            except json.decoder.JSONDecodeError:
+            except ValueError:
                 pass
             json_out.seek(0)
             json_out.write(json.dumps(json_list, indent=4))
@@ -910,7 +910,6 @@ def get_blast_version(program):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = process.communicate()
     out = convert_bytes_to_str(out)
-    err = convert_bytes_to_str(err)
     try:
         return out.split(': ')[1].split()[0].split('+')[0]
     except IndexError:
@@ -958,7 +957,6 @@ def merge_assembly_pieces(pieces):
     Takes a list of AssemblyPiece objects and returns another list of AssemblyPiece objects where
     the overlapping pieces have been merged.
     """
-    merged_pieces = []
     while True:
         merged_pieces = []
         merge_count = 0
