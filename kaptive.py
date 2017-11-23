@@ -44,6 +44,7 @@ import json
 import fcntl
 import gzip
 import copy
+import random
 from collections import OrderedDict
 from Bio import SeqIO
 
@@ -187,7 +188,7 @@ def fix_paths(args):
 
 def make_temp_dir(args):
     """Makes the temporary directory, if necessary. Returns the temp directory path."""
-    temp_dir_name = 'temp_' + str(os.getpid())
+    temp_dir_name = 'kaptive_temp_' + str(os.getpid()) + '_' + str(random.randint(0, 999999))
     temp_dir = os.path.join(os.path.dirname(args.out), temp_dir_name)
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
@@ -198,10 +199,19 @@ def clean_up(k_ref_seqs, gene_seqs, temp_dir):
     """
     Deletes the temporary FASTA files. If the temp directory is then empty, it is deleted too.
     """
-    os.remove(k_ref_seqs)
-    os.remove(gene_seqs)
-    if not os.listdir(temp_dir):
-        os.rmdir(temp_dir)
+    try:
+        os.remove(k_ref_seqs)
+    except OSError:
+        pass
+    try:
+        os.remove(gene_seqs)
+    except OSError:
+        pass
+    try:
+        if not os.listdir(temp_dir):
+            os.rmdir(temp_dir)
+    except FileNotFoundError:
+        pass
 
 
 def parse_genbank(genbank, temp_dir, locus_label):
