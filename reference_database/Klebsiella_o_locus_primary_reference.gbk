@@ -2419,7 +2419,7 @@ ORIGIN
 //
 LOCUS       LT174603               11906 bp    DNA     linear   BCT 13-JUN-2016
 DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
-            gene cluster, type: O3, wbdD long.
+            gene cluster, type: O3/O3a.
 ACCESSION   LT174603
 VERSION     LT174603.1  GI:1036211094
 KEYWORDS    .
@@ -2443,9 +2443,10 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="AKPRH077088"
-                     /serovar="O3 wbdD long"
+                     /serovar="O3/O3a"
                      /db_xref="taxon:573"
-                     /note="O locus: O3l"
+                     /note="O locus: O3/O3a"
+                     /note="annotation edited from original by K. Wyres Jan 2018"
      gene            1..1416
                      /gene="manC"
      CDS             1..1416
@@ -2816,7 +2817,7 @@ ORIGIN
 //
 LOCUS       LT174604               11838 bp    DNA     linear   BCT 13-JUN-2016
 DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
-            gene cluster, type: O3, wbdD short.
+            gene cluster, type: O3b.
 ACCESSION   LT174604
 VERSION     LT174604.1  GI:1036211103
 KEYWORDS    .
@@ -2840,9 +2841,10 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="539"
-                     /serovar="O3 wbdD short"
+                     /serovar="O3b"
                      /db_xref="taxon:573"
-                     /note="O locus: O3s"
+                     /note="O locus: O3b"
+                     /note="annotation edited from original by K. Wyres Jan 2018"
      gene            1..1416
                      /gene="manC"
      CDS             1..1416
