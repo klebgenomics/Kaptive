@@ -1,17 +1,15 @@
 <p align="center"><img src="extras/kaptive_logo.png" alt="Kaptive" width="400"></p>
 
 
-Kaptive reports information about capsular (K) loci found in genome assemblies. You can also run a graphical version of Kaptive via [this web interface](http://kaptive.holtlab.net/).
+Kaptive reports information about K and O types for Klebsiella genome assemblies. You can also run a graphical version of Kaptive via [this web interface](http://kaptive.holtlab.net/).
 
-Given a novel genome and a database of known K loci, Kaptive will help a user to decide whether their sample has a known or novel K locus. It carries out the following for each input assembly:
-* BLAST for all known K locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
-* Extract the region(s) of the assembly which correspond to the BLAST hits (i.e. the K locus sequence in the assembly) and save it to a FASTA file.
-* BLAST for all known K locus genes (using `tblastn`) to identify which expected genes (genes in the best matching K locus) are present/missing and whether any unexpected genes (genes from other K loci) are present.
+Given a novel genome and a database of known loci (K or O), Kaptive will help a user to decide whether their sample has a known or novel locus. It carries out the following for each input assembly:
+* BLAST for all known locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
+* Extract the region(s) of the assembly which correspond to the BLAST hits (i.e. the locus sequence in the assembly) and save it to a FASTA file.
+* BLAST for all known locus genes (using `tblastn`) to identify which expected genes (genes in the best matching locus) are present/missing and whether any unexpected genes (genes from other loci) are present.
 * Output a summary to a table file.
 
-In cases where your input assembly closely matches a known K locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate K locus sequences for totally novel types – if it indicates a novel K locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the K locus sequence in your assembly is broken into multiple pieces.
-
-__Update__: as of v0.4, Kaptive now includes a [_Klebsiella_ O locus database](#klebsiella-o-locus-database) as well!
+In cases where your input assembly closely matches a known locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate locus sequences for totally novel types – if it indicates a novel locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the locus sequence in your assembly is broken into multiple pieces.
 
 Read more about Kaptive and how it was used to classify K loci in _Klebsiella_ here:
 [Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
@@ -28,7 +26,7 @@ Read more about Kaptive and how it was used to classify K loci in _Klebsiella_ h
 * [Output files](#output-files)
     * [Summary table](#summary-table)
     * [JSON](#json)
-    * [K locus matching sequences](#k-locus-matching-sequences)
+    * [Locus matching sequences](#locus-matching-sequences)
 * [Example results and interpretation](#example-results-and-interpretation)
     * [Very close match](#very-close-match)
     * [More distant match](#more-distant-match)
@@ -47,23 +45,23 @@ Read more about Kaptive and how it was used to classify K loci in _Klebsiella_ h
 ## Quick version (for the impatient)
 
 Kaptive needs the following input files to run (included in this repository):
-* A multi-record Genbank file with your known K loci (nucleotide sequences for each whole locus and protein sequences for their genes)
+* A multi-record Genbank file with your known loci (nucleotide sequences for each whole locus and protein sequences for their genes)
 * One or more assemblies in FASTA format
 
 Example command:
 
 `kaptive.py -a path/to/assemblies/*.fasta -k database.gbk -o output_directory/prefix`
 
-For each input assembly file, Kaptive will identify the closest known K locus type and report information about the corresponding locus genes.
+For each input assembly file, Kaptive will identify the closest known locus type and report information about the corresponding locus genes.
 
 It generates the following output files:
-* A FASTA file for each input assembly with the nucleotide sequences matching the closest K locus
+* A FASTA file for each input assembly with the nucleotide sequences matching the closest locus
 * A table summarising the results for all input assemblies
 
-Character codes in the output indicate problems with the K locus match:
+Character codes in the output indicate problems with the locus match:
 * `?` = the match was not in a single piece, possible due to a poor match or discontiguous assembly.
-* `-` = genes expected in the K locus were not found.
-* `+` = extra genes were found in the K locus.
+* `-` = genes expected in the locus were not found.
+* `+` = extra genes were found in the locus.
 * `*` = one or more expected genes was found but with low identity.
 
 
@@ -82,14 +80,14 @@ Kaptive has two dependencies:
 
 Using the `-a` (or `--assembly`) argument, you must provide one or more FASTA files to analyse. There are no particular requirements about the header formats in these inputs.
 
-#### K locus references
+#### Locus references
 
-Using the `-k` (or `--k_refs`) argument, you must provide a Genbank file containing one record for each known K locus.
+Using the `-k` (or `--k_refs`) argument, you must provide a Genbank file containing one record for each known locus.
 
 This input Genbank has the following requirements:
-* The `source` feature must contain a `note` qualifier which begins with a label such as 'K locus:'. Whatever follows is used as the K locus name. The label is automatically determined, and any consistent label ending in a colon will work. However, the user can specify exactly which label to use with `--locus_label`, if desired.
-* Any K locus gene should be annotated as `CDS` features. All `CDS` features will be used and any other type of feature will be ignored.
-* If the gene has a name, it should be specified in a `gene` qualifier. This is not required, but if absent the gene will only be named using its numbered position in the K locus.
+* The `source` feature must contain a `note` qualifier which begins with a label such as 'K locus:'. Whatever follows is used as the locus name. The label is automatically determined, and any consistent label ending in a colon will work. However, the user can specify exactly which label to use with `--locus_label`, if desired.
+* Any locus gene should be annotated as `CDS` features. All `CDS` features will be used and any other type of feature will be ignored.
+* If the gene has a name, it should be specified in a `gene` qualifier. This is not required, but if absent the gene will only be named using its numbered position in the locus.
 
 Example piece of input Genbank file:
 ```
@@ -115,7 +113,7 @@ If used, Kaptive will report the number of the best allele for each type gene. I
 
 Kaptive will write a simple line to stdout for each assembly:
 * the assembly name
-* the best K locus match
+* the best locus match
 * character codes for any match problems
 
 Example (no type genes supplied):
@@ -135,14 +133,14 @@ assembly_3: KL17?-*, wzc=18*, wzi=137*
 #### Verbose
 
 If run without the `-v` or `--verbose` option, Kaptive will give detailed information about each assembly including:
-* Which K locus reference best matched the assembly
-* Information about the nucleotide sequence match between the assembly and the best K locus reference:
+* Which locus reference best matched the assembly
+* Information about the nucleotide sequence match between the assembly and the best locus reference:
   * % Coverage and % identity
-  * Length discrepancy (only available if assembled K locus match is in one piece)
+  * Length discrepancy (only available if assembled locus match is in one piece)
   * Contig names and coordinates for matching sequences
 * Details about found genes:
   * Whether they were expected or unexpected
-  * Whether they were found inside or outside the K locus matching sequence
+  * Whether they were found inside or outside the locus matching sequence
   * % Coverage and % identity
   * Contig names and coordinates for matching sequences
 * Best alleles for each type gene (if the user supplied a type gene database)
@@ -154,31 +152,31 @@ If run without the `-v` or `--verbose` option, Kaptive will give detailed inform
 
 Kaptive produces a single tab-delimited table summarising the results of all input assemblies. It has the following columns:
 * **Assembly**: the name of the input assembly, taken from the assembly filename.
-* **Best match locus**: the K locus type which most closely matches the assembly, based on BLAST coverage.
+* **Best match locus**: the locus type which most closely matches the assembly, based on BLAST coverage.
 * **Match confidence**: a categorical measure of match quality:
-  * `Perfect` = the K locus was found in a single piece with 100% coverage and 100% identity.
-  * `Very high` = the K locus was found in a single piece with ≥99% coverage and ≥95% identity, with no missing genes and no extra genes.
-  * `High` = the K locus was found in a single piece with ≥99% coverage, with ≤ 3 missing genes and no extra genes.
-  * `Good` = the K locus was found in a single piece or with ≥95% coverage, with ≤ 3 missing genes and ≤ 1 extra genes.
-  * `Low` = the K locus was found in a single piece or with ≥90% coverage, with ≤ 3 missing genes and ≤ 2 extra genes.
+  * `Perfect` = the locus was found in a single piece with 100% coverage and 100% identity.
+  * `Very high` = the locus was found in a single piece with ≥99% coverage and ≥95% identity, with no missing genes and no extra genes.
+  * `High` = the locus was found in a single piece with ≥99% coverage, with ≤ 3 missing genes and no extra genes.
+  * `Good` = the locus was found in a single piece or with ≥95% coverage, with ≤ 3 missing genes and ≤ 1 extra genes.
+  * `Low` = the locus was found in a single piece or with ≥90% coverage, with ≤ 3 missing genes and ≤ 2 extra genes.
   * `None` = did not qualify for any of the above.
-* **Problems**: characters indicating issues with the K locus match. An absence of any such characters indicates a very good match.
+* **Problems**: characters indicating issues with the locus match. An absence of any such characters indicates a very good match.
   * `?` = the match was not in a single piece, possible due to a poor match or discontiguous assembly.
-  * `-` = genes expected in the K locus were not found.
-  * `+` = extra genes were found in the K locus.
+  * `-` = genes expected in the locus were not found.
+  * `+` = extra genes were found in the locus.
   * `*` = one or more expected genes was found but with low identity.
-* **Coverage**: the percent of the K locus reference which BLAST found in the assembly.
-* **Identity**: the nucleotide identity of the BLAST hits between K locus reference and assembly.
-* **Length discrepancy**: the difference in length between the K locus match and the corresponding part of the assembly. Only available if the K locus was found in a single piece (i.e. the `?` problem character is not used).
-* **Expected genes in locus**: a fraction indicating how many of the genes in the best matching K locus were found in the K locus part of the assembly.
-* **Expected genes in locus, details**: gene names and percent identity (from the BLAST hits) for the expected genes found in the K locus part of the assembly.
+* **Coverage**: the percent of the locus reference which BLAST found in the assembly.
+* **Identity**: the nucleotide identity of the BLAST hits between locus reference and assembly.
+* **Length discrepancy**: the difference in length between the locus match and the corresponding part of the assembly. Only available if the locus was found in a single piece (i.e. the `?` problem character is not used).
+* **Expected genes in locus**: a fraction indicating how many of the genes in the best matching locus were found in the locus part of the assembly.
+* **Expected genes in locus, details**: gene names and percent identity (from the BLAST hits) for the expected genes found in the locus part of the assembly.
 * **Missing expected genes**: a string listing the gene names of expected genes that were not found.
-* **Other genes in locus**: the number of unexpected genes (genes from K loci other than the best match) which were found in the K locus part of the assembly.
-* **Other genes in locus, details**: gene names and percent identity (from the BLAST hits) for the other genes found in the K locus part of the assembly.
-* **Expected genes outside locus**: the number of expected genes which were found in the assembly but not in the K locus part of the assembly (usually zero)
-* **Expected genes outside locus, details**: gene names and percent identity (from the BLAST hits) for the expected genes found outside the K locus part of the assembly.
-* **Other genes outside locus**: the number of unexpected genes (genes from K loci other than the best match) which were found outside the K locus part of the assembly.
-* **Other genes outside locus, details**: gene names and percent identity (from the BLAST hits) for the other genes found outside the K locus part of the assembly.
+* **Other genes in locus**: the number of unexpected genes (genes from loci other than the best match) which were found in the locus part of the assembly.
+* **Other genes in locus, details**: gene names and percent identity (from the BLAST hits) for the other genes found in the locus part of the assembly.
+* **Expected genes outside locus**: the number of expected genes which were found in the assembly but not in the locus part of the assembly (usually zero)
+* **Expected genes outside locus, details**: gene names and percent identity (from the BLAST hits) for the expected genes found outside the locus part of the assembly.
+* **Other genes outside locus**: the number of unexpected genes (genes from loci other than the best match) which were found outside the locus part of the assembly.
+* **Other genes outside locus, details**: gene names and percent identity (from the BLAST hits) for the other genes found outside the locus part of the assembly.
 * One column for each type gene (if the user supplied a type gene database)
 
 If the summary table already exists, Kaptive will append to it (not overwrite it). This allows you to run Kaptive in parallel on many assemblies, all outputting to the same table file.
@@ -193,9 +191,9 @@ Kaptive also outputs its results in a JSON file which contains all information f
 To disable JSON output, run Kaptive with `--no_json`.
 
 
-#### K locus matching sequences
+#### Locus matching sequences
 
-For each input assembly, Kaptive produces a Genbank file of the region(s) of the assembly which correspond to the best K locus match. This may be a single piece (in cases of a good assembly and a strong match) or it may be in multiple pieces (in cases of poor assembly and/or a novel K locus). The file is named using the output prefix and the assembly name.
+For each input assembly, Kaptive produces a Genbank file of the region(s) of the assembly which correspond to the best locus match. This may be a single piece (in cases of a good assembly and a strong match) or it may be in multiple pieces (in cases of poor assembly and/or a novel locus). The file is named using the output prefix and the assembly name.
 
 To these output files, run Kaptive with `--no_seq_out`.
 
@@ -249,12 +247,12 @@ A case such as this demands a closer examination outside of Kaptive. It is likel
 
 Each of these options has a default and is not required on the command line, but can be adjusted if desired:
 
-* `--start_end_margin`: Kaptive tries to identify whether the start and end of a K locus are present in an assembly and in the same contig. This option allows for a bit of wiggle room in this determination. For example, if this value is 10 (the default), a K locus match that is missing the first 8 base pairs will still count as capturing the start of the locus. If set to zero, then the BLAST hit(s) must extend to the very start and end of the K locus for Kaptive to consider the match complete.
+* `--start_end_margin`: Kaptive tries to identify whether the start and end of a locus are present in an assembly and in the same contig. This option allows for a bit of wiggle room in this determination. For example, if this value is 10 (the default), a locus match that is missing the first 8 base pairs will still count as capturing the start of the locus. If set to zero, then the BLAST hit(s) must extend to the very start and end of the locus for Kaptive to consider the match complete.
 * `--min_gene_cov`: the minimum required percent coverage for the gene BLAST search. For example if this value is 90 (the default), then a gene BLAST hit which only covers 85% of the gene will be ignored. Using a lower value will allow smaller pieces of genes to be included in the results.
-* `--min_gene_id`: the mimimum required percent identity for the gene BLAST search. For example if this value is 80 (the default), then a gene BLAST hit which has only 65% amino acid identity will be ignored. A lower value will allow for more distant gene hits to be included in the results (possibly resulting in more genes in the 'Other genes outside K locus' category). A higher value will make Kaptive only accept very close gene hits (possibly resulting in low-identity K locus genes not being found and included in 'expected genes not found in K locus').
+* `--min_gene_id`: the mimimum required percent identity for the gene BLAST search. For example if this value is 80 (the default), then a gene BLAST hit which has only 65% amino acid identity will be ignored. A lower value will allow for more distant gene hits to be included in the results (possibly resulting in more genes in the 'Other genes outside locus' category). A higher value will make Kaptive only accept very close gene hits (possibly resulting in low-identity locus genes not being found and included in 'Missing expected genes').
 * `--low_gene_id`: the percent identity threshold for what counts as a low identity match in the gene BLAST search. This only affects whether or not the `*` character is included in the 'Problems'. Default is 95.
-* `--min_assembly_piece`: the smallest piece of the assembly (measured in bases) that will be included in the output FASTA files. For example, if this value is 100 (the default), then a 50 bp match between the assembly and the best matching K locus reference will be ignored.
-* `--gap_fill_size`: the size of assembly gaps to be filled in when producing the output FASTA files. For example, if this value is 100 (the default) and an assembly has two separate K locus BLAST hits which are only 50 bp apart in a contig, they will be merged together into one sequence for the output FASTA. But if the two BLAST hits were 150 bp apart, they will be included in the output FASTA as two separate sequences. A lower value will possibly result in more fragmented output FASTA sequences. A higher value will possibly result in more sequences being included in the K locus output.
+* `--min_assembly_piece`: the smallest piece of the assembly (measured in bases) that will be included in the output FASTA files. For example, if this value is 100 (the default), then a 50 bp match between the assembly and the best matching locus reference will be ignored.
+* `--gap_fill_size`: the size of assembly gaps to be filled in when producing the output FASTA files. For example, if this value is 100 (the default) and an assembly has two separate locus BLAST hits which are only 50 bp apart in a contig, they will be merged together into one sequence for the output FASTA. But if the two BLAST hits were 150 bp apart, they will be included in the output FASTA as two separate sequences. A lower value will possibly result in more fragmented output FASTA sequences. A higher value will possibly result in more sequences being included in the locus output.
 
 
 ## SLURM jobs
