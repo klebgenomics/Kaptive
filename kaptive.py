@@ -48,7 +48,7 @@ import random
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '0.4'
+__version__ = '0.5'
 
 
 def main():
