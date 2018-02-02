@@ -67,11 +67,30 @@ Character codes in the output indicate problems with the locus match:
 
 ## Installation
 
-No explicit installation is required – simply clone (or download) from GitHub and run the Python script.
+Kaptive should work on both Python 2 and 3, but I run/test it on Python 3 and recommend you do the same.
 
-Kaptive has two dependencies:
-* [Biopython](http://biopython.org/wiki/Main_Page) (installation instructions are [here](http://biopython.org/DIST/docs/install/Installation.html)).
-* [BLAST+](http://www.ncbi.nlm.nih.gov/books/NBK279690/) commands must be available on the command line (specifically the commands `makeblastdb`, `blastn` and `tblastn`). BLAST+ can usually be easily installed using a package manager such as [Homebrew](http://brew.sh/) (on Mac) or [apt-get](https://help.ubuntu.com/community/AptGet/Howto) (on Ubuntu and related Linux distributions).
+
+#### Clone and run
+
+Kaptive is a single Python script, so you can simply clone (or download) from GitHub and run it. Kaptive depends on [Biopython](http://biopython.org/wiki/Main_Page), so make sure it's installed (either `pip3 install biopython` or read detailed instructions [here](http://biopython.org/DIST/docs/install/Installation.html)).
+
+```
+git clone https://github.com/katholt/Kaptive
+Kaptive/kaptive.py -h
+```
+
+#### Install with pip
+
+Alternatively, you can install Kaptive using [pip](https://pip.pypa.io/en/stable/). This will take care of the Biopython requirement (if necessary) and put the `kaptive.py` script in your PATH for easy access. Pip installing will _not_ provide the reference databases, so you'll need to download them separately from [here](https://github.com/katholt/Kaptive/tree/master/reference_database).
+
+```
+pip3 install --user git+https://github.com/katholt/Kaptive
+kaptive.py -h
+```
+
+#### Other dependencies
+
+Regardless of how you download/install Kaptive, it requires that [BLAST+](http://www.ncbi.nlm.nih.gov/books/NBK279690/) is available on the command line (specifically the commands `makeblastdb`, `blastn` and `tblastn`). BLAST+ can usually be easily installed using a package manager such as [Homebrew](http://brew.sh/) (on Mac) or [apt-get](https://help.ubuntu.com/community/AptGet/Howto) (on Ubuntu and related Linux distributions).
 
 
 ## Input files
