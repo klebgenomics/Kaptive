@@ -115,7 +115,7 @@ def get_argument_parser():
 
 
 def add_arguments_to_parser(parser):
-    parser.add_argument('--version', action='version', version='Kaptive ' + __version__,
+    parser.add_argument('--version', action='version', version='Kaptive v' + __version__,
                         help="Show Kaptive's version number and exit")
     parser.add_argument('-a', '--assembly', nargs='+', type=str, required=True,
                         help='FASTA file(s) for assemblies')
