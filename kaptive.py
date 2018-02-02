@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Kaptive
+Copyright 2018 Ryan Wick (rrwick@gmail.com)
+https://github.com/katholt/Kaptive
 
-This is a tool which reports information about the K and O types for Klebsiella genome assemblies.
-It will help a user to decide whether their Klebsiella sample has a known or novel locus type, and
-if novel, how similar it is to a known type.
+Kaptive is a tool which reports information about the K and O types for Klebsiella genome
+assemblies. It will help a user to decide whether their Klebsiella sample has a known or novel
+locus type, and if novel, how similar it is to a known type.
 
 This script needs the following input files to run:
 * A Genbank file with known locus types
@@ -27,10 +28,13 @@ Character codes indicate problems with the locus match:
 * `+` indicates that extra genes were found in the locus
 * `*` indicates that one or more expected genes was found but with low identity
 
-https://github.com/katholt/kaptive
-
-Author: Ryan Wick
-email: rrwick@gmail.com
+This file is part of Kaptive. Kaptive is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by the Free Software Foundation,
+either version 3 of the License, or (at your option) any later version. Kaptive is distributed in
+the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+details. You should have received a copy of the GNU General Public License along with Kaptive. If
+not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
@@ -48,7 +52,7 @@ import random
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '0.5'
+__version__ = '0.5.1'
 
 
 def main():
