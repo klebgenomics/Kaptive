@@ -15,7 +15,9 @@ not, see <http://www.gnu.org/licenses/>.
 from setuptools import setup
 
 with open('README.md', 'rb') as readme:
-    LONG_DESCRIPTION = readme.read().decode()
+    long_description = readme.read()
+if not isinstance(long_description, str):
+    long_description = long_description.decode()
 
 # Get the version from kaptive.py.
 __version__ = '0.0.0'
@@ -26,10 +28,11 @@ exec(version_line)
 setup(name='Kaptive',
       version=__version__,
       description='K and O locus typing for Klebsiella assemblies',
-      long_description=LONG_DESCRIPTION,
+      long_description=long_description,
       url='http://github.com/katholt/Kaptive',
       author='Ryan Wick',
       author_email='rrwick@gmail.com',
       license='GPLv3',
       scripts=['kaptive.py'],
+      install_requires=['biopython'],
       zip_safe=False)
