@@ -330,6 +330,9 @@ A small number of the original K-locus references are truncated, containing only
 If you use Kaptive in your research, please cite this paper:
 [Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
 
+If you use [Kaptive Web](http://kaptive.holtlab.net/) in your research, please cite this paper:
+[Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. bioRxiv (2018).](https://www.biorxiv.org/content/early/2018/02/05/260125)
+
 
 ## License
 
