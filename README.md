@@ -282,6 +282,10 @@ If you are running this script on a cluster using [SLURM](http://slurm.schedmd.c
 
 ## Databases distributed with Kaptive
 
+The Kaptive repository contains _Klebsiella_ K-locus and O-locus databases in the [reference_database](https://github.com/katholt/Kaptive/tree/master/reference_database) directory, but you can run the Kaptive with any appropriately formatted database of your own.
+
+If you have a locus database that you would like to be added to Kaptive for use by yourself and others in the community, [please get in touch](https://github.com/katholt/Kaptive/issues). Similarly, if you have identified new locus variants not currently in the existing databases, let us know!
+
 #### _Klebsiella_ K locus databases
 
 The primary reference database (`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length (_galF_ to _ugd_) annotated sequences for each distinct _Klebsiella_ K locus, where available:
