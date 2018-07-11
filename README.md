@@ -1,7 +1,7 @@
 <p align="center"><img src="extras/kaptive_logo.png" alt="Kaptive" width="400"></p>
 
 
-Kaptive reports information about K and O types for Klebsiella genome assemblies. You can also run a graphical version of Kaptive via [this web interface](http://kaptive.holtlab.net/).
+Kaptive reports information about K and O types for Klebsiella genome assemblies. You can also run a graphical version of Kaptive via [this web interface](http://kaptive.holtlab.net/) ([source code](https://github.com/kelwyres/Kaptive-Web)).
 
 Given a novel genome and a database of known loci (K or O), Kaptive will help a user to decide whether their sample has a known or novel locus. It carries out the following for each input assembly:
 * BLAST for all known locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
@@ -11,8 +11,7 @@ Given a novel genome and a database of known loci (K or O), Kaptive will help a 
 
 In cases where your input assembly closely matches a known locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate locus sequences for totally novel types – if it indicates a novel locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the locus sequence in your assembly is broken into multiple pieces.
 
-Read more about Kaptive and how it was used to classify K loci in _Klebsiella_ here:
-[Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
+Read more about Kaptive, Kaptive Web and the locus databases in [our papers](#citation).
 
 
 ## Table of Contents
@@ -331,11 +330,11 @@ A small number of the original K-locus references are truncated, containing only
 
 ## Citation
 
-If you use Kaptive in your research, please cite this paper:
+If you use Kaptive and/or the K locus database in your research, please cite this paper:
 [Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
 
-If you use [Kaptive Web](http://kaptive.holtlab.net/) in your research, please cite this paper:
-[Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. bioRxiv (2018).](https://www.biorxiv.org/content/early/2018/02/05/260125)
+If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the O locus database in your research, please cite this paper:
+[Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
 
 
 ## License
