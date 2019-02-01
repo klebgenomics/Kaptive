@@ -290,6 +290,7 @@ If you have a locus database that you would like to be added to Kaptive for use 
 The primary reference database (`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length (_galF_ to _ugd_) annotated sequences for each distinct _Klebsiella_ K locus, where available:
 * KL1 - KL77 correspond to the loci associated with each of the 77 serologically defined K-type references.
 * KL101 and above are defined from DNA sequence data on the basis of gene content.
+
 Note that insertion sequences (IS) are excluded from this database since we assume that the ancestral sequence was likely IS-free and IS transposase genes are not specific to the K locus.
 Synthetic IS-free K locus sequences were generated for K loci for which no naturally occurring IS-free variants have been identified to date.
 
@@ -301,6 +302,9 @@ Note that KL156-D1 is included in the primary reference database since no full-l
 We recommend screening your data with the primary reference database first to find the best-matching K-locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
 WARNING: If you use the variant database please inspect your results carefully and decide for yourself what constitutes a confident match! Kaptive is not optimised for accurate variant detection. 
 
+Database versions:
+* Kaptive releases v0.5.1 and below include the original K locus databases, as described in [Wyres, K. et al. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
+* Kaptive v0.6.0 includes four novel primary reference loci defined on the basis of gene content: KL162-KL165
 
 #### _Klebsiella_ O locus database
 
