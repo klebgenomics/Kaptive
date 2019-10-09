@@ -1,36 +1,40 @@
 #!/usr/bin/env python3
 """
-Kaptive
+Copyright 2018 Ryan Wick (rrwick@gmail.com)
+https://github.com/katholt/Kaptive
 
-This is a tool which reports information about the K type for Klebsiella genome assemblies. It
-will help a user to decide whether their Klebsiella sample has a known or novel K type, and if
-novel, how similar it is to a known type.
+Kaptive is a tool which reports information about the K and O types for Klebsiella genome
+assemblies. It will help a user to decide whether their Klebsiella sample has a known or novel
+locus type, and if novel, how similar it is to a known type.
 
 This script needs the following input files to run:
-* A Genbank file with known K types
+* A Genbank file with known locus types
 * One or more assemblies in FASTA format
 
 Example command:
 kaptive.py -a path/to/assemblies/*.fasta -k k_loci_refs.gbk -o output_directory
 
-For each input assembly file, Kaptive will identify the closest known K type and report
-information about the corresponding K locus genes.
+For each input assembly file, Kaptive will identify the closest known locus type and report
+information about the corresponding locus genes.
 
 It generates the following output files:
-* A FASTA file for each input assembly with the nucleotide sequences matching the closest K type
+* A FASTA file for each input assembly with the nucleotide sequences matching the closest locus type
 * A table summarising the results for all input assemblies
 
-Character codes indicate problems with the K locus match:
+Character codes indicate problems with the locus match:
 * `?` indicates that the match was not in a single piece, possible due to a poor match or
       discontiguous assembly
-* `-` indicates that genes expected in the K locus were not found
-* `+` indicates that extra genes were found in the K locus
+* `-` indicates that genes expected in the locus were not found
+* `+` indicates that extra genes were found in the locus
 * `*` indicates that one or more expected genes was found but with low identity
 
-https://github.com/katholt/kaptive
-
-Author: Ryan Wick
-email: rrwick@gmail.com
+This file is part of Kaptive. Kaptive is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by the Free Software Foundation,
+either version 3 of the License, or (at your option) any later version. Kaptive is distributed in
+the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+details. You should have received a copy of the GNU General Public License along with Kaptive. If
+not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
@@ -44,10 +48,11 @@ import json
 import fcntl
 import gzip
 import copy
+import random
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '0.4'
+__version__ = '0.5.1'
 
 
 def main():
@@ -79,13 +84,17 @@ def main():
     for fasta_file in args.assembly:
         assembly = Assembly(fasta_file)
         best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
-        find_assembly_pieces(assembly, best_k, args)
-        assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
-        type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
-        if args.no_seq_out:
-            os.remove(assembly_pieces_fasta)
-        protein_blast(assembly, best_k, gene_seqs, args)
-        check_name_for_o1_o2(best_k)
+        if best_k is None:
+            type_gene_results = {}
+            best_k = KLocus('None', '', [])
+        else:
+            find_assembly_pieces(assembly, best_k, args)
+            assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
+            type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
+            if args.no_seq_out and assembly_pieces_fasta is not None:
+                os.remove(assembly_pieces_fasta)
+            protein_blast(assembly, best_k, gene_seqs, args)
+            check_name_for_o1_o2(best_k)
 
         output(args.out, assembly, best_k, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
@@ -106,7 +115,7 @@ def get_argument_parser():
 
 
 def add_arguments_to_parser(parser):
-    parser.add_argument('--version', action='version', version='Kaptive ' + __version__,
+    parser.add_argument('--version', action='version', version='Kaptive v' + __version__,
                         help="Show Kaptive's version number and exit")
     parser.add_argument('-a', '--assembly', nargs='+', type=str, required=True,
                         help='FASTA file(s) for assemblies')
@@ -123,13 +132,13 @@ def add_arguments_to_parser(parser):
                         default=min(multiprocessing.cpu_count(), 4),
                         help='The number of threads to use for the BLAST searches')
     parser.add_argument('--no_seq_out', action='store_true',
-                        help='Suppress output files of sequences matching K locus')
+                        help='Suppress output files of sequences matching locus')
     parser.add_argument('--no_table', action='store_true',
                         help='Suppress output of tab-delimited table')
     parser.add_argument('--no_json', action='store_true',
                         help='Suppress output of JSON file')
     parser.add_argument('--start_end_margin', type=int, required=False, default=10,
-                        help='Missing bases at the ends of K locus allowed in a perfect match.')
+                        help='Missing bases at the ends of locus allowed in a perfect match.')
     parser.add_argument('--min_gene_cov', type=float, required=False, default=90.0,
                         help='minimum required %% coverage for genes')
     parser.add_argument('--min_gene_id', type=float, required=False, default=80.0,
@@ -138,7 +147,7 @@ def add_arguments_to_parser(parser):
                         help='genes with a %% identity below this value will be flagged as low '
                              'identity')
     parser.add_argument('--min_assembly_piece', type=int, required=False, default=100,
-                        help='minimum K locus matching assembly piece to return')
+                        help='minimum locus matching assembly piece to return')
     parser.add_argument('--gap_fill_size', type=int, required=False, default=100,
                         help='when separate parts of the assembly are found within this distance, '
                              'they will be merged')
@@ -183,7 +192,7 @@ def fix_paths(args):
 
 def make_temp_dir(args):
     """Makes the temporary directory, if necessary. Returns the temp directory path."""
-    temp_dir_name = 'temp_' + str(os.getpid())
+    temp_dir_name = 'kaptive_temp_' + str(os.getpid()) + '_' + str(random.randint(0, 999999))
     temp_dir = os.path.join(os.path.dirname(args.out), temp_dir_name)
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)
@@ -194,18 +203,27 @@ def clean_up(k_ref_seqs, gene_seqs, temp_dir):
     """
     Deletes the temporary FASTA files. If the temp directory is then empty, it is deleted too.
     """
-    os.remove(k_ref_seqs)
-    os.remove(gene_seqs)
-    if not os.listdir(temp_dir):
-        os.rmdir(temp_dir)
+    try:
+        os.remove(k_ref_seqs)
+    except OSError:
+        pass
+    try:
+        os.remove(gene_seqs)
+    except OSError:
+        pass
+    try:
+        if not os.listdir(temp_dir):
+            os.rmdir(temp_dir)
+    except FileNotFoundError:
+        pass
 
 
 def parse_genbank(genbank, temp_dir, locus_label):
     """
     This function reads the input Genbank file and produces two temporary FASTA files: one with the
-    K loci nucleotide sequences and one with the gene sequences.
+    loci nucleotide sequences and one with the gene sequences.
     It returns the file paths for these two FASTA files along with a dictionary that links genes to
-    K loci.
+    loci.
     """
     k_ref_genes = {}
     k_ref_seqs_filename = os.path.join(temp_dir, 'temp_k_ref_seqs.fasta')
@@ -226,7 +244,7 @@ def parse_genbank(genbank, temp_dir, locus_label):
                     elif note.startswith('Extra genes'):
                         k_locus_name = note.replace(':', '').replace(' ', '_')
         if k_locus_name in k_ref_genes:
-            quit_with_error('Duplicate reference K locus name: ' + k_locus_name)
+            quit_with_error('Duplicate reference locus name: ' + k_locus_name)
         k_ref_genes[k_locus_name] = []
 
         # Extra genes are only used for the gene search, not the nucleotide search.
@@ -359,17 +377,18 @@ def quit_with_error(message):
 
 def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
     """
-    Searches for all known K types in the given assembly and returns the best match.
-    Best match is defined as the K type for which the largest fraction of the K locus has a BLAST
-    hit to the assembly. In cases of a tie, the mean identity of the K type BLAST hits are used to
-    determine the best.
+    Searches for all known locus types in the given assembly and returns the best match.
+    Best match is defined as the locus type for which the largest fraction of the locus has a BLAST
+    hit to the assembly. In cases of a tie, the mean identity of the locus type BLAST hits are used
+    to determine the best.
     """
     for k_ref in k_refs.values():
         k_ref.clear()
     blast_hits = get_blast_hits(assembly.fasta, k_refs_fasta, threads)
+
     for hit in blast_hits:
         if hit.qseqid not in k_refs:
-            quit_with_error('BLAST hit (' + hit.qseqid + ') not found in K locus references')
+            quit_with_error('BLAST hit (' + hit.qseqid + ') not found in locus references')
         k_refs[hit.qseqid].add_blast_hit(hit)
     best_k_ref = None
     best_cov = 0.0
@@ -381,7 +400,8 @@ def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
         elif cov == best_cov and best_k_ref and \
                 k_ref.get_mean_blast_hit_identity() > best_k_ref.get_mean_blast_hit_identity():
             best_k_ref = k_ref
-    best_k_ref.clean_up_blast_hits()
+    if best_k_ref is not None:
+        best_k_ref.clean_up_blast_hits()
     return copy.copy(best_k_ref)
 
 
@@ -425,8 +445,8 @@ def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
 
 def find_assembly_pieces(assembly, k_locus, args):
     """
-    This function uses the BLAST hits in the given K type to find the corresponding pieces of the
-    given assembly. It saves its results in the KLocus
+    This function uses the BLAST hits in the given locus type to find the corresponding pieces of
+    the given assembly. It saves its results in the KLocus object.
     """
     if not k_locus.blast_hits:
         return
@@ -445,7 +465,7 @@ def find_assembly_pieces(assembly, k_locus, args):
     if good_start_and_end(start, end, k_locus.get_length(), args.start_end_margin):
         k_locus.assembly_pieces = [biggest_piece]
 
-    # If it isn't the ideal case, we still want to check if the start and end of the K locus were
+    # If it isn't the ideal case, we still want to check if the start and end of the locus were
     # found in the same contig. If so, fill all gaps in between so we include the entire
     # intervening sequence.
     else:
@@ -463,12 +483,12 @@ def find_assembly_pieces(assembly, k_locus, args):
 
 def protein_blast(assembly, k_locus, gene_seqs, args):
     """
-    Conducts a BLAST search of all known K locus proteins. Stores the results in the KLocus
+    Conducts a BLAST search of all known locus proteins. Stores the results in the KLocus
     object.
     """
     hits = get_blast_hits(assembly.fasta, gene_seqs, args.threads, genes=True)
     hits = [x for x in hits if x.query_cov >= args.min_gene_cov and x.pident >= args.min_gene_id]
-
+    
     best_hits = []
     for expected_gene in k_locus.gene_names:
         best_hit = get_best_hit_for_query(hits, expected_gene, k_locus)
@@ -580,22 +600,25 @@ def check_name_for_o1_o2(k_locus):
 def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_results,
            json_list, output_table, output_json, all_gene_dict):
     """
-    Writes a line to the output table describing all that we've learned about the given K locus and
+    Writes a line to the output table describing all that we've learned about the given locus and
     writes to stdout as well.
     """
     uncertainty_chars = k_locus.get_match_uncertainty_chars()
 
-    expected_in_locus_per = 100.0 * len(k_locus.expected_hits_inside_locus) / \
-        len(k_locus.gene_names)
-    expected_out_locus_per = 100.0 * len(k_locus.expected_hits_outside_locus) / \
-        len(k_locus.gene_names)
-    expected_genes_in_locus_str = str(len(k_locus.expected_hits_inside_locus)) + ' / ' + \
-        str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_in_locus_per) + '%)'
-    expected_genes_out_locus_str = str(len(k_locus.expected_hits_outside_locus)) + ' / ' + \
-        str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_out_locus_per) + '%)'
-    missing_per = 100.0 * len(k_locus.missing_expected_genes) / len(k_locus.gene_names)
-    missing_genes_str = str(len(k_locus.missing_expected_genes)) + ' / ' + \
-        str(len(k_locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
+    try:
+        expected_in_locus_per = 100.0 * len(k_locus.expected_hits_inside_locus) / \
+            len(k_locus.gene_names)
+        expected_out_locus_per = 100.0 * len(k_locus.expected_hits_outside_locus) / \
+            len(k_locus.gene_names)
+        expected_genes_in_locus_str = str(len(k_locus.expected_hits_inside_locus)) + ' / ' + \
+            str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_in_locus_per) + '%)'
+        expected_genes_out_locus_str = str(len(k_locus.expected_hits_outside_locus)) + ' / ' + \
+            str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_out_locus_per) + '%)'
+        missing_per = 100.0 * len(k_locus.missing_expected_genes) / len(k_locus.gene_names)
+        missing_genes_str = str(len(k_locus.missing_expected_genes)) + ' / ' + \
+            str(len(k_locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
+    except ZeroDivisionError:
+        expected_genes_in_locus_str, expected_genes_out_locus_str, missing_genes_str = '', '', ''
 
     output_to_stdout(assembly, k_locus, args.verbose, type_gene_names, type_gene_results,
                      uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str,
@@ -708,7 +731,7 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
             gene_dict['Match confidence'] = 'Not found'
 
         k_locus_genes.append(gene_dict)
-    json_record['K locus genes'] = k_locus_genes
+    json_record['Locus genes'] = k_locus_genes
 
     extra_genes = OrderedDict()
     for gene_name, hit in other_hits_inside_locus.items():
@@ -770,7 +793,7 @@ def write_json_file(output_prefix, json_list):
             try:
                 existing_json_list = json.loads(file_data, object_pairs_hook=OrderedDict)
                 json_list = existing_json_list + json_list
-            except json.decoder.JSONDecodeError:
+            except ValueError:
                 pass
             json_out.seek(0)
             json_out.write(json.dumps(json_list, indent=4))
@@ -911,7 +934,6 @@ def get_blast_version(program):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = process.communicate()
     out = convert_bytes_to_str(out)
-    err = convert_bytes_to_str(err)
     try:
         return out.split(': ')[1].split()[0].split('+')[0]
     except IndexError:
@@ -959,7 +981,6 @@ def merge_assembly_pieces(pieces):
     Takes a list of AssemblyPiece objects and returns another list of AssemblyPiece objects where
     the overlapping pieces have been merged.
     """
-    merged_pieces = []
     while True:
         merged_pieces = []
         merge_count = 0
@@ -1082,7 +1103,7 @@ def line_iterator(string_with_line_breaks):
 
 
 def load_k_locus_references(fasta, k_ref_genes):
-    """Returns a dictionary of: key = K locus name, value = KLocus object"""
+    """Returns a dictionary of: key = locus name, value = KLocus object"""
     return {seq[0]: KLocus(seq[0], seq[1], k_ref_genes[seq[0]]) for seq in load_fasta(fasta)}
 
 
@@ -1342,10 +1363,10 @@ class KLocus(object):
         self.other_hits_outside_locus = []
 
     def __repr__(self):
-        return 'K locus ' + self.name
+        return 'Locus ' + self.name
 
     def get_length(self):
-        """Returns the K locus sequence length."""
+        """Returns the locus sequence length."""
         return len(self.seq)
 
     def add_blast_hit(self, hit):
@@ -1354,7 +1375,7 @@ class KLocus(object):
         self.hit_ranges.add_range(hit.qstart, hit.qend)
 
     def get_mean_blast_hit_identity(self):
-        """Returns the mean identity (weighted by hit length) for all BLAST hits in the K locus."""
+        """Returns the mean identity (weighted by hit length) for all BLAST hits in the locus."""
         identity_sum = 0.0
         length_sum = 0
         for hit in self.blast_hits:
@@ -1381,8 +1402,11 @@ class KLocus(object):
         self.other_hits_outside_locus = []
 
     def get_coverage(self):
-        """Returns the % of this K locus which is covered by BLAST hits in the given assembly."""
-        return 100.0 * self.hit_ranges.get_total_length() / len(self.seq)
+        """Returns the % of this locus which is covered by BLAST hits in the given assembly."""
+        try:
+            return 100.0 * self.hit_ranges.get_total_length() / len(self.seq)
+        except ZeroDivisionError:
+            return 0.0
     
     def get_coverage_string(self):
         return '%.2f' % self.get_coverage() + '%'
@@ -1393,8 +1417,8 @@ class KLocus(object):
     def clean_up_blast_hits(self):
         """
         This function removes unnecessary BLAST hits from self.blast_hits.
-        For each BLAST hit, we keep it if it offers new parts of the K locus. If, on the other
-        hand, it lies entirely within an existing hit (in K locus positions), we ignore it. Since
+        For each BLAST hit, we keep it if it offers new parts of the locus. If, on the other
+        hand, it lies entirely within an existing hit (in locus positions), we ignore it. Since
         we first sort the BLAST hits longest to shortest, this strategy will prioritise long hits
         over short ones.
         """
@@ -1410,12 +1434,12 @@ class KLocus(object):
 
     def get_match_uncertainty_chars(self):
         """
-        Returns the character code which indicates uncertainty with how this K locus was found in
+        Returns the character code which indicates uncertainty with how this locus was found in
         the current assembly.
-        '?' means the K locus was found in multiple discontinuous assembly pieces.
+        '?' means the locus was found in multiple discontinuous assembly pieces.
         '-' means that one or more expected genes were missing.
-        '+' means that one or more additional genes were found in the K locus assembly parts.
-        '*' means that at least one of the expected genes in the K locus is low identity.
+        '+' means that one or more additional genes were found in the locus assembly parts.
+        '*' means that at least one of the expected genes in the locus is low identity.
         """
         uncertainty_chars = ''
         if len(self.assembly_pieces) > 1:
@@ -1430,10 +1454,10 @@ class KLocus(object):
 
     def get_length_discrepancy(self):
         """
-        Returns an integer of the base discrepancy between the K locus in the assembly and the
-        reference K locus sequence.
+        Returns an integer of the base discrepancy between the locus in the assembly and the
+        reference locus sequence.
         E.g. if the assembly match was 5 bases shorter than the reference, this returns -5.
-        This function only applies to cases where the K locus was found in a single piece. In
+        This function only applies to cases where the locus was found in a single piece. In
         other cases, it returns None.
         """
         if len(self.assembly_pieces) != 1:
@@ -1461,8 +1485,8 @@ class KLocus(object):
 
     def get_earliest_and_latest_pieces(self):
         """
-        Returns the AssemblyPiece with the earliest coordinate (closest to the K locus start) and
-        the AssemblyPiece with the latest coordinate (closest to the K locus end)
+        Returns the AssemblyPiece with the earliest coordinate (closest to the locus start) and
+        the AssemblyPiece with the latest coordinate (closest to the locus end)
         """
         earliest_piece = sorted(self.assembly_pieces, key=lambda x: x.earliest_hit_coordinate())[0]
         latest_piece = sorted(self.assembly_pieces, key=lambda x: x.latest_hit_coordinate())[-1]
