@@ -488,11 +488,12 @@ def protein_blast(assembly, k_locus, gene_seqs, args):
     """
     hits = get_blast_hits(assembly.fasta, gene_seqs, args.threads, genes=True)
     hits = [x for x in hits if x.query_cov >= args.min_gene_cov and x.pident >= args.min_gene_id]
-    
+
     best_hits = []
     for expected_gene in k_locus.gene_names:
         best_hit = get_best_hit_for_query(hits, expected_gene, k_locus)
-        best_hits.append(best_hit)
+        if best_hit is not None:
+            best_hits.append(best_hit)
     best_hits = sorted(best_hits, key=lambda x: x.bitscore, reverse=True)
     for best_hit in best_hits:
         if best_hit in hits:
