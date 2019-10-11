@@ -1785,11 +1785,12 @@ def makeblastdb(fasta):
     If the FASTA file is not compressed, this just runs makeblastdb. If it is compressed,
     it runs gunzip and pipes into makeblastdb.
     """
+    if ' ' in fasta:
+        print('WARNING: spaces in file paths may not work in BLAST', file=sys.stderr)
     if get_compression_type(fasta) == 'gz':
         gunzip_command = ['gunzip', '-c', fasta]
         makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', '-', '-out', fasta,
                                '-title', fasta]
-
         gunzip = subprocess.Popen(gunzip_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         makeblastdb_process = subprocess.Popen(makeblastdb_command, stdin=gunzip.stdout,
                                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
