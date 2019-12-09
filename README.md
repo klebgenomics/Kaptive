@@ -1,15 +1,16 @@
 <p align="center"><img src="extras/kaptive_logo.png" alt="Kaptive" width="400"></p>
 
 
-Kaptive reports information about K and O types for Klebsiella genome assemblies. You can also run a graphical version of Kaptive via [this web interface](http://kaptive.holtlab.net/) ([source code](https://github.com/kelwyres/Kaptive-Web)).
+Kaptive reports information about surface polysaccharide loci for _Klebsiella_ and _Acinetobacter baumannii_ genome assemblies. You can also run a graphical version of Kaptive via [this web interface](http://kaptive.holtlab.net/) ([source code](https://github.com/kelwyres/Kaptive-Web)).
 
-Given a novel genome and a database of known loci (K or O), Kaptive will help a user to decide whether their sample has a known or novel locus. It carries out the following for each input assembly:
+Given a novel genome and a database of known loci (K, O or OC), Kaptive will help a user to decide whether their sample has a known or novel locus. It carries out the following for each input assembly:
 * BLAST for all known locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
 * Extract the region(s) of the assembly which correspond to the BLAST hits (i.e. the locus sequence in the assembly) and save it to a FASTA file.
 * BLAST for all known locus genes (using `tblastn`) to identify which expected genes (genes in the best matching locus) are present/missing and whether any unexpected genes (genes from other loci) are present.
 * Output a summary to a table file.
 
 In cases where your input assembly closely matches a known locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate locus sequences for totally novel types – if it indicates a novel locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the locus sequence in your assembly is broken into multiple pieces.
+If you think you have found a novel locus that should be added to one of the databases distributed with Kaptive please [contact us](mailto:kaptive.typing@gmail.com).
 
 Read more about Kaptive, Kaptive Web and the locus databases in [our papers](#citation).
 
@@ -36,6 +37,7 @@ Read more about Kaptive, Kaptive Web and the locus databases in [our papers](#ci
 * [Databases distributed with Kaptive](#databases-distributed-with-kaptive)
     * [_Klebsiella_ K locus databases](#klebsiella-k-locus-databases)
     * [_Klebsiella_ O locus database](#klebsiella-o-locus-database)
+    * [_Acinetobacter baumannii_ K and OC locus databases](#acinetobacter-baumanii-k-and-oc-locus-databases)
 * [FAQs](#faqs)
 * [Citation](#citation)
 * [License](#license)
@@ -66,7 +68,7 @@ Character codes in the output indicate problems with the locus match:
 
 ## Installation
 
-Kaptive should work on both Python 2 and 3, but I run/test it on Python 3 and recommend you do the same.
+Kaptive should work on both Python 2 and 3, but we run/test it on Python 3 and recommend you do the same.
 
 
 #### Clone and run
@@ -281,13 +283,15 @@ If you are running this script on a cluster using [SLURM](http://slurm.schedmd.c
 
 ## Databases distributed with Kaptive
 
-The Kaptive repository contains _Klebsiella_ K-locus and O-locus databases in the [reference_database](https://github.com/katholt/Kaptive/tree/master/reference_database) directory, but you can run the Kaptive with any appropriately formatted database of your own.
+The Kaptive repository contains _Klebsiella_ K-locus and O-locus databases plus _A. baumannii_ K-locus and OC-locus databases in the [reference_database](https://github.com/katholt/Kaptive/tree/master/reference_database) directory, but you can run Kaptive with any appropriately formatted database of your own.
 
-If you have a locus database that you would like to be added to Kaptive for use by yourself and others in the community, [please get in touch](https://github.com/katholt/Kaptive/issues). Similarly, if you have identified new locus variants not currently in the existing databases, let us know!
+The databases were developed and curated by [Kelly Wyres](https://holtlab.net/kelly-wyres/) (_Klebsiella_) and [Johanna Kenyon](https://research.qut.edu.au/infectionandimmunity/projects/bacterial-polysaccharide-research/) (_A. baumannii_).
+
+If you have a locus database that you would like to be added to Kaptive for use by yourself and others in the community, please get in touch via the [issues page](https://github.com/katholt/Kaptive/issues) or [email](mailto:kaptive.typing@gmail.com) . Similarly, if you have identified new locus variants not currently in the existing databases, let us know!
 
 #### _Klebsiella_ K locus databases
 
-The primary reference database (`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length (_galF_ to _ugd_) annotated sequences for each distinct _Klebsiella_ K locus, where available:
+The _Klebsiella_ K locus primary reference database (`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length (_galF_ to _ugd_) annotated sequences for each distinct _Klebsiella_ K locus, where available:
 * KL1 - KL77 correspond to the loci associated with each of the 77 serologically defined K-type references.
 * KL101 and above are defined from DNA sequence data on the basis of gene content.
 
@@ -299,46 +303,64 @@ The variants database (`Klebsiella_k_locus_variant_reference.gbk`) comprises ful
 * Deletion variants are named KLN-D1, -D2 etc e.g. KL15-D1 is a deletion variant of KL15.
 Note that KL156-D1 is included in the primary reference database since no full-length version of this locus has been identified to date. 
 
-We recommend screening your data with the primary reference database first to find the best-matching K-locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
+We recommend screening your data with the primary reference database first to find the best-matching K locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
 WARNING: If you use the variant database please inspect your results carefully and decide for yourself what constitutes a confident match! Kaptive is not optimised for accurate variant detection. 
 
 Database versions:
-* Kaptive releases v0.5.1 and below include the original K locus databases, as described in [Wyres, K. et al. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
-* Kaptive v0.6.0 includes four novel primary reference loci defined on the basis of gene content: KL162-KL165
+* Kaptive releases v0.5.1 and below include the original _Klebsiella_ K locus databases, as described in [Wyres, K. et al. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
+* Kaptive v0.6.0 includes four novel primary _Klebsiella_ K locus references defined on the basis of gene content (KL162-KL165) in this [paper.](https://www.biorxiv.org/content/10.1101/557785v1)
 
 #### _Klebsiella_ O locus database
 
-The O locus database (`Klebsiella_o_locus_primary_reference.gbk`) contains annotated sequences for 12 distinct _Klebsiella_ O loci.
+The _Klebsiella_ O locus database (`Klebsiella_o_locus_primary_reference.gbk`) contains annotated sequences for 12 distinct _Klebsiella_ O loci.
 
 O locus classification requires some special logic, as the O1 and O2 serotypes contain the same locus genes. It is two additional genes elsewhere in the chromosome (_wbbY_ and _wbbZ_) which results in the O1 antigen. Kaptive therefore looks for these genes to properly call an assembly as either O1 or O2. When only one of the two additional genes can be found, the result is ambiguous and Kaptive will report a locus type of O1/O2.
 
 Read more about the O locus and its classification here: [The diversity of _Klebsiella_ pneumoniae surface polysaccharides](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5320592/).
 
+Database versions:
+* Kaptive v0.4.0 and above include the original version of the _Klebsiella_ O locus database, as described in [Wick, R. et al. J Clin Microbiol (2019).](http://jcm.asm.org/content/56/6/e00197-18) 
+
+
+#### _Acinetobacter baunannii_ K and OC locus databases
+
+The _A. baumannii_ K (capsule) locus reference database (`Acinetobacter_baumannii_k_locus_primary_reference.gbk`) contains annotated sequences for 92 distinct K loci.
+The _A. baumannii_ OC (lipopolysaccharide outer core) locus reference database (`Acinetobacter_baumannii_OC_locus_primary_reference.gbk`) contains annotated sequences for 12 distinct OC loci.
+
+WARNING: These databases have been developed and tested specifically for _A. baumannii_ and may not be suitable for screening other _Acinetobacter_ species. You can check that your assembly is a true _A. baumannii_ by screening for the _oxaAB_ gene e.g. using blastn.
+
+ Database versions:
+* Kaptive v0.7.0 and above include the original _A. baumannii_ K and OC locus databases, as described in Wyres, KL. et al. _In prep_ 2019.
+
 
 
 ## FAQs
 
-#### Why are there K-locus genes found outside the K-locus?
+#### Why are there locus genes found outside the locus?
 
-A number of the K-locus genes are orthologous to genes outside of the K-locus region of the genome. E.g the _Klebsiella_ K-locus <i>man</i> and <i>rml</i> genes have orthologues in the LPS (lipopolysacharide) locus; so it is not unusual to find a small number of genes "outside" the locus.
+For _Klebsiella_ K loci in particular, a number of the K-locus genes are orthologous to genes outside of the K-locus region of the genome. E.g the _Klebsiella_ K-locus <i>man</i> and <i>rml</i> genes have orthologues in the LPS (lipopolysacharide) locus; so it is not unusual to find a small number of genes "outside" the locus.
 However, if you have a large number of genes (>5) outside the locus it may mean that there is a problem with the locus match, or that your assembly is very fragmented or contaminated (contains more than one sample).
 
-#### How can my sample be missing K-locus genes when it has a full-length, high identity K-locus match?
+#### How can my sample be missing locus genes when it has a full-length, high identity locus match?
 
-Kaptive uses 'tblastn' to screen for the presence of each K-locus gene with a coverage threshold of 90%. A single non-sense mutation or small indel in the centre of a gene will interrupt the 'tblastn' match and cause it to fall below the 90% threshold. However, such a small change has only a minor effect on the nucleotide 'blast' match across the full locus.
+Kaptive uses 'tblastn' to screen for the presence of each locus gene with a coverage threshold of 90%. A single non-sense mutation or small indel in the centre of a gene will interrupt the 'tblastn' match and cause it to fall below the 90% threshold. However, such a small change has only a minor effect on the nucleotide 'blast' match across the full locus.
 
-#### Why does the K-locus region of my sample contain a <i>ugd</i> gene matching another locus?
+#### Why does the _Klebsiella_ K-locus region of my sample contain a <i>ugd</i> gene matching another locus?
 
-A small number of the original K-locus references are truncated, containing only a partial <i>ugd</i> sequence. The reference annotations for these loci do not include <i>ugd</i>, so are not identified by the 'tblastn' search. Instead <b>Kaptive</b> reports the closest match to the partial sequence (if it exceeds the 90% coverage threshold). 
+A small number of the original _Klebsiella_ K locus references are truncated, containing only a partial <i>ugd</i> sequence. The reference annotations for these loci do not include <i>ugd</i>, so are not identified by the 'tblastn' search. Instead <b>Kaptive</b> reports the closest match to the partial sequence (if it exceeds the 90% coverage threshold). 
 
 
 ## Citation
 
-If you use Kaptive and/or the K locus database in your research, please cite this paper:
-[Wyres, K. et al. Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
+If you use Kaptive and/or the _Klebsiella_ K locus database in your research, please cite this paper:
+[Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
 
-If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the O locus database in your research, please cite this paper:
+If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the _Klebsiella_ O locus database in your research, please cite this paper:
 [Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
+
+If you use the _A. baumannii_ K or OC locus database(s) in your research please cite this paper:
+Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Wyres KL, Cahill SM, Holt KE, Hall RM and Kenyon JJ. _In preparation_.
+Lists of papers describing each of the individual _A. baumannii_ reference loci can be found [here](https://github.com/katholt/Kaptive/tree/master/extras).
 
 
 ## License
