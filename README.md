@@ -303,7 +303,7 @@ The variants database (`Klebsiella_k_locus_variant_reference.gbk`) comprises ful
 * Deletion variants are named KLN-D1, -D2 etc e.g. KL15-D1 is a deletion variant of KL15.
 Note that KL156-D1 is included in the primary reference database since no full-length version of this locus has been identified to date. 
 
-We recommend screening your data with the primary reference database first to find the best-matching K locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.
+We recommend screening your data with the primary reference database first to find the best-matching K locus type. If you have poor matches or are particularly interested in detecting variant loci you should try the variant database.  
 WARNING: If you use the variant database please inspect your results carefully and decide for yourself what constitutes a confident match! Kaptive is not optimised for accurate variant detection. 
 
 Database versions:
@@ -325,7 +325,7 @@ Database versions:
 #### _Acinetobacter baunannii_ K and OC locus databases
 
 The _A. baumannii_ K (capsule) locus reference database (`Acinetobacter_baumannii_k_locus_primary_reference.gbk`) contains annotated sequences for 92 distinct K loci.
-The _A. baumannii_ OC (lipopolysaccharide outer core) locus reference database (`Acinetobacter_baumannii_OC_locus_primary_reference.gbk`) contains annotated sequences for 12 distinct OC loci.
+The _A. baumannii_ OC (lipooligosaccharide outer core) locus reference database (`Acinetobacter_baumannii_OC_locus_primary_reference.gbk`) contains annotated sequences for 12 distinct OC loci.
 
 WARNING: These databases have been developed and tested specifically for _A. baumannii_ and may not be suitable for screening other _Acinetobacter_ species. You can check that your assembly is a true _A. baumannii_ by screening for the _oxaAB_ gene e.g. using blastn.
 
@@ -359,7 +359,7 @@ If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the _Klebsiella_ O 
 [Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
 
 If you use the _A. baumannii_ K or OC locus database(s) in your research please cite this paper:
-Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Wyres KL, Cahill SM, Holt KE, Hall RM and Kenyon JJ. _In preparation_.
+Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Wyres KL, Cahill SM, Holt KE, Hall RM and Kenyon JJ. _In preparation_.  
 Lists of papers describing each of the individual _A. baumannii_ reference loci can be found [here](https://github.com/katholt/Kaptive/tree/master/extras).
 
 
