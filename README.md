@@ -359,7 +359,7 @@ If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the _Klebsiella_ O 
 [Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
 
 If you use the _A. baumannii_ K or OC locus database(s) in your research please cite this paper:
-[Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Wyres KL, Cahill SM, Holt KE, Hall RM and Kenyon JJ. bioRxiv 2019.](https://www.biorxiv.org/content/10.1101/869370v1)  
+[Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. bioRxiv 2019.](https://www.biorxiv.org/content/10.1101/869370v1)  
 Lists of papers describing each of the individual _A. baumannii_ reference loci can be found [here](https://github.com/katholt/Kaptive/tree/master/extras).
 
 
