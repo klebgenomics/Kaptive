@@ -330,7 +330,7 @@ The _A. baumannii_ OC (lipooligosaccharide outer core) locus reference database 
 WARNING: These databases have been developed and tested specifically for _A. baumannii_ and may not be suitable for screening other _Acinetobacter_ species. You can check that your assembly is a true _A. baumannii_ by screening for the _oxaAB_ gene e.g. using blastn.
 
  Database versions:
-* Kaptive v0.7.0 and above include the original _A. baumannii_ K and OC locus databases, as described in Wyres, KL. et al. _In prep_ 2019.
+* Kaptive v0.7.0 and above include the original _A. baumannii_ K and OC locus databases, as described in [Wyres, KL. et al. bioRxiv (2019).](https://www.biorxiv.org/content/10.1101/869370v1)
 
 
 
@@ -359,7 +359,7 @@ If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the _Klebsiella_ O 
 [Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
 
 If you use the _A. baumannii_ K or OC locus database(s) in your research please cite this paper:
-Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Wyres KL, Cahill SM, Holt KE, Hall RM and Kenyon JJ. _In preparation_.  
+[Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Wyres KL, Cahill SM, Holt KE, Hall RM and Kenyon JJ. bioRxiv 2019.](https://www.biorxiv.org/content/10.1101/869370v1)  
 Lists of papers describing each of the individual _A. baumannii_ reference loci can be found [here](https://github.com/katholt/Kaptive/tree/master/extras).
 
 
