@@ -91,7 +91,7 @@ kaptive.py -h
 
 #### Other dependencies
 
-Regardless of how you download/install Kaptive, it requires that [BLAST+](http://www.ncbi.nlm.nih.gov/books/NBK279690/) is available on the command line (specifically the commands `makeblastdb`, `blastn` and `tblastn`). BLAST+ can usually be easily installed using a package manager such as [Homebrew](http://brew.sh/) (on Mac) or [apt-get](https://help.ubuntu.com/community/AptGet/Howto) (on Ubuntu and related Linux distributions).
+Regardless of how you download/install Kaptive, it requires that [BLAST+](http://www.ncbi.nlm.nih.gov/books/NBK279690/) is available on the command line (specifically the commands `makeblastdb`, `blastn` and `tblastn`). BLAST+ can usually be easily installed using a package manager such as [Homebrew](http://brew.sh/) (on Mac) or [apt-get](https://help.ubuntu.com/community/AptGet/Howto) (on Ubuntu and related Linux distributions). Some later versions of BLAST+ have been associated with sporadic crashes when running tblastn with multiple threads; to avoid this problem we recommend running Kaptive with BLAST+ v 2.3.0 or using the "--threads 1" option (see below for full command argument details).
 
 
 ## Input files
