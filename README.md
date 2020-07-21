@@ -308,7 +308,15 @@ WARNING: If you use the variant database please inspect your results carefully a
 
 Database versions:
 * Kaptive releases v0.5.1 and below include the original _Klebsiella_ K locus databases, as described in [Wyres, K. et al. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
-* Kaptive v0.6.0 includes four novel primary _Klebsiella_ K locus references defined on the basis of gene content (KL162-KL165) in this [paper.](https://www.biorxiv.org/content/10.1101/557785v1)
+* Kaptive v0.6.0 and above include four novel primary _Klebsiella_ K locus references defined on the basis of gene content (KL162-KL165) in this [paper.](https://www.biorxiv.org/content/10.1101/557785v1)
+* Kaptive v0.7.1 and above contain updated versions of the KL53 and KL126 loci (see table below for details). The updated KL126 locus sequence will be described in McDougall, F. et al. 2020 in prep.
+
+Changes to the _Klebsiella_ K locus primary reference database:
+
+| Locus  | Change | Reason | Date of change | Kaptive version no. |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| KL53  | Annotation update: wcaJ changed to wbaP | Error in original annotation | 21 July 2020 | v 0.7.1 | 
+| KL126  | Sequence update: new sequence from isolate FF923 includes rmlBADC genes between gnd and ugd | Assembly scaffolding error in original sequence from isolate A-003-I-a-1 | 21 July 2020 | v 0.7.1 |
 
 #### _Klebsiella_ O locus database
 
