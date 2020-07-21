@@ -1446,7 +1446,7 @@ FEATURES             Location/Qualifiers
                      /note="sequence from NCBI GenBank accession number
                      KF030679 REGION: complement(28675..37977)"
      CDS             1..888
-                     /gene="gtrOC1""
+                     /gene="gtrOC1"
                      /codon_start=1
                      /transl_table=11
                      /product="GtrOC1 glycosyltransferase"
@@ -1749,7 +1749,7 @@ FEATURES             Location/Qualifiers
                      /note="sequence from NCBI WGS accession number
                      AMTB01000038 REGION: 221522..230586"
      CDS             1..888
-                     /gene="gtrOC1""
+                     /gene="gtrOC1"
                      /codon_start=1
                      /transl_table=11
                      /product="GtrOC1 glycosyltransferase"
@@ -2038,7 +2038,7 @@ FEATURES             Location/Qualifiers
                      /note="sequence from NCBI WGS accession number
                      AMFY01000013 REGION: 222496..228777"
      CDS             1..888
-                     /gene="gtrOC1""
+                     /gene="gtrOC1"
                      /codon_start=1
                      /transl_table=11
                      /product="GtrOC1 glycosyltransferase"
@@ -2245,7 +2245,7 @@ FEATURES             Location/Qualifiers
                      /note="sequence from NCBI WGS accession number
                      AMFI01000027 REGION: complement(34336..40843)"
      CDS             1..888
-                     /gene="gtrOC1""
+                     /gene="gtrOC1"
                      /codon_start=1
                      /transl_table=11
                      /product="GtrOC1 glycosyltransferase"
