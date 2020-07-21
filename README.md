@@ -315,8 +315,8 @@ Changes to the _Klebsiella_ K locus primary reference database:
 
 | Locus  | Change | Reason | Date of change | Kaptive version no. |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
-| KL53  | Annotation update: wcaJ changed to wbaP | Error in original annotation | 21 July 2020 | v 0.7.1 | 
-| KL126  | Sequence update: new sequence from isolate FF923 includes rmlBADC genes between gnd and ugd | Assembly scaffolding error in original sequence from isolate A-003-I-a-1 | 21 July 2020 | v 0.7.1 |
+| KL53  | Annotation update: _wcaJ_ changed to _wbaP_ | Error in original annotation | 21 July 2020 | v 0.7.1 | 
+| KL126  | Sequence update: new sequence from isolate FF923 includes _rmlBADC_ genes between _gnd_ and _ugd_ | Assembly scaffolding error in original sequence from isolate A-003-I-a-1 | 21 July 2020 | v 0.7.1 |
 
 #### _Klebsiella_ O locus database
 
