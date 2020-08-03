@@ -309,7 +309,8 @@ WARNING: If you use the variant database please inspect your results carefully a
 Database versions:
 * Kaptive releases v0.5.1 and below include the original _Klebsiella_ K locus databases, as described in [Wyres, K. et al. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
 * Kaptive v0.6.0 and above include four novel primary _Klebsiella_ K locus references defined on the basis of gene content (KL162-KL165) in this [paper.](https://www.biorxiv.org/content/10.1101/557785v1)
-* Kaptive v0.7.1 and above contain updated versions of the KL53 and KL126 loci (see table below for details). The updated KL126 locus sequence will be described in McDougall, F. et al. 2020 in prep.
+* Kaptive v0.7.1 and above contain updated versions of the KL53 and KL126 loci (see table below for details). The updated KL126 locus sequence will be described in McDougall, F. et al. 2020. _Klebsiella pneumoniae_ diversity and detection of _Klebsiella africana_ in Australian Fruit Bats (_Pteropus policephalus_). _In prep._
+* Kaptive v0.7.2 and above include a novel primary _Klebsiella_ K locus reference defined on the basis of gene content (KL166), which will be described in Li, M. et al. 2020. Characterization of clinically isolated hypermucoviscous _Klebsiella pneumoniae_ in Japan. _In prep._
 
 Changes to the _Klebsiella_ K locus primary reference database:
 
