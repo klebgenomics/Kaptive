@@ -364,7 +364,7 @@ A small number of the original _Klebsiella_ K locus references are truncated, co
 
 The databases are updated as novel loci are discovered and curated. If your previous match had a confidence call of 'Low' or 'None' but your new match has higher confidence, this indicates that your genome contains a locus that was absent in the older version of the database! So nothing to worry about here.
 
-__But what if your old match and your new match have 'Good' or better confidence levels?__
+But what if your old match and your new match have 'Good' or better confidence levels?
 
 If your old match had 'Perfect' or 'Very High' confidence, please post an issue to the issues page, as this may indicate a problem with the new database!
 
