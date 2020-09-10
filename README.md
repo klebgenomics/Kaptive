@@ -311,6 +311,8 @@ Database versions:
 * Kaptive v0.6.0 and above include four novel primary _Klebsiella_ K locus references defined on the basis of gene content (KL162-KL165) in this [paper.](https://www.biorxiv.org/content/10.1101/557785v1)
 * Kaptive v0.7.1 and above contain updated versions of the KL53 and KL126 loci (see table below for details). The updated KL126 locus sequence will be described in McDougall, F. et al. 2020. _Klebsiella pneumoniae_ diversity and detection of _Klebsiella africana_ in Australian Fruit Bats (_Pteropus policephalus_). _In prep._
 * Kaptive v0.7.2 and above include a novel primary _Klebsiella_ K locus reference defined on the basis of gene content (KL166), which will be described in Li, M. et al. 2020. Characterization of clinically isolated hypermucoviscous _Klebsiella pneumoniae_ in Japan. _In prep._
+* Kaptive v0.7.3 and above include four novel primary _Klebsiella_ K locus references defined on the basis of gene content (KL167-KL170), which will be described in Gorrie, C. et al. 2020. Opportunity and diversity: A year of _Klebsiella pneumoniae_ infections in hospital. _In prep._
+
 
 Changes to the _Klebsiella_ K locus primary reference database:
 
@@ -357,6 +359,21 @@ Kaptive uses 'tblastn' to screen for the presence of each locus gene with a cove
 #### Why does the _Klebsiella_ K-locus region of my sample contain a <i>ugd</i> gene matching another locus?
 
 A small number of the original _Klebsiella_ K locus references are truncated, containing only a partial <i>ugd</i> sequence. The reference annotations for these loci do not include <i>ugd</i>, so are not identified by the 'tblastn' search. Instead <b>Kaptive</b> reports the closest match to the partial sequence (if it exceeds the 90% coverage threshold). 
+
+#### Why has the best matching locus changed after I reran my analysis with an updated version of the database? ####
+
+The databases are updated as novel loci are discovered and curated. If your previous match had a confidence call of 'Low' or 'None' but your new match has higher confidence, this indicates that your genome contains a locus that was absent in the older version of the database! So nothing to worry about here.
+
+__But what if your old match and your new match have 'Good' or better confidence levels?__
+
+If your old match had 'Perfect' or 'Very High' confidence, please post an issue to the issues page, as this may indicate a problem with the new database!
+
+If your old match had 'Good' or 'High' confidence please read on...
+
+Polysaccharide loci are subject to frequent recombinations and rearrangements, which generates new variants. As a result, a small number of pairs of loci share large regions of homology e.g. the _Klebsiella_ K-locus KL170 is very similar to KL101, and in fact seems to be a hybrid of KL101 plus a small region from KL106. 
+Kaptive can accurately distinguish the KL101 and KL170 loci when it is working with high quality genome assemblies, but this task is much trickier if the assembly is fragmented. This means that matches to KL101 that were reported using an early version of the K-locus database might be reported as KL170 when using a later version of the database.
+However, this should only occur in instances where the K-locus is fragmented in the genome assembly and in that case Kaptive will have indicated 'problems' with the matches e.g. '?' indicating fragmented assembly or '-' indicating that an expected gene is missing, and the corresponding confidence level will be at the lower end of the scale (i.e. 'Good' or 'High', but not 'Very High' or 'Perfect').
+You may want to try to figure out the correct locus manually, e.g. using [Bandage](https://rrwick.github.io/Bandage/) to BLAST the corresponding loci in your genome assembly. 
 
 
 ## Citation
