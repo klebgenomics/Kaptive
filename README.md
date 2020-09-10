@@ -372,8 +372,8 @@ If your old match had 'Good' or 'High' confidence please read on...
 
 Polysaccharide loci are subject to frequent recombinations and rearrangements, which generates new variants. As a result, a small number of pairs of loci share large regions of homology e.g. the _Klebsiella_ K-locus KL170 is very similar to KL101, and in fact seems to be a hybrid of KL101 plus a small region from KL106. 
 Kaptive can accurately distinguish the KL101 and KL170 loci when it is working with high quality genome assemblies, but this task is much trickier if the assembly is fragmented. This means that matches to KL101 that were reported using an early version of the K-locus database might be reported as KL170 when using a later version of the database.
-However, this should only occur in instances where the K-locus is fragmented in the genome assembly and in that case Kaptive will have indicated 'problems' with the matches e.g. '?' indicating fragmented assembly or '-' indicating that an expected gene is missing, and the corresponding confidence level will be at the lower end of the scale (i.e. 'Good' or 'High', but not 'Very High' or 'Perfect').
-You may want to try to figure out the correct locus manually, e.g. using [Bandage](https://rrwick.github.io/Bandage/) to BLAST the corresponding loci in your genome assembly. 
+However, this should only occur in instances where the K-locus is fragmented in the genome assembly and in that case Kaptive will have indicated 'problems' with the matches (e.g. '?' indicating fragmented assembly or '-' indicating that an expected gene is missing), and the corresponding confidence level will be at the lower end of the scale (i.e. 'Good' or 'High', but not 'Very High' or 'Perfect').
+You may want to try to figure out the correct locus manually, e.g. using [Bandage](https://rrwick.github.io/Bandage/) to BLAST the corresponding loci in your genome assembly graph. 
 
 
 ## Citation
