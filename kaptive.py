@@ -170,7 +170,7 @@ def check_for_blast():
 
 def find_program(name):
     """Checks to see if a program exists."""
-    process = subprocess.Popen(['command -v', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(['command', '-v', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = process.communicate()
     return bool(out) and not bool(err)
 
