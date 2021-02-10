@@ -213,7 +213,7 @@ To disable JSON output, run Kaptive with `--no_json`.
 
 #### Locus matching sequences
 
-For each input assembly, Kaptive produces a Genbank file of the region(s) of the assembly which correspond to the best locus match. This may be a single piece (in cases of a good assembly and a strong match) or it may be in multiple pieces (in cases of poor assembly and/or a novel locus). The file is named using the output prefix and the assembly name.
+For each input assembly, Kaptive produces a fasta file of the region(s) of the assembly which correspond to the best locus match. This may be a single piece (in cases of a good assembly and a strong match) or it may be in multiple pieces (in cases of poor assembly and/or a novel locus). The file is named using the output prefix and the assembly name.
 
 To these output files, run Kaptive with `--no_seq_out`.
 
