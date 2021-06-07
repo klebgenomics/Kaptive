@@ -4251,7 +4251,7 @@ ORIGIN
      9301 actacccgct gtacaaagcg ttaaaaaggc taatatcaaa aatgtcctgg ccaggtgcta
      9361 aaaaagatta ccgtggtaat cttttaaatc aataa
 //
-LOCUS       O1/O2v3                10105 bp    DNA     linear   BCT 14-FEB-2018
+LOCUS       O1/O2v3                 9400 bp    DNA     linear   BCT 14-FEB-2018
 DEFINITION  Klebsiella pneumoniae strain CWK53 O2aeh O locus, complete
             sequence.
 ACCESSION   MG280710
