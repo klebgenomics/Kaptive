@@ -4251,7 +4251,7 @@ ORIGIN
      9301 actacccgct gtacaaagcg ttaaaaaggc taatatcaaa aatgtcctgg ccaggtgcta
      9361 aaaaagatta ccgtggtaat cttttaaatc aataa
 //
-LOCUS       O1/O2v3              10105 bp    DNA     linear   BCT 14-FEB-2018
+LOCUS       O1/O2v3                10105 bp    DNA     linear   BCT 14-FEB-2018
 DEFINITION  Klebsiella pneumoniae strain CWK53 O2aeh O locus, complete
             sequence.
 ACCESSION   MG280710
@@ -4585,7 +4585,7 @@ ORIGIN
      9301 agcggcattt gcatcaatat tcattgccta tatttatgca cgatttatcg attatcctct
      9361 ctatcgggcg ttaaagcgtc agattgccaa aataagttaa
 //
-LOCUS       gmlABD                3354 bp    DNA     linear   BCT 14-FEB-2018
+LOCUS       gmlABD                  3354 bp    DNA     linear   BCT 14-FEB-2018
 DEFINITION  Klebsiella pneumoniae strain CWK53 gmlABD gene cluster complete sequence.
 ACCESSION   MG458670
 VERSION     MG458670.1
@@ -4738,7 +4738,7 @@ ORIGIN
      3241 gccacagcag agagcgtggt ttttgatatg cgcgactttc acaacaaaga tattaccttg
      3301 attattgata ataatggttc ctctgcttgt gatagcctgg atattaacca gtaa
 //
-LOCUS       wbmVW                2733 bp    DNA     linear   BCT 14-FEB-2018
+LOCUS       wbmVW                   2733 bp    DNA     linear   BCT 14-FEB-2018
 DEFINITION  Klebsiella pneumoniae strain 5053 wbmVW genes, complete
             sequence.
 ACCESSION   MG602074
@@ -4868,7 +4868,7 @@ ORIGIN
      2641 ttaaataaat ctatttctgg aattagtgaa agatataaga ggtatgagtt agatgatggc
      2701 tggctagata gacttaagct ggccagccgc taa
 //
-LOCUS       wbbY                2223 bp    DNA     linear   BCT 14-FEB-2018
+LOCUS       wbbY                    2223 bp    DNA     linear   BCT 14-FEB-2018
 DEFINITION  Klebsiella pneumoniae strain CWK2 wbbY gene, complete
             sequence.
 ACCESSION   MG458672
