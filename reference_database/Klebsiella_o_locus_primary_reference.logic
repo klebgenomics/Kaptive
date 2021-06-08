@@ -7,15 +7,15 @@ O1/O2v1	wbbY	O1
 O1/O2v2	wbbY	O1
 O1/O2v3	wbbY	O1
 O8	wbbY	O8
-O1/O2v1	wbmVW	O2ac
-O1/O2v2	wbmVW	O2ac
-O1/O2v3	wbmVW	O2ac
-O8	wbmVW	O2ac
-O1/O2v1	gmlABD	O2aeh
-O1/O2v2	gmlABD	O2aeh
-O1/O2v3	gmlABD	O2aeh
-O8	gmlABD	O2aeh
-O1/O2v1	wbbY,wbmVW	O1 (O2ac)
-O1/O2v2	wbbY,wbmVW	O1 (O2ac)
-O1/O2v3	wbbY,wbmVW	O1 (O2ac)
-O8	wbbY,wbmVW	O1 (O2ac)
+O1/O2v1	wbmV,wbmW	O2ac
+O1/O2v2	wbmV,wbmW	O2ac
+O1/O2v3	wbmV,wbmW	O2ac
+O8	wbmV,wbmW	O2ac
+O1/O2v1	gmlA,gmlB,gmlD	O2aeh
+O1/O2v2	gmlA,gmlB,gmlD	O2aeh
+O1/O2v3	gmlA,gmlB,gmlD	O2aeh
+O8	gmlA,gmlB,gmlD	O2aeh
+O1/O2v1	wbbY,wbmV,wbmW	O1 (O2ac)
+O1/O2v2	wbbY,wbmV,wbmW	O1 (O2ac)
+O1/O2v3	wbbY,wbmV,wbmW	O1 (O2ac)
+O8	wbbY,wbmV,wbmW	O1 (O2ac)
