@@ -95,7 +95,7 @@ def main():
             if args.no_seq_out and assembly_pieces_fasta is not None:
                 os.remove(assembly_pieces_fasta)
             protein_blast(assembly, best, gene_seqs, args)
-            apply_special_logic(best, special_logic)
+            apply_special_logic(best, special_logic, ref_genes)
 
         output(args.out, assembly, best, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
@@ -621,18 +621,18 @@ def load_special_logic(ref_filename, ref_types):
         for line in special_logic_file:
             parts = line.strip().split('\t')
             assert len(parts) == 3
-            locus, extra_genes, new_type = parts
+            locus, extra_loci, new_type = parts
             if locus == 'locus':  # header line
                 continue
-            if extra_genes.lower() == 'none':
-                extra_genes = []
+            if extra_loci.lower() == 'none':
+                extra_loci = []
             else:
-                extra_genes = sorted(extra_genes.split(','))
-            special_logic.append((locus, extra_genes, new_type))
+                extra_loci = sorted(extra_loci.split(','))
+            special_logic.append((locus, extra_loci, new_type))
     return special_logic
 
 
-def apply_special_logic(locus, special_logic):
+def apply_special_logic(locus, special_logic, ref_genes):
     """
     This function has special logic for dealing with the locus -> type situations that depend on
     other genes in the genome.
@@ -641,17 +641,29 @@ def apply_special_logic(locus, special_logic):
         return
 
     other_gene_names = [x.qseqid for x in locus.other_hits_outside_locus]
-    extra_gene_names = sorted(n.split('_')[-1]
-                              for n in other_gene_names if n.startswith('Extra_genes_'))
+    extra_gene_names = sorted(n for n in other_gene_names if n.startswith('Extra_genes_'))
+
+    # Look for any 'Extra genes' loci for which all of their genes have been found in this genome.
+    found_loci = []
+    for ref_locus, genes in ref_genes.items():
+        if ref_locus.startswith('Extra_genes_'):
+            short_locus_name = ref_locus.replace('Extra_genes_', '')
+            locus_gene_names = [g.full_name for g in genes]
+            if all(g in extra_gene_names for g in locus_gene_names):
+                found_loci.append(short_locus_name)
+        found_loci = sorted(found_loci)
+
+    # See if the combination of best-match-locus and extra-loci is represented in the special logic,
+    # and if so, change the type.
     new_types = []
-    for locus_name, extra_genes, new_type in special_logic:
-        if locus.name == locus_name and extra_gene_names == extra_genes:
+    for locus_name, extra_loci, new_type in special_logic:
+        if locus.name == locus_name and found_loci == extra_loci:
             new_types.append(new_type)
     if len(new_types) == 0:
         locus.type = 'unknown'
     elif len(new_types) == 1:
         locus.type = new_types[0]
-    else:  # multiple new types -
+    else:  # multiple matches - shouldn't happen!
         quit_with_error('redundancy in special logic file')
 
 
