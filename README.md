@@ -124,7 +124,7 @@ CDS             1..897
 You can also supply Kaptive with a FASTA file of gene alleles using the `-g` (or `--allelic_typing`) 
 argument. For example, `wzi_wzc_db.fasta` (included with Kaptive) contains wzi and wzc alleles. This file must be formatted as an [SRST2](https://github.com/katholt/srst2) database with integers for allele names.
 
-If used, Kaptive will report the number of the best allele for each type gene. If there is no perfect match, Kaptive reports the best match and adds a `*` to the allele number.
+If used, Kaptive will report the number of the best allele for each type gene within the found locus. If there is no perfect match, Kaptive reports the best match and adds a `*` to the allele number. To be clear, Kaptive will only search for the genes in the locus sequence, not in the entire genome (check out [this tool](https://github.com/rrwick/SRST2-table-from-assemblies) if an entire-genome search is needed).
 
 
 ## Standard output
