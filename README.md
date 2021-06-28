@@ -12,8 +12,24 @@ Given a novel genome and a database of known loci (K, O or OC), Kaptive will hel
 In cases where your input assembly closely matches a known locus, Kaptive should make that obvious. When your assembly has a novel type, that too should be clear. However, Kaptive cannot reliably extract or annotate locus sequences for totally novel types – if it indicates a novel locus is present then extracting and annotating the sequence is up to you! Very poor assemblies can confound the results, so be sure to closely examine any case where the locus sequence in your assembly is broken into multiple pieces.
 If you think you have found a novel locus that should be added to one of the databases distributed with Kaptive please [contact us](mailto:kaptive.typing@gmail.com).
 
-For citation info and details about Kaptive, Kaptive Web and the locus databases, see [our papers](#citation) below.
+## Citation
 
+If you use Kaptive and/or the _Klebsiella_ K locus database in your research, please cite this paper:
+[Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
+
+If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the _Klebsiella_ O locus database in your research, please cite this paper:
+[Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
+
+If you use the _A. baumannii_ K or OC locus database(s) in your research please cite this paper:
+[Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Microbial Genomics (2020).](https://doi.org/10.1099/mgen.0.000339)  
+Lists of papers describing each of the individual _A. baumannii_ reference loci can be found [here](https://github.com/katholt/Kaptive/tree/master/extras).
+
+
+## License
+
+GNU General Public License, version 3
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.495263.svg)](https://doi.org/10.5281/zenodo.495263)
 
 ## Table of Contents
 
@@ -39,9 +55,6 @@ For citation info and details about Kaptive, Kaptive Web and the locus databases
     * [_Klebsiella_ O locus database](#klebsiella-o-locus-database)
     * [_Acinetobacter baumannii_ K and OC locus databases](#acinetobacter-baumanii-k-and-oc-locus-databases)
 * [FAQs](#faqs)
-* [Citation](#citation)
-* [License](#license)
-
 
 ## Quick version (for the impatient)
 
@@ -374,23 +387,3 @@ Polysaccharide loci are subject to frequent recombinations and rearrangements, w
 Kaptive can accurately distinguish the KL101 and KL170 loci when it is working with high quality genome assemblies, but this task is much trickier if the assembly is fragmented. This means that matches to KL101 that were reported using an early version of the K-locus database might be reported as KL170 when using a later version of the database.
 However, this should only occur in instances where the K-locus is fragmented in the genome assembly and in that case Kaptive will have indicated 'problems' with the matches (e.g. '?' indicating fragmented assembly or '-' indicating that an expected gene is missing), and the corresponding confidence level will be at the lower end of the scale (i.e. 'Good' or 'High', but not 'Very High' or 'Perfect').
 You may want to try to figure out the correct locus manually, e.g. using [Bandage](https://rrwick.github.io/Bandage/) to BLAST the corresponding loci in your genome assembly graph. 
-
-
-## Citation
-
-If you use Kaptive and/or the _Klebsiella_ K locus database in your research, please cite this paper:
-[Identification of _Klebsiella_ capsule synthesis loci from whole genome data. Microbial Genomics (2016).](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
-
-If you use [Kaptive Web](http://kaptive.holtlab.net/) and/or the _Klebsiella_ O locus database in your research, please cite this paper:
-[Kaptive Web: user-friendly capsule and lipopolysaccharide serotype prediction for _Klebsiella_ genomes. Journal of Clinical Microbiology (2018).](http://jcm.asm.org/content/56/6/e00197-18)
-
-If you use the _A. baumannii_ K or OC locus database(s) in your research please cite this paper:
-[Identification of _Acinetobacter baumannii_ loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. Microbial Genomics (2020).](https://doi.org/10.1099/mgen.0.000339)  
-Lists of papers describing each of the individual _A. baumannii_ reference loci can be found [here](https://github.com/katholt/Kaptive/tree/master/extras).
-
-
-## License
-
-GNU General Public License, version 3
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.495263.svg)](https://doi.org/10.5281/zenodo.495263)
