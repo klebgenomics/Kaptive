@@ -24,7 +24,7 @@ GNU General Public License, version 3
 
 ## Table of Contents
 
-* [What does Kaptive do?](#what-does-kaptive-do?)
+* [What does Kaptive do?](#what-does-kaptive-do)
 * [Quick version (for the impatient)](#quick-version-for-the-impatient)
 * [Installation](#installation)
 * [Input files](#input-files)
