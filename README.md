@@ -24,7 +24,7 @@ GNU General Public License, version 3
 
 ## Table of Contents
 
-* [What does Kaptive do?](#what-does-kaptive-do)
+* [How does Kaptive work?](#how-does-kaptive-work)
 * [Quick version (for the impatient)](#quick-version-for-the-impatient)
 * [Installation](#installation)
 * [Input files](#input-files)
@@ -48,7 +48,7 @@ GNU General Public License, version 3
     * [_Acinetobacter baumannii_ K and OC locus databases](#acinetobacter-baumanii-k-and-oc-locus-databases)
 * [FAQs](#faqs)
 
-## What does Kaptive do?
+## How does Kaptive work?
 
 Given a novel genome and a database of known loci (K, O or OC), Kaptive will help a user to decide whether their sample has a known or novel locus. It carries out the following for each input assembly:
 * BLAST for all known locus nucleotide sequences (using `blastn`) to identify the best match ('best' defined as having the highest coverage).
@@ -60,7 +60,7 @@ In cases where your input assembly closely matches a known locus, Kaptive should
 If you think you have found a novel locus that should be added to one of the databases distributed with Kaptive please [contact us](mailto:kaptive.typing@gmail.com).
 
 
-## Quick version (for the impatient)
+## How to run and interpret - quick version (for the impatient)
 
 Kaptive needs the following input files to run (included in this repository):
 * A multi-record Genbank file with your known loci (nucleotide sequences for each whole locus and protein sequences for their genes)
