@@ -50,7 +50,7 @@ import random
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '0.8.0'
+__version__ = '2.0.0'
 
 
 def main():
