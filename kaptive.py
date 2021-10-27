@@ -242,7 +242,7 @@ def parse_genbank(genbank, temp_dir, locus_label, type_label):
     else:
         check_label(genbank, locus_label)
     if type_label == 'automatically determined':
-        type_label = find_label(genbank, 'type')
+        type_label = find_label(genbank, 'type', required=False)
     else:
         check_label(genbank, type_label)
 
@@ -255,7 +255,7 @@ def parse_genbank(genbank, temp_dir, locus_label, type_label):
                         locus_name = get_name_from_note(note, locus_label)
                     elif note.startswith('Extra genes'):
                         locus_name = note.replace(':', '').replace(' ', '_')
-                    elif note.startswith(type_label):
+                    elif type_label is not None and note.startswith(type_label):
                         type_name = get_name_from_note(note, type_label)
         if locus_name in ref_genes:
             quit_with_error('Duplicate reference locus name: ' + locus_name)
@@ -287,12 +287,12 @@ def rreplace(s, old, new):
     return new.join(li)
 
 
-def find_label(genbank, required_text):
+def find_label(genbank, text, required=True):
     """
-    Automatically finds the label in the Genbank file which contains the required test. For
-    example, if the required text is 'locus', then the Genbank file must have exactly one
-    possible label containing 'locus' that is present in a note qualifier in the source feature
-    for every record. If not, Kaptive will quit with an error.
+    Automatically finds the label in the Genbank file which contains the specified text. For
+    example, if the text is 'locus', then the Genbank file must have exactly one possible label
+    containing 'locus' that is present in a note qualifier in the source feature for every record.
+    If not, Kaptive will quit with an error.
     """
     possible_locus_labels = set()
     for record in SeqIO.parse(genbank, 'genbank'):
@@ -301,12 +301,13 @@ def find_label(genbank, required_text):
                 for note in feature.qualifiers['note']:
                     if ':' in note:
                         note = note.split(':')[0].strip()
-                    elif '=' in note:
-                        note = note.split('=')[0].strip()
-                    if required_text in note:
-                        possible_locus_labels.add(note)
+                        if text in note:
+                            possible_locus_labels.add(note)
     if not possible_locus_labels:
-        quit_with_error('None of the records contain a valid locus label')
+        if required:
+            quit_with_error('None of the records contain a valid ' + text + ' label')
+        else:
+            return None
     available_locus_labels = possible_locus_labels.copy()
     for record in SeqIO.parse(genbank, 'genbank'):
         locus_labels = set()
@@ -315,24 +316,22 @@ def find_label(genbank, required_text):
                 for note in feature.qualifiers['note']:
                     if ':' in note:
                         locus_labels.add(note.split(':')[0].strip())
-                    if '=' in note:
-                        locus_labels.add(note.split('=')[0].strip())
         if any(x == 'Extra genes' for x in locus_labels):
             continue
         if not locus_labels:
-            quit_with_error('no possible locus labels were found for ' + record.name)
+            quit_with_error('no possible ' + text + ' labels were found for ' + record.name)
         previous_labels = available_locus_labels.copy()
         available_locus_labels = available_locus_labels.intersection(locus_labels)
         if not available_locus_labels:
-            error_message = record.name + ' does not have a locus label matching the previous ' \
-                            'records\n'
+            error_message = record.name + ' does not have a ' + text + ' label matching the ' \
+                            'previous records\n'
             error_message += 'Previous record labels: ' + ', '.join(list(previous_labels)) + '\n'
             error_message += 'Labels in ' + record.name + ': ' + ', '.join(list(locus_labels))
             quit_with_error(error_message)
     if len(available_locus_labels) > 1:
-        error_message = 'multiple possible locus labels were found: ' + \
+        error_message = 'multiple possible ' + text + ' labels were found: ' + \
                         ', '.join(list(available_locus_labels)) + '\n'
-        error_message += 'Please use the --locus_label option to specify which to use'
+        error_message += 'Please use the --' + text + '_label option to specify which to use'
         quit_with_error(error_message)
     return list(available_locus_labels)[0]
 
