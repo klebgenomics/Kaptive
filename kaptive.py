@@ -96,6 +96,8 @@ def main():
                 os.remove(assembly_pieces_fasta)
             protein_blast(assembly, best, gene_seqs, args)
             apply_special_logic(best, special_logic, ref_genes)
+            if best.type == 'unknown':
+                best.type = 'unknown (' + best.name + ')'
 
         output(args.out, assembly, best, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
