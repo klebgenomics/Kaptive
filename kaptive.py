@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Copyright 2018 Ryan Wick (rrwick@gmail.com)
+Copyright 2021 Ryan Wick (rrwick@gmail.com)
 https://github.com/katholt/Kaptive
 
 Kaptive is a tool which reports information about the K and O types for Klebsiella genome
@@ -37,8 +37,6 @@ details. You should have received a copy of the GNU General Public License along
 not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import print_function
-from __future__ import division
 import argparse
 import sys
 import os
@@ -52,7 +50,7 @@ import random
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '0.7.3'
+__version__ = '2.0.0'
 
 
 def main():
@@ -68,13 +66,16 @@ def main():
     output_json = not args.no_json
 
     temp_dir = make_temp_dir(args)
-    k_ref_seqs, gene_seqs, k_ref_genes = parse_genbank(args.k_refs, temp_dir, args.locus_label)
+    ref_seqs, gene_seqs, ref_genes, ref_types = \
+        parse_genbank(args.k_refs, temp_dir, args.locus_label, args.type_label)
+    special_logic = load_special_logic(args.k_refs, ref_types)
+
     all_gene_dict = {}
-    for gene_list in k_ref_genes.values():
+    for gene_list in ref_genes.values():
         for gene in gene_list:
             all_gene_dict[gene.full_name] = gene
 
-    k_refs = load_k_locus_references(k_ref_seqs, k_ref_genes)
+    refs = load_locus_references(ref_seqs, ref_genes, ref_types)
     type_gene_names = get_type_gene_names(args.allelic_typing)
 
     if output_table:
@@ -83,26 +84,28 @@ def main():
 
     for fasta_file in args.assembly:
         assembly = Assembly(fasta_file)
-        best_k = get_best_k_type_match(assembly, k_ref_seqs, k_refs, args.threads)
-        if best_k is None:
+        best = get_best_locus_match(assembly, ref_seqs, refs, args.threads)
+        if best is None:
             type_gene_results = {}
-            best_k = KLocus('None', '', [])
+            best = Locus('None', '', '', [])
         else:
-            find_assembly_pieces(assembly, best_k, args)
-            assembly_pieces_fasta = save_assembly_pieces_to_file(best_k, assembly, args.out)
+            find_assembly_pieces(assembly, best, args)
+            assembly_pieces_fasta = save_assembly_pieces_to_file(best, assembly, args.out)
             type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
             if args.no_seq_out and assembly_pieces_fasta is not None:
                 os.remove(assembly_pieces_fasta)
-            protein_blast(assembly, best_k, gene_seqs, args)
-            check_name_for_o1_o2(best_k)
+            protein_blast(assembly, best, gene_seqs, args)
+            apply_special_logic(best, special_logic, ref_genes)
+            if best.type == 'unknown':
+                best.type = 'unknown (' + best.name + ')'
 
-        output(args.out, assembly, best_k, args, type_gene_names, type_gene_results,
+        output(args.out, assembly, best, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
 
     if output_json:
         write_json_file(args.out, json_list)
 
-    clean_up(k_ref_seqs, gene_seqs, temp_dir)
+    clean_up(ref_seqs, gene_seqs, temp_dir)
     sys.exit(0)
 
 
@@ -155,7 +158,12 @@ def add_arguments_to_parser(parser):
                         default='automatically determined',
                         help='In the Genbank file, the source feature must have a note '
                              'identifying the locus name, starting with this label followed by '
-                             'a colon (e.g. /note="K locus: K1")')
+                             'a colon (e.g. /note="K locus: KL1")')
+    parser.add_argument('--type_label', type=str, required=False,
+                        default='automatically determined',
+                        help='In the Genbank file, the source feature must have a note '
+                             'identifying the type name, starting with this label followed by '
+                             'a colon (e.g. /note="K type: K1")')
 
 
 def check_for_blast():
@@ -199,12 +207,12 @@ def make_temp_dir(args):
     return temp_dir
 
 
-def clean_up(k_ref_seqs, gene_seqs, temp_dir):
+def clean_up(ref_seqs, gene_seqs, temp_dir):
     """
     Deletes the temporary FASTA files. If the temp directory is then empty, it is deleted too.
     """
     try:
-        os.remove(k_ref_seqs)
+        os.remove(ref_seqs)
     except OSError:
         pass
     try:
@@ -218,57 +226,75 @@ def clean_up(k_ref_seqs, gene_seqs, temp_dir):
         pass
 
 
-def parse_genbank(genbank, temp_dir, locus_label):
+def parse_genbank(genbank, temp_dir, locus_label, type_label):
     """
     This function reads the input Genbank file and produces two temporary FASTA files: one with the
     loci nucleotide sequences and one with the gene sequences.
     It returns the file paths for these two FASTA files along with a dictionary that links genes to
     loci.
     """
-    k_ref_genes = {}
-    k_ref_seqs_filename = os.path.join(temp_dir, 'temp_k_ref_seqs.fasta')
+    ref_genes, ref_types = {}, {}
+    ref_seqs_filename = os.path.join(temp_dir, 'temp_ref_seqs.fasta')
     gene_seqs_filename = os.path.join(temp_dir, 'temp_gene_seqs.fasta')
-    k_ref_seqs = open(k_ref_seqs_filename, 'wt')
+    ref_seqs = open(ref_seqs_filename, 'wt')
     gene_seqs = open(gene_seqs_filename, 'wt')
+
     if locus_label == 'automatically determined':
-        locus_label = find_locus_label(genbank)
+        locus_label = find_label(genbank, 'locus')
     else:
-        check_locus_label(genbank, locus_label)
+        check_label(genbank, locus_label)
+    if type_label == 'automatically determined':
+        type_label = find_label(genbank, 'type', required=False)
+    else:
+        check_label(genbank, type_label)
+
     for record in SeqIO.parse(genbank, 'genbank'):
-        k_locus_name = ''
+        locus_name, type_name = '', ''
         for feature in record.features:
             if feature.type == 'source' and 'note' in feature.qualifiers:
                 for note in feature.qualifiers['note']:
                     if note.startswith(locus_label):
-                        k_locus_name = get_locus_name_from_note(note, locus_label)
+                        locus_name = get_name_from_note(note, locus_label)
                     elif note.startswith('Extra genes'):
-                        k_locus_name = note.replace(':', '').replace(' ', '_')
-        if k_locus_name in k_ref_genes:
-            quit_with_error('Duplicate reference locus name: ' + k_locus_name)
-        k_ref_genes[k_locus_name] = []
+                        locus_name = note.replace(':', '').replace(' ', '_')
+                    elif type_label is not None and note.startswith(type_label):
+                        type_name = get_name_from_note(note, type_label)
+        if locus_name in ref_genes:
+            quit_with_error('Duplicate reference locus name: ' + locus_name)
+        ref_genes[locus_name] = []
 
         # Extra genes are only used for the gene search, not the nucleotide search.
-        if not k_locus_name.startswith('Extra_genes'):
-            k_ref_seqs.write('>' + k_locus_name + '\n')
-            k_ref_seqs.write(add_line_breaks_to_sequence(str(record.seq), 60))
+        if not locus_name.startswith('Extra_genes'):
+            ref_seqs.write('>' + locus_name + '\n')
+            ref_seqs.write(add_line_breaks_to_sequence(str(record.seq), 60))
+            ref_types[locus_name] = type_name
 
         gene_num = 1
         for feature in record.features:
             if feature.type == 'CDS':
-                gene = Gene(k_locus_name, gene_num, feature, record.seq)
-                k_ref_genes[k_locus_name].append(gene)
+                gene = Gene(locus_name, gene_num, feature, record.seq)
+                ref_genes[locus_name].append(gene)
                 gene_num += 1
                 gene_seqs.write(gene.get_fasta())
-    k_ref_seqs.close()
+    ref_seqs.close()
     gene_seqs.close()
-    return k_ref_seqs_filename, gene_seqs_filename, k_ref_genes
+    return ref_seqs_filename, gene_seqs_filename, ref_genes, ref_types
 
 
-def find_locus_label(genbank):
+def rreplace(s, old, new):
     """
-    Automatically finds the label for the locus sequences. The Genbank file must have exactly one
-    possible label that is present in a note qualifier in the source feature for every record. If
-    not, Kaptive will quit with an error.
+    https://stackoverflow.com/questions/2556108
+    """
+    li = s.rsplit(old, 1)
+    return new.join(li)
+
+
+def find_label(genbank, text, required=True):
+    """
+    Automatically finds the label in the Genbank file which contains the specified text. For
+    example, if the text is 'locus', then the Genbank file must have exactly one possible label
+    containing 'locus' that is present in a note qualifier in the source feature for every record.
+    If not, Kaptive will quit with an error.
     """
     possible_locus_labels = set()
     for record in SeqIO.parse(genbank, 'genbank'):
@@ -276,11 +302,14 @@ def find_locus_label(genbank):
             if feature.type == 'source' and 'note' in feature.qualifiers:
                 for note in feature.qualifiers['note']:
                     if ':' in note:
-                        possible_locus_labels.add(note.split(':')[0].strip())
-                    if '=' in note:
-                        possible_locus_labels.add(note.split('=')[0].strip())
+                        note = note.split(':')[0].strip()
+                        if text in note:
+                            possible_locus_labels.add(note)
     if not possible_locus_labels:
-        quit_with_error('None of the records contain a valid locus label')
+        if required:
+            quit_with_error('None of the records contain a valid ' + text + ' label')
+        else:
+            return None
     available_locus_labels = possible_locus_labels.copy()
     for record in SeqIO.parse(genbank, 'genbank'):
         locus_labels = set()
@@ -289,29 +318,27 @@ def find_locus_label(genbank):
                 for note in feature.qualifiers['note']:
                     if ':' in note:
                         locus_labels.add(note.split(':')[0].strip())
-                    if '=' in note:
-                        locus_labels.add(note.split('=')[0].strip())
         if any(x == 'Extra genes' for x in locus_labels):
             continue
         if not locus_labels:
-            quit_with_error('no possible locus labels were found for ' + record.name)
+            quit_with_error('no possible ' + text + ' labels were found for ' + record.name)
         previous_labels = available_locus_labels.copy()
         available_locus_labels = available_locus_labels.intersection(locus_labels)
         if not available_locus_labels:
-            error_message = record.name + ' does not have a locus label matching the previous ' \
-                            'records\n'
+            error_message = record.name + ' does not have a ' + text + ' label matching the ' \
+                            'previous records\n'
             error_message += 'Previous record labels: ' + ', '.join(list(previous_labels)) + '\n'
             error_message += 'Labels in ' + record.name + ': ' + ', '.join(list(locus_labels))
             quit_with_error(error_message)
     if len(available_locus_labels) > 1:
-        error_message = 'multiple possible locus labels were found: ' + \
+        error_message = 'multiple possible ' + text + ' labels were found: ' + \
                         ', '.join(list(available_locus_labels)) + '\n'
-        error_message += 'Please use the --locus_label option to specify which to use'
+        error_message += 'Please use the --' + text + '_label option to specify which to use'
         quit_with_error(error_message)
     return list(available_locus_labels)[0]
 
 
-def check_locus_label(genbank, locus_label):
+def check_label(genbank, label):
     """
     Makes sure that every record in the Genbank file contains a note in the source feature
     beginning with the given label.
@@ -321,18 +348,18 @@ def check_locus_label(genbank, locus_label):
         for feature in record.features:
             if feature.type == 'source' and 'note' in feature.qualifiers:
                 for note in feature.qualifiers['note']:
-                    if note.startswith(locus_label):
-                        k_locus_name = get_locus_name_from_note(note, locus_label)
-                        if k_locus_name:
+                    if note.startswith(label):
+                        locus_name = get_name_from_note(note, label)
+                        if locus_name:
                             found_label = True
         if not found_label:
-            error_message = record.name + ' is missing a locus label\n'
+            error_message = record.name + ' is missing a label\n'
             error_message += 'The source feature must have a note qualifier beginning with "' + \
-                             locus_label + ':" followed by the locus name'
+                             label + ':" followed by the relevant info'
             quit_with_error(error_message)
 
 
-def get_locus_name_from_note(full_note, locus_label):
+def get_name_from_note(full_note, locus_label):
     """
     Extracts the part of the note following the label (and any colons, spaces or equals signs).
     """
@@ -375,34 +402,34 @@ def quit_with_error(message):
     sys.exit(1)
 
 
-def get_best_k_type_match(assembly, k_refs_fasta, k_refs, threads):
+def get_best_locus_match(assembly, refs_fasta, refs, threads):
     """
     Searches for all known locus types in the given assembly and returns the best match.
     Best match is defined as the locus type for which the largest fraction of the locus has a BLAST
     hit to the assembly. In cases of a tie, the mean identity of the locus type BLAST hits are used
     to determine the best.
     """
-    for k_ref in k_refs.values():
-        k_ref.clear()
-    blast_hits = get_blast_hits(assembly.fasta, k_refs_fasta, threads)
+    for ref in refs.values():
+        ref.clear()
+    blast_hits = get_blast_hits(assembly.fasta, refs_fasta, threads)
 
     for hit in blast_hits:
-        if hit.qseqid not in k_refs:
+        if hit.qseqid not in refs:
             quit_with_error('BLAST hit (' + hit.qseqid + ') not found in locus references')
-        k_refs[hit.qseqid].add_blast_hit(hit)
-    best_k_ref = None
+        refs[hit.qseqid].add_blast_hit(hit)
+    best_ref = None
     best_cov = 0.0
-    for k_ref in k_refs.values():
-        cov = k_ref.get_coverage()
+    for ref in refs.values():
+        cov = ref.get_coverage()
         if cov > best_cov:
             best_cov = cov
-            best_k_ref = k_ref
-        elif cov == best_cov and best_k_ref and \
-                k_ref.get_mean_blast_hit_identity() > best_k_ref.get_mean_blast_hit_identity():
-            best_k_ref = k_ref
-    if best_k_ref is not None:
-        best_k_ref.clean_up_blast_hits()
-    return copy.copy(best_k_ref)
+            best_ref = ref
+        elif cov == best_cov and best_ref and \
+                ref.get_mean_blast_hit_identity() > best_ref.get_mean_blast_hit_identity():
+            best_ref = ref
+    if best_ref is not None:
+        best_ref.clean_up_blast_hits()
+    return copy.copy(best_ref)
 
 
 def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
@@ -443,55 +470,55 @@ def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
     return type_gene_results
 
 
-def find_assembly_pieces(assembly, k_locus, args):
+def find_assembly_pieces(assembly, locus, args):
     """
     This function uses the BLAST hits in the given locus type to find the corresponding pieces of
-    the given assembly. It saves its results in the KLocus object.
+    the given assembly. It saves its results in the Locus object.
     """
-    if not k_locus.blast_hits:
+    if not locus.blast_hits:
         return
-    assembly_pieces = [x.get_assembly_piece(assembly) for x in k_locus.blast_hits]
+    assembly_pieces = [x.get_assembly_piece(assembly) for x in locus.blast_hits]
     merged_pieces = merge_assembly_pieces(assembly_pieces)
     length_filtered_pieces = [x for x in merged_pieces if x.get_length() >= args.min_assembly_piece]
     if not length_filtered_pieces:
         return
-    k_locus.assembly_pieces = fill_assembly_piece_gaps(length_filtered_pieces, args.gap_fill_size)
+    locus.assembly_pieces = fill_assembly_piece_gaps(length_filtered_pieces, args.gap_fill_size)
 
     # Now check to see if the biggest assembly piece seems to capture the whole locus. If so, this
     # is an ideal match.
-    biggest_piece = sorted(k_locus.assembly_pieces, key=lambda z: z.get_length(), reverse=True)[0]
+    biggest_piece = sorted(locus.assembly_pieces, key=lambda z: z.get_length(), reverse=True)[0]
     start = biggest_piece.earliest_hit_coordinate()
     end = biggest_piece.latest_hit_coordinate()
-    if good_start_and_end(start, end, k_locus.get_length(), args.start_end_margin):
-        k_locus.assembly_pieces = [biggest_piece]
+    if good_start_and_end(start, end, locus.get_length(), args.start_end_margin):
+        locus.assembly_pieces = [biggest_piece]
 
     # If it isn't the ideal case, we still want to check if the start and end of the locus were
     # found in the same contig. If so, fill all gaps in between so we include the entire
     # intervening sequence.
     else:
-        earliest, latest, same_contig_and_strand = k_locus.get_earliest_and_latest_pieces()
-        k_start = earliest.earliest_hit_coordinate()
-        k_end = latest.latest_hit_coordinate()
-        if good_start_and_end(k_start, k_end, k_locus.get_length(), args.start_end_margin) and \
+        earliest, latest, same_contig_and_strand = locus.get_earliest_and_latest_pieces()
+        start = earliest.earliest_hit_coordinate()
+        end = latest.latest_hit_coordinate()
+        if good_start_and_end(start, end, locus.get_length(), args.start_end_margin) and \
            same_contig_and_strand:
             gap_filling_piece = AssemblyPiece(assembly, earliest.contig_name, earliest.start,
                                               latest.end, earliest.strand)
-            k_locus.assembly_pieces = merge_assembly_pieces(k_locus.assembly_pieces +
-                                                            [gap_filling_piece])
-    k_locus.identity = get_mean_identity(k_locus.assembly_pieces)
+            locus.assembly_pieces = merge_assembly_pieces(locus.assembly_pieces +
+                                                          [gap_filling_piece])
+    locus.identity = get_mean_identity(locus.assembly_pieces)
 
 
-def protein_blast(assembly, k_locus, gene_seqs, args):
+def protein_blast(assembly, locus, gene_seqs, args):
     """
-    Conducts a BLAST search of all known locus proteins. Stores the results in the KLocus
+    Conducts a BLAST search of all known locus proteins. Stores the results in the Locus
     object.
     """
     hits = get_blast_hits(assembly.fasta, gene_seqs, args.threads, genes=True)
     hits = [x for x in hits if x.query_cov >= args.min_gene_cov and x.pident >= args.min_gene_id]
 
     best_hits = []
-    for expected_gene in k_locus.gene_names:
-        best_hit = get_best_hit_for_query(hits, expected_gene, k_locus)
+    for expected_gene in locus.gene_names:
+        best_hit = get_best_hit_for_query(hits, expected_gene, locus)
         if best_hit is not None:
             best_hits.append(best_hit)
     best_hits = sorted(best_hits, key=lambda x: x.bitscore, reverse=True)
@@ -500,10 +527,10 @@ def protein_blast(assembly, k_locus, gene_seqs, args):
             hits = cull_conflicting_hits(best_hit, hits)
 
     expected_hits = []
-    for expected_gene in k_locus.gene_names:
-        best_hit = get_best_hit_for_query(hits, expected_gene, k_locus)
+    for expected_gene in locus.gene_names:
+        best_hit = get_best_hit_for_query(hits, expected_gene, locus)
         if not best_hit:
-            k_locus.missing_expected_genes.append(expected_gene)
+            locus.missing_expected_genes.append(expected_gene)
         else:
             best_hit.over_identity_threshold = best_hit.pident >= args.low_gene_id
             expected_hits.append(best_hit)
@@ -511,14 +538,14 @@ def protein_blast(assembly, k_locus, gene_seqs, args):
             hits = cull_conflicting_hits(best_hit, hits)
     other_hits = cull_all_conflicting_hits(hits)
 
-    k_locus.expected_hits_inside_locus = [x for x in expected_hits
-                                          if x.in_assembly_pieces(k_locus.assembly_pieces)]
-    k_locus.expected_hits_outside_locus = [x for x in expected_hits
-                                           if not x.in_assembly_pieces(k_locus.assembly_pieces)]
-    k_locus.other_hits_inside_locus = [x for x in other_hits
-                                       if x.in_assembly_pieces(k_locus.assembly_pieces)]
-    k_locus.other_hits_outside_locus = [x for x in other_hits
-                                        if not x.in_assembly_pieces(k_locus.assembly_pieces)]
+    locus.expected_hits_inside_locus = [x for x in expected_hits
+                                        if x.in_assembly_pieces(locus.assembly_pieces)]
+    locus.expected_hits_outside_locus = [x for x in expected_hits
+                                         if not x.in_assembly_pieces(locus.assembly_pieces)]
+    locus.other_hits_inside_locus = [x for x in other_hits
+                                     if x.in_assembly_pieces(locus.assembly_pieces)]
+    locus.other_hits_outside_locus = [x for x in other_hits
+                                      if not x.in_assembly_pieces(locus.assembly_pieces)]
 
 
 def create_table_file(output_prefix, type_gene_names):
@@ -538,6 +565,7 @@ def create_table_file(output_prefix, type_gene_names):
 
     headers = ['Assembly',
                'Best match locus',
+               'Best match type',
                'Match confidence',
                'Problems',
                'Coverage',
@@ -579,78 +607,121 @@ def get_type_gene_names(type_genes_fasta):
     return gene_names
 
 
-def check_name_for_o1_o2(k_locus):
+def load_special_logic(ref_filename, ref_types):
     """
-    This function has special logic for dealing with the O1/O2 locus. If the wbbY and wbbZ genes
-    are both found, then we call the locus O2 (instead of O1/O2). If neither are found, then we
-    call the locus O1.
+    If any of the reference loci have a type of 'special logic', that implies that a corresponding
+    file exists to describe that logic. This function loads that special logic file if needed.
     """
-    if not (k_locus.name == 'O1/O2v1' or k_locus.name == 'O1/O2v2'):
+    if not any(t == 'special logic' for t in ref_types.values()):
+        return []
+    special_logic = []
+    assert ref_filename.endswith('.gbk')
+    special_logic_filename = rreplace(ref_filename, '.gbk', '.logic')
+    check_file_exists(special_logic_filename)
+    with open(special_logic_filename, 'rt') as special_logic_file:
+        for line in special_logic_file:
+            parts = line.strip().split('\t')
+            assert len(parts) == 3
+            locus, extra_loci, new_type = parts
+            if locus == 'locus':  # header line
+                continue
+            if extra_loci.lower() == 'none':
+                extra_loci = []
+            else:
+                extra_loci = sorted(extra_loci.split(','))
+            special_logic.append((locus, extra_loci, new_type))
+    return special_logic
+
+
+def apply_special_logic(locus, special_logic, ref_genes):
+    """
+    This function has special logic for dealing with the locus -> type situations that depend on
+    other genes in the genome.
+    """
+    if not locus.type == 'special logic':
         return
-    other_gene_names = [x.qseqid for x in k_locus.other_hits_outside_locus]
-    both_present = ('Extra_genes_wbbY/wbbZ_01_wbbY' in other_gene_names and
-                    'Extra_genes_wbbY/wbbZ_02_wbbZ' in other_gene_names)
-    both_absent = ('Extra_genes_wbbY/wbbZ_01_wbbY' not in other_gene_names and
-                   'Extra_genes_wbbY/wbbZ_02_wbbZ' not in other_gene_names)
-    if both_present:
-        k_locus.name = k_locus.name.replace('O1/O2', 'O1')
-    elif both_absent:
-        k_locus.name = k_locus.name.replace('O1/O2', 'O2')
+
+    other_gene_names = [x.qseqid for x in locus.other_hits_outside_locus]
+    extra_gene_names = sorted(n for n in other_gene_names if n.startswith('Extra_genes_'))
+
+    # Look for any 'Extra genes' loci for which all of their genes have been found in this genome.
+    found_loci = []
+    for ref_locus, genes in ref_genes.items():
+        if ref_locus.startswith('Extra_genes_'):
+            short_locus_name = ref_locus.replace('Extra_genes_', '')
+            locus_gene_names = [g.full_name for g in genes]
+            if all(g in extra_gene_names for g in locus_gene_names):
+                found_loci.append(short_locus_name)
+        found_loci = sorted(found_loci)
+
+    # See if the combination of best-match-locus and extra-loci is represented in the special logic,
+    # and if so, change the type.
+    new_types = []
+    for locus_name, extra_loci, new_type in special_logic:
+        if locus.name == locus_name and found_loci == extra_loci:
+            new_types.append(new_type)
+    if len(new_types) == 0:
+        locus.type = 'unknown'
+    elif len(new_types) == 1:
+        locus.type = new_types[0]
+    else:  # multiple matches - shouldn't happen!
+        quit_with_error('redundancy in special logic file')
 
 
-def output(output_prefix, assembly, k_locus, args, type_gene_names, type_gene_results,
+def output(output_prefix, assembly, locus, args, type_gene_names, type_gene_results,
            json_list, output_table, output_json, all_gene_dict):
     """
     Writes a line to the output table describing all that we've learned about the given locus and
     writes to stdout as well.
     """
-    uncertainty_chars = k_locus.get_match_uncertainty_chars()
+    uncertainty_chars = locus.get_match_uncertainty_chars()
 
     try:
-        expected_in_locus_per = 100.0 * len(k_locus.expected_hits_inside_locus) / \
-            len(k_locus.gene_names)
-        expected_out_locus_per = 100.0 * len(k_locus.expected_hits_outside_locus) / \
-            len(k_locus.gene_names)
-        expected_genes_in_locus_str = str(len(k_locus.expected_hits_inside_locus)) + ' / ' + \
-            str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_in_locus_per) + '%)'
-        expected_genes_out_locus_str = str(len(k_locus.expected_hits_outside_locus)) + ' / ' + \
-            str(len(k_locus.gene_names)) + ' (' + float_to_str(expected_out_locus_per) + '%)'
-        missing_per = 100.0 * len(k_locus.missing_expected_genes) / len(k_locus.gene_names)
-        missing_genes_str = str(len(k_locus.missing_expected_genes)) + ' / ' + \
-            str(len(k_locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
+        expected_in_locus_per = 100.0 * len(locus.expected_hits_inside_locus) / \
+                                len(locus.gene_names)
+        expected_out_locus_per = 100.0 * len(locus.expected_hits_outside_locus) / \
+            len(locus.gene_names)
+        expected_genes_in_locus_str = str(len(locus.expected_hits_inside_locus)) + ' / ' + \
+            str(len(locus.gene_names)) + ' (' + float_to_str(expected_in_locus_per) + '%)'
+        expected_genes_out_locus_str = str(len(locus.expected_hits_outside_locus)) + ' / ' + \
+            str(len(locus.gene_names)) + ' (' + float_to_str(expected_out_locus_per) + '%)'
+        missing_per = 100.0 * len(locus.missing_expected_genes) / len(locus.gene_names)
+        missing_genes_str = str(len(locus.missing_expected_genes)) + ' / ' + \
+            str(len(locus.gene_names)) + ' (' + float_to_str(missing_per) + '%)'
     except ZeroDivisionError:
         expected_genes_in_locus_str, expected_genes_out_locus_str, missing_genes_str = '', '', ''
 
-    output_to_stdout(assembly, k_locus, args.verbose, type_gene_names, type_gene_results,
+    output_to_stdout(assembly, locus, args.verbose, type_gene_names, type_gene_results,
                      uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str,
                      missing_genes_str)
     if output_table:
-        output_to_table(output_prefix, assembly, k_locus, type_gene_names, type_gene_results,
+        output_to_table(output_prefix, assembly, locus, type_gene_names, type_gene_results,
                         uncertainty_chars, expected_genes_in_locus_str,
                         expected_genes_out_locus_str)
     if output_json:
-        add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list,
+        add_to_json(assembly, locus, type_gene_names, type_gene_results, json_list,
                     uncertainty_chars, all_gene_dict)
 
 
-def output_to_table(output_prefix, assembly, k_locus, type_gene_names, type_gene_results,
+def output_to_table(output_prefix, assembly, locus, type_gene_names, type_gene_results,
                     uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str):
     line = [assembly.name,
-            k_locus.name,
-            k_locus.get_match_confidence(),
+            locus.name,
+            locus.type,
+            locus.get_match_confidence(),
             uncertainty_chars,
-            k_locus.get_coverage_string(),
-            k_locus.get_identity_string(),
-            k_locus.get_length_discrepancy_string(),
+            locus.get_coverage_string(),
+            locus.get_identity_string(),
+            locus.get_length_discrepancy_string(),
             expected_genes_in_locus_str,
-            get_gene_info_string(k_locus.expected_hits_inside_locus),
-            ';'.join(k_locus.missing_expected_genes),
-            str(len(k_locus.other_hits_inside_locus)),
-            get_gene_info_string(k_locus.other_hits_inside_locus),
+            get_gene_info_string(locus.expected_hits_inside_locus),
+            ';'.join(locus.missing_expected_genes),
+            str(len(locus.other_hits_inside_locus)),
+            get_gene_info_string(locus.other_hits_inside_locus),
             expected_genes_out_locus_str,
-            get_gene_info_string(k_locus.expected_hits_outside_locus),
-            str(len(k_locus.other_hits_outside_locus)),
-            get_gene_info_string(k_locus.other_hits_outside_locus)]
+            get_gene_info_string(locus.expected_hits_outside_locus),
+            str(len(locus.other_hits_outside_locus)),
+            get_gene_info_string(locus.other_hits_outside_locus)]
 
     for gene_name in type_gene_names:
         hit = type_gene_results[gene_name]
@@ -663,18 +734,19 @@ def output_to_table(output_prefix, assembly, k_locus, type_gene_names, type_gene
     table.close()
 
 
-def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list,
+def add_to_json(assembly, locus, type_gene_names, type_gene_results, json_list,
                 uncertainty_chars, all_gene_dict):
     json_record = OrderedDict()
     json_record['Assembly name'] = assembly.name
 
     match_dict = OrderedDict()
-    match_dict['Locus name'] = k_locus.name
-    match_dict['Match confidence'] = k_locus.get_match_confidence()
+    match_dict['Locus name'] = locus.name
+    match_dict['Type'] = locus.type
+    match_dict['Match confidence'] = locus.get_match_confidence()
 
     reference_dict = OrderedDict()
-    reference_dict['Length'] = len(k_locus.seq)
-    reference_dict['Sequence'] = k_locus.seq
+    reference_dict['Length'] = len(locus.seq)
+    reference_dict['Sequence'] = locus.seq
     match_dict['Reference'] = reference_dict
     json_record['Best match'] = match_dict
 
@@ -686,11 +758,11 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
     json_record['Problems'] = problems
 
     blast_results = OrderedDict()
-    blast_results['Coverage'] = k_locus.get_coverage_string()
-    blast_results['Identity'] = k_locus.get_identity_string()
-    blast_results['Length discrepancy'] = k_locus.get_length_discrepancy_string()
+    blast_results['Coverage'] = locus.get_coverage_string()
+    blast_results['Identity'] = locus.get_identity_string()
+    blast_results['Length discrepancy'] = locus.get_length_discrepancy_string()
     assembly_pieces = []
-    for i, piece in enumerate(k_locus.assembly_pieces):
+    for i, piece in enumerate(locus.assembly_pieces):
         assembly_piece = OrderedDict()
         assembly_piece['Contig name'] = piece.contig_name
         assembly_piece['Contig start position'] = piece.start + 1
@@ -703,13 +775,13 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
     blast_results['Locus assembly pieces'] = assembly_pieces
     json_record['blastn result'] = blast_results
 
-    expected_genes_in_locus = {x.qseqid: x for x in k_locus.expected_hits_inside_locus}
-    expected_hits_outside_locus = {x.qseqid: x for x in k_locus.expected_hits_outside_locus}
-    other_hits_inside_locus = {x.qseqid: x for x in k_locus.other_hits_inside_locus}
-    other_hits_outside_locus = {x.qseqid: x for x in k_locus.other_hits_outside_locus}
+    expected_genes_in_locus = {x.qseqid: x for x in locus.expected_hits_inside_locus}
+    expected_hits_outside_locus = {x.qseqid: x for x in locus.expected_hits_outside_locus}
+    other_hits_inside_locus = {x.qseqid: x for x in locus.other_hits_inside_locus}
+    other_hits_outside_locus = {x.qseqid: x for x in locus.other_hits_outside_locus}
 
-    k_locus_genes = []
-    for gene in k_locus.genes:
+    locus_genes = []
+    for gene in locus.genes:
         gene_dict = OrderedDict()
         gene_name = gene.full_name
         gene_dict['Name'] = gene_name
@@ -731,8 +803,8 @@ def add_to_json(assembly, k_locus, type_gene_names, type_gene_results, json_list
         else:
             gene_dict['Match confidence'] = 'Not found'
 
-        k_locus_genes.append(gene_dict)
-    json_record['Locus genes'] = k_locus_genes
+        locus_genes.append(gene_dict)
+    json_record['Locus genes'] = locus_genes
 
     extra_genes = OrderedDict()
     for gene_name, hit in other_hits_inside_locus.items():
@@ -803,7 +875,7 @@ def write_json_file(output_prefix, json_list):
             fcntl.flock(json_out, fcntl.LOCK_UN)
 
 
-def output_to_stdout(assembly, k_locus, verbose, type_gene_names, type_gene_results,
+def output_to_stdout(assembly, locus, verbose, type_gene_names, type_gene_results,
                      uncertainty_chars, expected_genes_in_locus_str, expected_genes_out_locus_str,
                      missing_genes_str):
     if verbose:
@@ -811,26 +883,27 @@ def output_to_stdout(assembly, k_locus, verbose, type_gene_names, type_gene_resu
         assembly_name_line = 'Assembly: ' + assembly.name
         print(assembly_name_line)
         print('-' * len(assembly_name_line))
-        print('    Best match locus: ' + k_locus.name)
-        print('    Match confidence: ' + k_locus.get_match_confidence())
+        print('    Best match locus: ' + locus.name)
+        print('    Best match type: ' + locus.type)
+        print('    Match confidence: ' + locus.get_match_confidence())
         print('    Problems: ' + (uncertainty_chars if uncertainty_chars else 'None'))
-        print('    Coverage: ' + k_locus.get_coverage_string())
-        print('    Identity: ' + k_locus.get_identity_string())
-        print('    Length discrepancy: ' + k_locus.get_length_discrepancy_string())
+        print('    Coverage: ' + locus.get_coverage_string())
+        print('    Identity: ' + locus.get_identity_string())
+        print('    Length discrepancy: ' + locus.get_length_discrepancy_string())
         print()
-        print_assembly_pieces(k_locus.assembly_pieces)
+        print_assembly_pieces(locus.assembly_pieces)
         print_gene_hits('Expected genes in locus: ' + expected_genes_in_locus_str,
-                        k_locus.expected_hits_inside_locus)
+                        locus.expected_hits_inside_locus)
         print_gene_hits('Expected genes outside locus: ' + expected_genes_out_locus_str,
-                        k_locus.expected_hits_outside_locus)
+                        locus.expected_hits_outside_locus)
         print('    Missing expected genes: ' + missing_genes_str)
-        for missing_gene in k_locus.missing_expected_genes:
+        for missing_gene in locus.missing_expected_genes:
             print('        ' + missing_gene)
         print()
-        print_gene_hits('Other genes in locus: ' + str(len(k_locus.other_hits_inside_locus)),
-                        k_locus.other_hits_inside_locus)
-        print_gene_hits('Other genes outside locus: ' + str(len(k_locus.other_hits_outside_locus)),
-                        k_locus.other_hits_outside_locus)
+        print_gene_hits('Other genes in locus: ' + str(len(locus.other_hits_inside_locus)),
+                        locus.other_hits_inside_locus)
+        print_gene_hits('Other genes outside locus: ' + str(len(locus.other_hits_outside_locus)),
+                        locus.other_hits_outside_locus)
 
         for gene_name in type_gene_names:
             result = 'Not found' if not type_gene_results[gene_name] \
@@ -839,7 +912,7 @@ def output_to_stdout(assembly, k_locus, verbose, type_gene_names, type_gene_resu
         print()
 
     else:  # not verbose
-        simple_output = assembly.name + ': ' + k_locus.name + uncertainty_chars
+        simple_output = assembly.name + ': ' + locus.name + uncertainty_chars
         for gene_name in type_gene_names:
             result = 'Not found' if not type_gene_results[gene_name] \
                 else type_gene_results[gene_name].result
@@ -941,7 +1014,7 @@ def get_blast_version(program):
         return ''
 
 
-def get_best_hit_for_query(blast_hits, query_name, k_locus):
+def get_best_hit_for_query(blast_hits, query_name, locus):
     """
     Given a list of BlastHits, this function returns the best hit for the given query, based first
     on whether or not the hit is in the assembly pieces, then on bit score.
@@ -950,7 +1023,7 @@ def get_best_hit_for_query(blast_hits, query_name, k_locus):
     matching_hits = [x for x in blast_hits if x.qseqid == query_name]
     if matching_hits:
         return sorted(matching_hits,
-                      key=lambda z: (z.in_assembly_pieces(k_locus.assembly_pieces), z.bitscore),
+                      key=lambda z: (z.in_assembly_pieces(locus.assembly_pieces), z.bitscore),
                       reverse=True)[0]
     else:
         return None
@@ -1065,16 +1138,16 @@ def complement_base(base):
     return reverse[forward.find(base)]
 
 
-def save_assembly_pieces_to_file(k_locus, assembly, output_prefix):
+def save_assembly_pieces_to_file(locus, assembly, output_prefix):
     """
     Creates a single FASTA file for all of the assembly pieces.
     Assumes all assembly pieces are from the same assembly.
     """
-    if not k_locus.assembly_pieces:
+    if not locus.assembly_pieces:
         return None
     fasta_file_name = output_prefix + '_' + assembly.name + '.fasta'
     with open(fasta_file_name, 'w') as fasta_file:
-        for piece in k_locus.assembly_pieces:
+        for piece in locus.assembly_pieces:
             fasta_file.write('>' + assembly.name + '_' + piece.get_header() + '\n')
             fasta_file.write(add_line_breaks_to_sequence(piece.get_sequence(), 60))
     return fasta_file_name
@@ -1103,9 +1176,10 @@ def line_iterator(string_with_line_breaks):
         prev_newline = next_newline
 
 
-def load_k_locus_references(fasta, k_ref_genes):
-    """Returns a dictionary of: key = locus name, value = KLocus object"""
-    return {seq[0]: KLocus(seq[0], seq[1], k_ref_genes[seq[0]]) for seq in load_fasta(fasta)}
+def load_locus_references(fasta, ref_genes, ref_types):
+    """Returns a dictionary of: key = locus name, value = Locus object"""
+    return {seq[0]: Locus(seq[0], ref_types[seq[0]], seq[1], ref_genes[seq[0]])
+            for seq in load_fasta(fasta)}
 
 
 def load_fasta(filename):
@@ -1134,12 +1208,12 @@ def load_fasta(filename):
     return fasta_seqs
 
 
-def good_start_and_end(start, end, k_length, allowed_margin):
+def good_start_and_end(start, end, length, allowed_margin):
     """
     Checks whether the given start and end coordinates are within the accepted margin of error.
     """
     good_start = start <= allowed_margin
-    good_end = end >= k_length - allowed_margin
+    good_end = end >= length - allowed_margin
     start_before_end = start < end
     return good_start and good_end and start_before_end
 
@@ -1347,9 +1421,10 @@ class TypeGeneBlastHit(BlastHit):
         return blast_results
 
 
-class KLocus(object):
-    def __init__(self, name, seq, genes):
+class Locus(object):
+    def __init__(self, name, type_name, seq, genes):
         self.name = name
+        self.type = type_name
         self.seq = seq
         self.genes = genes
         self.gene_names = [x.full_name for x in genes]
@@ -1389,7 +1464,7 @@ class KLocus(object):
 
     def clear(self):
         """
-        Clears everything in the KLocus object relevant to a particular assembly - gets it ready
+        Clears everything in the Locus object relevant to a particular assembly - gets it ready
         for the next assembly.
         """
         self.blast_hits = []
@@ -1425,11 +1500,11 @@ class KLocus(object):
         """
         self.blast_hits.sort(key=lambda x: x.length, reverse=True)
         kept_hits = []
-        k_range_so_far = IntRange()
+        range_so_far = IntRange()
         for hit in self.blast_hits:
             hit_range = hit.get_query_range()
-            if not k_range_so_far.contains(hit_range):
-                k_range_so_far.merge_in_range(hit_range)
+            if not range_so_far.contains(hit_range):
+                range_so_far.merge_in_range(hit_range)
                 kept_hits.append(hit)
         self.blast_hits = kept_hits
 
@@ -1466,9 +1541,9 @@ class KLocus(object):
         only_piece = self.assembly_pieces[0]
         a_start = only_piece.start
         a_end = only_piece.end
-        k_start = only_piece.earliest_hit_coordinate()
-        k_end = only_piece.latest_hit_coordinate()
-        expected_length = k_end - k_start
+        start = only_piece.earliest_hit_coordinate()
+        end = only_piece.latest_hit_coordinate()
+        expected_length = end - start
         actual_length = a_end - a_start
         return actual_length - expected_length
 
@@ -1724,11 +1799,11 @@ class IntRange(object):
 
 class Gene(object):
     """This class prepares and stores a gene taken from the input Genbank file."""
-    def __init__(self, k_locus_name, num, feature, k_locus_seq):
-        self.k_locus_name = k_locus_name
+    def __init__(self, locus_name, num, feature, k_locus_seq):
+        self.locus_name = locus_name
         self.feature = feature
         gene_num_string = str(num).zfill(2)
-        self.full_name = k_locus_name + '_' + gene_num_string
+        self.full_name = locus_name + '_' + gene_num_string
         if 'gene' in feature.qualifiers:
             self.gene_name = feature.qualifiers['gene'][0]
             self.full_name += '_' + self.gene_name

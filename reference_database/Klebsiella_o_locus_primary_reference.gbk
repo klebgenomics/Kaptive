@@ -27,6 +27,7 @@ FEATURES             Location/Qualifiers
                      /serovar="rfb_OL101"
                      /db_xref="taxon:573"
                      /note="O locus: OL101"
+                     /note="O type: unknown"
      gene            1..1065
                      /gene="rfbB"
      CDS             1..1065
@@ -440,6 +441,7 @@ FEATURES             Location/Qualifiers
                      /serovar="rfb_OL102"
                      /db_xref="taxon:573"
                      /note="O locus: OL102"
+                     /note="O type: unknown"
      gene            1..525
                      /gene="rfbB"
      CDS             1..525
@@ -723,6 +725,7 @@ FEATURES             Location/Qualifiers
                      /serovar="rfb_OL103"
                      /db_xref="taxon:573"
                      /note="O locus: OL103"
+                     /note="O type: unknown"
      gene            1..192
                      /gene="rmlC"
      CDS             1..192
@@ -1007,6 +1010,7 @@ FEATURES             Location/Qualifiers
                      /serovar="rfb_OL104"
                      /db_xref="taxon:573"
                      /note="O locus: OL104"
+                     /note="O type: unknown"
      gene            1..1416
                      /gene="manC"
      CDS             1..1416
@@ -1403,6 +1407,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O12"
                      /db_xref="taxon:573"
                      /note="O locus: O12"
+                     /note="O type: O12"
      gene            1..1065
                      /gene="rfbB"
      CDS             1..1065
@@ -1754,6 +1759,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O1/O2 Variant 1"
                      /db_xref="taxon:573"
                      /note="O locus: O1/O2v1"
+                     /note="O type: special logic"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -2051,6 +2057,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O1/O2 Variant 2"
                      /db_xref="taxon:573"
                      /note="O locus: O1/O2v2"
+                     /note="O type: special logic"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -2446,6 +2453,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O3/O3a"
                      /db_xref="taxon:573"
                      /note="O locus: O3/O3a"
+                     /note="O type: O3/O3a"
                      /note="annotation edited from original by K. Wyres Jan 2018"
      gene            1..1416
                      /gene="manC"
@@ -2844,6 +2852,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O3b"
                      /db_xref="taxon:573"
                      /note="O locus: O3b"
+                     /note="O type: O3b"
                      /note="annotation edited from original by K. Wyres Jan 2018"
      gene            1..1416
                      /gene="manC"
@@ -3241,6 +3250,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O4"
                      /db_xref="taxon:573"
                      /note="O locus: O4"
+                     /note="O type: O4"
                      /note="sequence manually trimmed to removed insertion sequences"
      gene            complement(1..1797)
                      /gene="hydrolase"
@@ -3547,6 +3557,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O5"
                      /db_xref="taxon:573"
                      /note="O locus: O5"
+                     /note="O type: O5"
      gene            1..1416
                      /gene="manC"
      CDS             1..1416
@@ -3960,6 +3971,7 @@ FEATURES             Location/Qualifiers
                      /note="Statens Serum Institut Klebsiella pnuemoniae
                      serotype O8 reference strains"
                      /note="O locus: O8"
+                     /note="O type: special logic"
                      /note="original sequence manually trimmed"
      gene            1..780
                      /gene="wzm"
@@ -4239,81 +4251,694 @@ ORIGIN
      9301 actacccgct gtacaaagcg ttaaaaaggc taatatcaaa aatgtcctgg ccaggtgcta
      9361 aaaaagatta ccgtggtaat cttttaaatc aataa
 //
-LOCUS       LT174607                3130 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae D-Gal II biosynthesis gene cluster wbbYZ.
-ACCESSION   LT174607
-VERSION     LT174607.1  GI:1036211132
+LOCUS       O1/O2v3                 9400 bp    DNA     linear   BCT 14-FEB-2018
+DEFINITION  Klebsiella pneumoniae strain CWK53 O2aeh O locus, complete
+            sequence.
+ACCESSION   MG280710
+VERSION     MG280710.1
 KEYWORDS    .
 SOURCE      Klebsiella pneumoniae
   ORGANISM  Klebsiella pneumoniae
-            Bacteria; Proteobacteria; Gammaproteobacteria; Enterobacteriales;
+            Bacteria; Proteobacteria; Gammaproteobacteria; Enterobacterales;
             Enterobacteriaceae; Klebsiella.
-REFERENCE   1
-  AUTHORS   Follador,R., Heinz,E., Wyres,K.L., Ellington,M.J., Kowarik,M.,
-            Holt,K.E. and Thomson,N.R.
-  TITLE     Towards a vaccine: An investigation of Klebsiella pneumoniae
-            surface antigens
+REFERENCE   1  (bases 1 to 10105)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Molecular basis for structural diversity in serogroup O2-antigen
+            polysaccharides in Klebsiella pneumoniae
   JOURNAL   Unpublished
-REFERENCE   2  (bases 1 to 3130)
-  AUTHORS   Informatics,P.
+REFERENCE   2  (bases 1 to 10105)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
   TITLE     Direct Submission
-  JOURNAL   Submitted (04-FEB-2016) SC, Wellcome Trust Sanger Institute, CB10
-            1SA, UNITED KINGDOM
+  JOURNAL   Submitted (27-OCT-2017) Dept of Molecular and Cellular Biology,
+            University of Guelph, 50 Stone Road, Guelph, Ontario N1G 2W1,
+            Canada
+COMMENT     ##Assembly-Data-START##
+            Assembly Method       :: Velvet v. 1.2.10
+            Assembly Name         :: Klebsiella pneumoniae CWK53 O-antigen
+                                     biosynthesis (rfb) gene cluster
+            Coverage              :: 100x
+            Sequencing Technology :: Illumina
+            ##Assembly-Data-END##
 FEATURES             Location/Qualifiers
-     source          1..3130
+     source          1..9400
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
-                     /strain="AKPRH07048"
-                     /serovar="O1"
+                     /strain="CWK53"
+                     /serotype="O2aeh"
                      /db_xref="taxon:573"
-                     /note="Extra genes: wbbY/wbbZ"
-                     /note="original sequence manually trimmed"
+                     /note="Sequence edited to remove hisI gene, Kelly Wyres April 2021"
+                     /note="O locus: O1/O2v3"
+                     /note="O type: special logic"
+     gene            1..768
+                     /gene="wzm"
+     CDS             1..768
+                     /gene="wzm"
+                     /note="lipopolysaccharide O-antigen export protein
+                     integral membrane component"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="Wzm"
+                     /protein_id="AVA30565.1"
+                     /translation="MKYNIGYLFDLLVVITNKDLKVRYKSSVFGYLWSIANPLLFAMI
+                     YYFIFKLVMRVQIPNYTLFLITGLFPWQWFASSATNSLFSFIANAQIIKKTVFPRSVI
+                     PLSNVMMEGLHFLCTIPVIIAFLFVYGMSPSISWLWGIPIIAIGQVIFTFGISIIFST
+                     LNLFFRDLERFVSLGIMLMFYCTPILYAADMIPEKFSWIITYNPLASMILSWRQLFMD
+                     GVLNYEYISILYVTGIILTIVGLSIFNKLKYRFAEIL"
+     misc_feature    1..>9400
+                     /note="rfb gene cluster"
+     gene            768..1508
+                     /gene="wzt"
+     CDS             768..1508
+                     /gene="wzt"
+                     /note="lipopolysaccharide O-antigen export protein
+                     nucleotide binding component"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="Wzt"
+                     /protein_id="AVA30566.1"
+                     /translation="MEPVINFSHVTKEYPLYHHIGSGIKDLVFHPKRAFQLLKGRKYL
+                     AIEDISFTVGKGEAVALIGRNGAGKSTSLGLVAGVIKPTKGTVTTQGRVASMLELGGG
+                     FHPELTGRENIYLNATLLGLRRKEVQQRMERIIEFSELGDFIDEPIRVYSSGMLAKLG
+                     FSVISQVEPDILIIDEVLAVGDISFQAKCIQTIKDFKSKGVTILFVSHNMSDVEKICD
+                     RVVWIEDHKLREIGSAERIIELYKQAMA"
+     gene            1523..3415
+                     /gene="wbbM"
+     CDS             1523..3415
+                     /gene="wbbM"
+                     /note="glycosyltransferase involved in lipopolysaccharide
+                     O-antigen biosynthesis"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="WbbM"
+                     /protein_id="AVA30567.1"
+                     /translation="MNSIKIYTCHHKPSAFLNASIIKPLHVGKANTYNDIGCEGEDSG
+                     DNISFKNPFYCELTAHYWVWKNEPLADYVGFMHYRRHLNFAEQQNHPEDNWGVVNYPL
+                     INAEYESQFGLSDESISTCVDGYDLLLPKKWSVTSAGSKNNLDHYAKGEFLHIKDYQS
+                     ALDVVEELYPEYKDAIQQFNNATDGYYTNMFVMRKDMFTDYSEWLFAILSNLEDRISM
+                     NNYNAQEKRVIGHIAERLFNIYIIKSQQDKQLKIKELQRTFVTAETFNGKLNPIFDES
+                     VPVVISFDNNYALSGGALINSIVRHSDANRNYDIVVLENKVSHLNKQRLIKLVAGHNN
+                     ISLRFFDVNSFTEMSDVHTRAHFSASTYARLFIPQLFREYKKVVFIDSDTVVKSDLAT
+                     LLDVEIGTNLVAAVKDIVMEGFVKFGTMSESDDGIMPAGEYLKKTLGMTNPDEYFQAG
+                     IIVFNVEQMVKENTFAQLMSALKAKKYWFLDQDIMNKVFFGRVKFLPLEWNVYHGNGN
+                     TDDFFPNLKFSTYMRFLEARRNPKMIHYAGENKPWNTEKVDFYDDFLENVLNTPWEKE
+                     IYYRQLPVATVVPNQHTELQQTVLLQTKIKRALMPYVNKYAPVGSPRRNKLTKYYYKV
+                     RRSILG"
+     gene            3434..4588
+                     /gene="glf"
+     CDS             3434..4588
+                     /gene="glf"
+                     /EC_number="5.4.99.9"
+                     /note="UDP-galactopyranose mutase"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="Glf"
+                     /protein_id="AVA30568.1"
+                     /translation="MKRNNILIVGAGFSGVVIARQLAEQGHKVKIIDQRDHIGGNSYD
+                     TRDPQTDVMVHVYGPHIFHTDNETVWNYVNRYAEMMPYVNRVKATVNGQVFSLPINLH
+                     TINQFFAKTCSPDEARALISEKGDSSILEPKTFEEQALRFIGKELYEAFFKGYTIKQW
+                     GMQPSELPASILKRLPVRFNYDDNYFNHKFQGMPKLGYTHMIEAIADHENITLQLQRE
+                     FAAENRESYDHVFYSGPLDAFYSYQHGRLGYRTLDFERFTWQGDYQGCAVMNYCSVDV
+                     PYTRITEHKYFSPWESHEGSVCYKEYSRACGEDDIPYYPIRQMGEMALLDKYLSLAEN
+                     EKNITFVGRLGTYRYLDMDVTIAEALKTADKYLSSLSNDEAMPVFVADVR"
+     gene            4585..5475
+                     /gene="wbbN"
+     CDS             4585..5475
+                     /gene="wbbN"
+                     /note="putative glycosyltransferase involved in
+                     lipopolysaccharide O-antigen biosynthesis"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="WbbN"
+                     /protein_id="AVA30569.1"
+                     /translation="MKHTALIVTFNRLEKLKKTVAETVKLHFTSIVIVNNGSTDGTSD
+                     WLQTITDPRVIVLNLACNNGGAGGFKAGSQYICSSVDSDWVFFYDDDAYPQSDILDKF
+                     STINKEGCRVFTALVKDLQGRTCAMNVPFAKVPTSFSDTLQYIKHPQRYVPDNKEMLV
+                     QTVSFVGMIIKREVLNEHLHHIYDELFLYFDDLYFGYQLTLSGEKIIYNPELVFTHDV
+                     SIQGKVISPEWKVYYLCRNLILAKRIFTEVAVFSSSSILLRLCKYISIFPVQRRKWVY
+                     LKFLCRGIVHGVKGISGKFH"
+     gene            5488..6621
+                     /gene="wbbO"
+     CDS             5488..6621
+                     /gene="wbbO"
+                     /note="glycosyltransferase involved in lipopolysaccharide
+                     O-antigen biosynthesis"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="WbbO"
+                     /protein_id="AVA30570.1"
+                     /translation="MKKLCYFINSDWYFDLHWTDRAIAARDAGYEIHIISHFVDDKIA
+                     IKFKTLGFICHNIPLVAQSFNVLIFFRAFFKARKIIQSINPDLLHCITIKPCLIGGFL
+                     AKSTHRPVILSFVGLGRVFSAESGCLKLLRSFTVMAYKYIASNKCSLFMFEHDKDRAK
+                     LADLVGIDYKQTIVIDGAGINPEIYKYSLEQQRDVPVVLFASRMLWSKGLGDLIEAKK
+                     ILSNKNIHFTLNVAGILVENDKDAIPLATIQKWQSEGVINWLGHCSNVFDLIEESNIV
+                     ALPSVYAEGVPRILLEASSVGRACIAYDVGGCDSLIINNDNGLIVKSKSVEELAEKLG
+                     FLLDNPETRVAMGINGRKRIQDKFSSVMIINKTLKTYRDVVEE"
+     CDS             6743..8047
+                     /note="Orf7"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="hypothetical protein"
+                     /protein_id="AVA30571.1"
+                     /translation="MSEKKSIAVSVIIPVHNAAGYISDTLSTVLSQTLNDIEIIIIND
+                     CSNDNTLEIVSALAETDSRIRVINNTTNLGGGGSRNVGLDAAIGEYVIFLDDDDYADN
+                     MMLERMYAQASDTQADVVICRSQSFDPSLQVYAPMPWSVRQELLPDLMVFSSQDIPSD
+                     FFRAFVWWPWDKLLRRQFIATHQLRFQEIRTTNDLFFVCAFMLMANRISVLNETLISH
+                     TINRSESLSATRAESHRCAVEALVALKAFICQQGMMDQRLRDYKNYVVVFLEWHLNTI
+                     SGPAFHPFYQQVKEFIVALDAKDDDFYDEFIAAAHHRITTLSAEEYLFSLKDRVLKEL
+                     EFFQAKSSALQQEVETLTDSFAEQKDENAILHNQLHEIEERVTEQEKNIRQLTDKNNN
+                     MHHEITIKQQEFNEIYQHHKNLISSLSWKLTKPLRVVRRFFK"
+     CDS             8381..9400
+                     /note="Orf8; involved in lipopolysaccharide O-antigen
+                     biosynthesis"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="putative acyltransferase"
+                     /protein_id="AVA30572.1"
+                     /translation="MGCRLSVNRFDAIDGTRGILAGMVMLSHMFGSFMGWPQVRPFSG
+                     AYLCVVYFFIMSGFVLTYAHASGNFFKYVLTRFARLWPLHFLSTILMVAIYYYNAHHG
+                     GYVSSPDVFSISVILKNILFLHGLYWHDFKLVNEPSWSISIEFWVSLLIPLIFTRLGN
+                     MTRAVVAGLLFIFLWHKHPSGIPPSMLTAMLSMLIGSLFFSLSQTEYFKCLMKEKFMA
+                     FFITAAAIVSIVGVYAMNHSRLDYFLFVAFIPMLFIDHLPDNQLIKRVFTSNLFLFLG
+                     YISFPLYLLHELVIVSGFIFDPENAWVSISIAAFASIFIAYIYARFIDYPLYRALKRQ
+                     IAKIS"
+BASE COUNT     2649 a   1738 c   2007 g   3006 t
+ORIGIN
+        1 atgaagtata atataggata tttgtttgat cttcttgttg taataacaaa caaagatttg
+       61 aaagtacgtt ataaaagcag cgtatttggt tacttatggt caatcgcaaa tccactgctt
+      121 ttcgcaatga tatattattt cattttcaaa cttgttatgc gggtacagat accaaattat
+      181 acactctttt taattacggg tcttttccca tggcaatggt ttgcgagttc tgcgaccaac
+      241 tctctattct cgtttattgc taacgcacaa attattaaga agacagtatt ccctcgttca
+      301 gtaatcccat taagcaatgt gatgatggaa gggttacatt ttctctgtac tattcctgtc
+      361 attatcgcat ttttgtttgt ttatggtatg agtccatcaa tatcctggct gtgggggata
+      421 ccaataattg cgattgggca agttattttt acatttggta tttctataat cttttcaaca
+      481 ctcaatctct ttttccggga tctggagcgg tttgtgagtc ttggcatcat gctgatgttt
+      541 tattgcacgc caattttata tgcagcagat atgatcccgg agaagtttag ctggattatc
+      601 acctataatc ctcttgcaag tatgatcctc agctggcgcc agttattcat ggatggtgta
+      661 ttgaactatg agtatatctc aatactttat gttacaggta ttatcctgac catagtgggt
+      721 ctaagcatct ttaataaatt aaaatatcga tttgcagaga ttttgtaatg gaaccagtaa
+      781 taaattttag tcacgttacg aaagaatatc cactttatca tcatattggc tcaggaataa
+      841 aagacttagt atttcatcct aagcgtgctt tccagttact gaaagggcgg aaataccttg
+      901 ctatcgagga tatctctttt actgttggca agggggaagc ggttgcattg atcggacgta
+      961 atggcgcggg gaaaagtact tcattaggtt tggtggctgg tgttatcaag ccaacgaaag
+     1021 gtaccgttac gactcagggc cgggttgcat caatgctgga gctaggcggt gggttccatc
+     1081 cagaattgac tggtcgggaa aatatttatc tcaatgccac ccttcttgga ttacgacgta
+     1141 aagaagttca gcagcgtatg gaacgtatca ttgagttctc ggaattaggt gactttattg
+     1201 atgaacctat ccgtgtttac tcaagcggca tgcttgcaaa actggggttc tctgtcatca
+     1261 gccaggttga gcctgatatt cttatcattg atgaagtgct tgctgtgggc gatatctcat
+     1321 tccaggccaa gtgcattcag accatcaaag actttaaaag caaaggagtg acgatattat
+     1381 tcgtcagtca caatatgagt gatgttgaaa aaatctgtga cagagttgtt tggatcgaag
+     1441 accacaaact ccgcgaaatt ggctcagcag agagaatcat tgaactttac aagcaagcaa
+     1501 tggcttaata attggtaata agatgaatag tatcaaaatt tacacatgtc accacaaacc
+     1561 cagtgctttt ctaaacgcct ctattattaa accactgcat gtcgggaagg ctaatactta
+     1621 taatgatatt ggctgtgaag gggaggatag cggagacaac atttccttta aaaacccctt
+     1681 ttattgtgag ctgacggccc actactgggt gtggaagaat gaaccccttg ctgactatgt
+     1741 gggattcatg cattaccgca gacacttgaa ctttgcagaa caacaaaatc atcctgagga
+     1801 taactggggg gtggtcaact acccgctcat caatgccgaa tacgaaagcc agtttggatt
+     1861 aagtgatgaa tccataagca cctgcgtcga tggatatgat ctgctgttac ccaaaaaatg
+     1921 gtcggtaact tcggcaggaa gtaagaataa ccttgatcat tatgcaaagg gtgagttttt
+     1981 acacattaaa gactatcagt ctgctctgga tgtcgttgaa gagctgtatc cagaatataa
+     2041 agatgcgatt caacaattca ataatgcaac tgatggttat tatacgaaca tgtttgttat
+     2101 gcgcaaagac atgttcacgg attattctga atggcttttt gctattttgt ctaatcttga
+     2161 agatcggatt tcgatgaata actacaatgc tcaagaaaaa cgagttatag gacacattgc
+     2221 tgagcgttta ttcaatattt atatcatcaa aagccaacaa gataaacagc tgaaaataaa
+     2281 agaactacag cgtacgtttg tcactgctga aacatttaat ggcaaattaa atccgatttt
+     2341 tgacgaaagt gttccggttg ttatcagttt tgataataac tatgcattaa gtggcggggc
+     2401 attaataaat tcaattgttc gccattctga tgctaaccga aactatgata tcgttgttct
+     2461 ggaaaataag gtcagtcatt taaataaaca acgccttatc aagctagttg ctggtcataa
+     2521 caacatatca ctgcgctttt ttgatgtgaa ttcattcact gagatgagtg atgttcatac
+     2581 ccgtgcgcat tttagtgcgt cgacatatgc gcgcttgttc atcccgcaac ttttccgcga
+     2641 gtataaaaaa gttgtgttta tcgattctga taccgtggtg aagtctgatt tggcgacact
+     2701 tctggatgtt gagatcggca ctaacctggt tgccgctgtt aaagacatcg tcatggaagg
+     2761 atttgtgaag tttggtacga tgtcagaatc tgatgatggc attatgccag caggggaata
+     2821 cctgaaaaag acattaggaa tgactaaccc tgacgaatat tttcaggccg ggattattgt
+     2881 ttttaacgtc gaacaaatgg ttaaagagaa cacctttgcg caattgatgt cagcattgaa
+     2941 agccaaaaag tattggttct tagatcagga tatcatgaac aaagtcttct ttggccgagt
+     3001 caagttttta ccattagaat ggaatgtgta ccatggtaat ggtaataccg atgatttctt
+     3061 cccgaatctc aagttttcaa cctatatgcg gtttttggaa gccagaagaa atccaaaaat
+     3121 gattcactat gcgggtgaaa acaaaccatg gaatactgag aaagtcgatt tctatgatga
+     3181 ttttcttgaa aatgttttaa atacgccatg ggaaaaagaa atttactatc gccagttacc
+     3241 tgtggccacg gtagtaccta accaacatac tgaactgcag caaaccgtgt tactgcagac
+     3301 aaagattaaa cgagctttaa tgccatatgt taacaaatat gctcctgtcg gttcgccaag
+     3361 aagaaataag ctcactaaat attattataa agttcgtcgc tcgattcttg gctaatataa
+     3421 ctggagatac attatgaagc gtaacaatat tctcatcgtc ggcgctggtt tttcaggtgt
+     3481 ggtcattgcc cgccagcttg ctgaacaagg tcacaaggtt aaaatcatcg atcagcggga
+     3541 ccacattgga ggaaactctt atgacactcg cgatcctcag actgatgtca tggttcatgt
+     3601 ctacggtccg catattttcc atacggataa tgaaaccgtc tggaactatg tcaatcggta
+     3661 tgcggaaatg atgccctatg tgaatagagt aaaagctact gttaatggtc aggttttttc
+     3721 actgccgatt aatctgcata ctattaatca gttctttgct aaaacctgtt ctcctgatga
+     3781 agctcgcgcg ctcattagcg aaaaaggtga tagctcgatt ctggaaccga agacatttga
+     3841 agagcaggct ttgcgcttta ttggtaaaga attatatgaa gcgttcttca aaggctacac
+     3901 cataaaacag tgggggatgc agccttccga gcttccggca tctatactca aacggttgcc
+     3961 tgtgcgtttc aattatgacg ataactactt caatcataaa ttccagggca tgccgaagtt
+     4021 gggctatacc catatgattg aagcgatcgc cgatcatgaa aatatcactc tgcaattaca
+     4081 gcgtgagttt gcggctgaaa atcgtgaaag ttatgatcat gtgttttata gcgggccgtt
+     4141 agacgcgttc tattcatacc agcatgggcg tcttggctac cgtactctgg actttgagcg
+     4201 atttacctgg caaggtgatt atcagggctg cgcggtcatg aattattgct cagttgatgt
+     4261 cccgtatacg cgaattacgg aacataaata tttttccccg tgggaaagcc atgaaggttc
+     4321 cgtatgttat aaggaatata gtcgcgcttg cggtgaagat gatattcctt actatccaat
+     4381 ccgccagatg ggtgagatgg ctctgctgga taaatattta tcactggcgg agaatgagaa
+     4441 aaatattact ttcgttggac gcctggggac ttatcgctac cttgatatgg atgtaacgat
+     4501 tgcagaagca ttgaaaacgg ccgataaata tctgtcctca ttgtccaacg acgaagcgat
+     4561 gcctgtattt gtggccgacg tacgatgaaa catactgcat taatagtcac ttttaaccgt
+     4621 cttgaaaagc taaaaaagac ggttgctgaa actgttaagc tgcactttac ctctatcgtt
+     4681 attgtcaaca acgggtccac ggatgggacc tctgattggc ttcagacaat cactgatccc
+     4741 cgtgtaattg tcttgaatct ggcctgtaat aacggtggcg ccggagggtt taaggccggt
+     4801 agtcaataca tatgcagttc tgttgatagc gattgggtct tcttttatga cgatgatgct
+     4861 tatccgcaaa gtgatattct tgataagttc tcaacgataa ataaagaagg ttgtcgtgtt
+     4921 tttacggctt tagttaaaga tttgcagggc cggacatgcg cgatgaatgt tccatttgca
+     4981 aaagtcccga cctcgtttag tgatactttg caatatatca aacatcccca acgatatgta
+     5041 ccagataata aggaaatgct ggtgcaaaca gtttcatttg ttggcatgat cattaagcgt
+     5101 gaagtcttga atgagcacct tcatcatatt tatgatgaac ttttccttta ttttgatgac
+     5161 ctctattttg gttatcaatt aactctaagt ggtgagaaaa ttatctataa tccggaactt
+     5221 gtttttactc atgatgtgag tatccaggga aaggtcatat cgccagagtg gaaggtttac
+     5281 tatctttgtc gaaacttaat tttggctaag agaatattta cggaagtggc agtttttagt
+     5341 agttcatcaa tccttttgcg cctatgcaag tatatctcca tattccctgt acagcgccgg
+     5401 aaatgggtgt atctaaagtt tttatgccgt gggattgtac atggtgtaaa aggaattagc
+     5461 ggtaagtttc actaagtgga catagcaatg aaaaaactgt gttatttcat aaattcggat
+     5521 tggtattttg atttgcattg gaccgatcgt gcaattgccg cccgagatgc cggttatgag
+     5581 attcacatta ttagccattt tgtcgatgat aaaatagcga taaaattcaa aacactaggt
+     5641 tttatttgtc ataatattcc tcttgtcgct caatcgttca acgttttgat tttctttcgg
+     5701 gcctttttta aggctcggaa aattattcaa agcattaatc ctgatttatt acactgcatt
+     5761 accatcaaac cgtgtttgat cggcggattt ctggctaaaa gtacccatcg tcctgttatt
+     5821 ctgagttttg tcggtttagg ccgagtattt tcggcagagt ctggctgtct taagctgctg
+     5881 cgtagtttta ctgttatggc atataagtat atcgccagta acaaatgcag cttgtttatg
+     5941 ttcgaacatg ataaagacag agccaaactc gccgatctgg ttggtatcga ttacaaacag
+     6001 actattgtta ttgatggtgc gggtattaat ccagagattt acaaatattc tctggagcaa
+     6061 caacgtgatg tcccggtcgt cctttttgcc agccgtatgc tgtggagtaa aggacttggt
+     6121 gatctgattg aagccaaaaa aatactgagt aataaaaata ttcactttac gctgaatgtt
+     6181 gccggtatct tagttgagaa tgataaagac gcgattccgc tagcgacgat acagaagtgg
+     6241 caaagcgaag gcgtgattaa ctggctcggt cattgctcta atgtatttga tttaattgaa
+     6301 gaatcaaata tcgttgcttt gccgtcggtc tacgccgaag gcgtaccacg tatcttgctg
+     6361 gaagcttcct cggtcgggcg tgcttgtatc gcttatgatg ttggtggctg tgatagctta
+     6421 attatcaaca acgataatgg gttaattgta aaaagtaaat ctgttgagga attagcggag
+     6481 aaactcggtt tcctgttaga taatcctgaa acgcgagtcg caatgggtat caatggcaga
+     6541 aagcgtattc aagataaatt ctcgagtgtg atgatcatta ataaaacatt aaaaacatat
+     6601 cgcgatgttg ttgaagagta atttttgatg aagctgagtt gctttcatct tacctatcct
+     6661 taatgaactg gaaacctaca aattaaatgc taccaataaa taaatataat tgcgtttaga
+     6721 agctaagcgt caaggtgatt acatgtctga aaaaaagagt attgctgttt ctgttattat
+     6781 ccctgtgcac aatgctgctg gatatatttc cgatacatta agcaccgttt tgtcgcaaac
+     6841 attaaatgat atcgaaatca ttattatcaa tgattgttct aacgataata ccttagagat
+     6901 tgtctctgcg ctggctgaaa ctgattcacg gattagagtg attaacaaca cgacaaatct
+     6961 tggtggtgga ggttcgagaa acgttgggtt ggatgctgct atcggtgagt acgttatttt
+     7021 tctcgatgac gacgattacg ctgataacat gatgttggag cgcatgtacg cgcaggccag
+     7081 cgatacacaa gcggatgtcg ttatttgtcg cagccagtct tttgatccct ccttacaagt
+     7141 ttatgctccg atgccgtggt cagttcgcca ggagctgcta cctgatctta tggttttttc
+     7201 ctcccaggat attccctctg actttttccg cgcctttgtc tggtggccat gggacaagct
+     7261 tctcaggcgt caatttattg ctactcatca gcttcgtttt caggaaatca ggacaacaaa
+     7321 cgatcttttc ttcgtctgtg ccttcatgct gatggcgaac agaatctcgg tcttaaatga
+     7381 aacgttaatt tctcatacca tcaatcgtag tgaatcctta tccgccacga gagcagaatc
+     7441 gcaccgctgt gctgttgaag cattagtggc tcttaaagca tttatctgtc agcaggggat
+     7501 gatggatcaa cgtctcagag attacaaaaa ctatgttgtc gttttccttg agtggcattt
+     7561 aaacacgata tctggtccgg catttcatcc gttttatcag caagtgaaag agtttattgt
+     7621 tgcgttagat gcaaaggatg atgattttta tgatgaattt atcgccgccg cgcatcatag
+     7681 aatcaccacg ctgtcagctg aagagtacct attctccctt aaagatcgtg ttctgaagga
+     7741 gcttgagttt ttccaggcaa agagctccgc attacagcaa gaagttgaga cgctgactga
+     7801 ctcattcgct gagcaaaagg atgaaaatgc gatattacat aatcaattgc atgagattga
+     7861 agagcgggtt actgaacagg aaaagaatat tcgtcagtta actgacaaaa ataataatat
+     7921 gcatcatgaa ataactatca aacagcaaga attcaatgaa atttatcagc atcacaaaaa
+     7981 tttaatctct tctttatcct ggaagttgac taagccacta cgagtggtaa gacgtttttt
+     8041 taaataattt caaaaagaag ttaagcaagt ttcacttctt tgttagtgtt cttgttattt
+     8101 tcaataaaaa tttttcgtta aataaaagag ctcctggtca tatgatttgc gagtctctat
+     8161 tcctgttaga ttaataattt attagttaga gagtaatagg tttttgtcga gttttactgg
+     8221 gggcagtaat atctcgatgt gtgtacttgt gtttttttgt gacttcctgc cttttgaatt
+     8281 ttttctatcg ggcagtgatc acctttgaat attgatagct attcttttta ttactaataa
+     8341 attctttctt ctaaaagaat gtagttttac tcattggaat atggggtgta gattgtctgt
+     8401 taacagattt gatgccattg atggcactcg tgggatattg gcgggtatgg tcatgctcag
+     8461 ccatatgttt ggcagcttta tgggttggcc gcaagtcaga ccatttagcg gtgcctatct
+     8521 gtgcgtggta tattttttca tcatgagtgg ctttgttcta acctatgccc acgcctcagg
+     8581 aaactttttc aaatacgttc ttacacgttt tgccagatta tggccgcttc attttctgtc
+     8641 aacgatactg atggtagcca tttattacta caatgcacac catggcggct atgtttccag
+     8701 tccggatgtt ttttctatta gcgtgatatt aaaaaatata ttatttcttc atggtcttta
+     8761 ctggcatgac ttcaagttag tcaatgagcc atcatggagt atcagtattg agttttgggt
+     8821 gtcactttta attcctctaa tctttacgcg attaggaaat atgactcgtg cggtagttgc
+     8881 aggtttatta tttatttttc tgtggcataa acatccatca gggataccgc catcaatgct
+     8941 aacagcaatg ctgtcaatgc tgattggttc attgtttttt tctttatcac agacagagta
+     9001 ctttaagtgt ctgatgaaag aaaagttcat ggctttcttt attaccgcag cggctatcgt
+     9061 atcgatcgtt ggcgtatatg caatgaacca tagtcgactg gactattttt tattcgttgc
+     9121 gtttatcccg atgctattca tcgatcatct tccggataat caattgataa agagagtttt
+     9181 cacctctaat ttattcttgt ttctcggtta tattagcttc cctttgtatt tattgcatga
+     9241 actggttatc gtatccggat tcatttttga ccctgagaat gcctgggtat caatatcaat
+     9301 agcggcattt gcatcaatat tcattgccta tatttatgca cgatttatcg attatcctct
+     9361 ctatcgggcg ttaaagcgtc agattgccaa aataagttaa
+//
+LOCUS       gmlABD                  3354 bp    DNA     linear   BCT 14-FEB-2018
+DEFINITION  Klebsiella pneumoniae strain CWK53 gmlABD gene cluster complete sequence.
+ACCESSION   MG458670
+VERSION     MG458670.1
+KEYWORDS    .
+SOURCE      Klebsiella pneumoniae
+  ORGANISM  Klebsiella pneumoniae
+            Bacteria; Proteobacteria; Gammaproteobacteria; Enterobacterales;
+            Enterobacteriaceae; Klebsiella.
+REFERENCE   1  (bases 1 to 5075)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Molecular basis for structural diversity in serogroup O2-antigen
+            polysaccharides in Klebsiella pneumoniae
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 5075)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (30-OCT-2017) Dept of Molecular and Cellular Biology,
+            University of Guelph, 50 Stone Road, Guelph, Ontario N1G 2W1,
+            Canada
+COMMENT     ##Assembly-Data-START##
+            Assembly Method       :: Velvet v. 1.2.10
+            Assembly Name         :: Klebsiella pneumoniae CWK53 gmlABD cluster
+            Coverage              :: 100x
+            Sequencing Technology :: Illumina
+            ##Assembly-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..3354
+                     /organism="Klebsiella pneumoniae"
+                     /mol_type="genomic DNA"
+                     /strain="CWK53"
+                     /serotype="O2aeh"
+                     /db_xref="taxon:573"
+                     /note="sequence edited to trim to gmlABD only by Kelly Wyres, April 2021"
+                     /note="Extra genes: gmlABD"
+     gene            1..375
+                     /gene="gmlA"
+     CDS             1..375
+                     /gene="gmlA"
+                     /note="putative export component of the periplasmic
+                     O-antigen modification pathway"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="GmlA"
+                     /protein_id="AVA30553.1"
+                     /translation="MKKILSNPALKYVMVGLLNTAITAVVIFLLMSAGVGVYLSNAMG
+                     YVVGILFSFVVNSLFTFSIALTGKRFIKFLASCAMCWVANIITVKMFLLIFPDLIYIS
+                     QLCGMIVYTIAGFLINKLWVMK"
+     misc_feature    <1..>3354
+                     /note="gmlABD gene cluster"
+     gene            375..1334
+                     /gene="gmlB"
+     CDS             375..1334
+                     /gene="gmlB"
+                     /note="putative glycosyltransferase synthesizing
+                     undecaprenol-P-galactose for periplasmic side-group
+                     modification of the O-antigen"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="GmlB"
+                     /protein_id="AVA30554.1"
+                     /translation="MKQPKLAIVVPCYNEEEVFSHCLSELQAVLAELVTATLISADSY
+                     ILFVDDGSCDSTWQLIAQASMDYSTVKGVKLSRNRGHQVALVAGLEAAESDITVSIDA
+                     DLQDDTSVIALMVKEYLNGNEIVYGVRNDRASDSPFKRKTAGLFYSCMKWMGVQQIPQ
+                     HADFRLLSDRAKKALLSFKEQNLYLRGLVPLIGYRSTQVAYSRTVRLAGESKYPLKKM
+                     LALAIEGITSLTITPLRIIAISGFAISILSVFAAIYALFEKFSGNTVEGWASVMIAIF
+                     FLGGVQMLSLGIIGEYVGKIYMESKGRPKYFIEKTTQQKVDDE"
+     gene            1327..3354
+                     /gene="gmlD"
+     CDS             1327..3354
+                     /gene="gmlD"
+                     /note="putative GT-C type glycosyltransferase that adds an
+                     alpha(1-2)-linked galactose side group to the O-antigen
+                     from Und-P-galactose in the periplasm."
+                     /codon_start=1
+                     /transl_table=11
+                     /product="GmlD"
+                     /protein_id="AVA30555.1"
+                     /translation="MNNEKIISRIQYVVFIAILSVLCYSFVASENQAYTWDSRFYWVV
+                     WNEYTGLLHDSFSQWLASIKYSVYSADYNPLPVIALIPFNYLPIGNREAYILGVYILY
+                     FLPFAYIAMRLFATAAGVDNKYQPYIFVFLASFIPFVTPTLRGYPDIIGMIPLSLCCL
+                     ILFKVNILKYQGARFVLLAIAMGVLLWLPFAFRRWYAYSVVSLFVTLPFLNTFLFGEA
+                     ARFSKERIFKYFIFFTLAGLVVIFLVCVFQFELAERILTTNYSDIYSAYKATEQATFF
+                     ITLNYAGLYLLPLIVLGGLYIVFGTSFRLKVLCAFALANFIITYIIFTRTQTPGMQHG
+                     MPFCFWLAILVLSALKLFFDRLNKGLAITLTIAFSLLTVAVFISTYSKPFGKPELVSR
+                     YLPGKEYPLRLENFDHYHELIAFMSARVEPDDKVAVFASSGSLNNDLFSAISPASFVS
+                     HIANVSQVDLRDKLATEAFSSRYAIVTDPAQTHLGIHGQQVIYLPNNLILEGKGIGAA
+                     YKRVSQPFILSGGVQAYVYEKIRPYTIDEYRSMIDEFSRSYPSWKAEYENNLTESYLS
+                     AAVEKGDTWGQFSMYREGRIYAHPGATTPTIVRMFVGEYDTLRITSVNKNCGKTDGVK
+                     VIIKDATHRVEKHIATAESVVFDMRDFHNKDITLIIDNNGSSACDSLDINQ"
+BASE COUNT      902 a    603 c    741 g   1108 t
+ORIGIN
+        1 gtgaaaaaaa tactttctaa tcccgcattg aaatatgtaa tggtggggtt attgaataca
+       61 gcaataactg cggtggtgat atttttatta atgtctgccg gggttggagt atatctatca
+      121 aatgccatgg gatatgtggt aggtattctc tttagttttg tggttaattc gttgtttacc
+      181 ttttcaatag cgctgaccgg caaacggttt ataaagtttc tggcatcttg tgcaatgtgc
+      241 tgggtagcta atattataac agttaaaatg tttttattaa tattccctga tttgatttat
+      301 atatctcagt tatgtggcat gattgtttac acaattgctg gttttttaat taataaactc
+      361 tgggtgatga aataatgaaa caaccaaagt tggctattgt tgtgccatgt tataacgagg
+      421 aagaagtatt cagtcactgc ttatctgaat tacaagcggt tctggcggaa ttagtcacgg
+      481 caacactgat ttcagctgat agctatattt tattcgttga tgatggcagc tgtgattcaa
+      541 cgtggcagtt gattgctcaa gcatcgatgg attactcaac ggttaaaggg gttaagcttt
+      601 caagaaatcg tggtcatcag gtagccctgg ttgcgggtct tgaggccgcc gaatcggata
+      661 ttactgtgag cattgatgca gatcttcagg atgatacttc tgttattgca ttaatggtta
+      721 aagagtacct caatggtaat gagatcgtat atggtgtacg taatgatcgg gcatctgact
+      781 ctccatttaa aagaaaaacc gcgggtctct tttatagttg tatgaagtgg atgggcgttc
+      841 agcagattcc ccagcatgcc gatttcagat tgttaagcga tcgcgctaaa aaggcgttgc
+      901 tgagctttaa agagcaaaat ttatatttac gtggattagt gccactgatt ggttatcgtt
+      961 ccactcaggt tgcatattcg agaacagttc gtctggctgg tgagtcgaag tatccattaa
+     1021 aaaaaatgct tgccctggca attgaaggca tcacttctct gaccattacc ccattaagga
+     1081 ttatcgctat ctcagggttt gcgatcagta ttctttcggt gtttgcagca atttatgcgc
+     1141 tgtttgagaa attctcagga aataccgttg aagggtgggc ctcagttatg atcgctattt
+     1201 tcttcctcgg cggtgtacag atgctatcgt taggcatcat tggtgagtat gtcggtaaga
+     1261 tatatatgga gtctaaaggt cgtcctaaat attttatcga aaaaacaacg cagcagaagg
+     1321 ttgatgatga ataacgaaaa aataatcagt agaatacagt atgtggtttt catcgccata
+     1381 ttatcagtac tttgttattc ctttgtggca agtgaaaatc aggcttatac atgggattcc
+     1441 agattttact gggtagtatg gaatgagtat actggcttac tgcatgactc atttagtcaa
+     1501 tggcttgcta gtataaaata ttcagtctat tcagctgatt ataacccttt gccagtcatt
+     1561 gcactgatcc cgtttaacta tctgccgata ggaaatcggg aagcttacat attgggtgtg
+     1621 tatattcttt attttttacc atttgcttat attgcaatgc gtttgtttgc gactgctgca
+     1681 ggtgtggaca acaaatacca gccgtatatc tttgtttttc tagcaagttt tattcctttt
+     1741 gtcacaccaa ccttgcgcgg ctatcctgat atcataggaa tgattccact atcgctgtgc
+     1801 tgcttgattt tgtttaaagt taatatatta aaataccagg gagcccgttt tgtattactt
+     1861 gcaatcgcaa tgggagtatt actatggttg ccctttgcat tccggcgatg gtatgcctat
+     1921 agcgtagttt ccttgtttgt tacgttgcct tttttgaata catttttgtt tggtgaagcg
+     1981 gccaggttta gtaaggaaag aatatttaaa tactttattt tctttactct tgctgggctg
+     2041 gtagtgattt ttttagtctg tgtttttcag ttcgaactgg ctgagagaat actgacgaca
+     2101 aactattctg atatttattc tgcatacaag gcgacagagc aagcaacctt ctttataacc
+     2161 ctgaactatg ctggtttata tttgctgcca ttaattgttt tgggaggctt gtatattgtt
+     2221 ttcggaacca gttttcgtct taaagttctt tgtgcttttg cattagctaa ttttattatc
+     2281 acctatatta tatttacccg aacacagaca ccagggatgc agcatggaat gccattctgt
+     2341 ttttggttgg caatactcgt gctttcggct ttaaaactat tctttgacag gttaaacaaa
+     2401 ggactggcga taacacttac gatcgcattc tcattactta cggttgcagt ctttattagc
+     2461 acatattcaa aaccatttgg taaaccggaa ttagtcagcc gctatcttcc tggcaaagag
+     2521 tatcctctca gattagaaaa ctttgaccat taccatgagc tgattgcctt tatgagtgcg
+     2581 cgtgttgagc cagatgataa ggtggctgtt tttgcatcca gcggttcact taataatgat
+     2641 ctgttttcag ccatatcacc ggcatcgttt gtcagccata tcgccaacgt ctcgcaggta
+     2701 gatttgcgtg ataagctggc tactgaagcc tttagttctc gttatgcgat tgtgaccgat
+     2761 ccagctcaaa cgcatcttgg aattcatgga caacaggtta tatatctgcc aaataatctt
+     2821 atcctggaag gtaagggaat tggtgccgct tataaaagag tcagtcagcc atttatactt
+     2881 agcggcggtg ttcaggcata cgtctatgaa aaaatcagac cgtatacaat cgatgaatac
+     2941 agaagcatga ttgatgaatt ttcccgttcc tacccctcat ggaaagcgga gtatgaaaat
+     3001 aatcttacag agagttatct aagcgcggca gtggagaaag gcgacacctg ggggcagttt
+     3061 agtatgtatc gtgaaggtcg aatctacgcc cacccaggcg caacaacacc gactattgtc
+     3121 aggatgttcg tcggggaata tgacacctta cgtattacgt cagtcaataa aaactgtggg
+     3181 aaaactgacg gagtgaaagt gattatcaaa gatgcgacgc atcgtgtaga aaagcatatt
+     3241 gccacagcag agagcgtggt ttttgatatg cgcgactttc acaacaaaga tattaccttg
+     3301 attattgata ataatggttc ctctgcttgt gatagcctgg atattaacca gtaa
+//
+LOCUS       wbmVW                   2733 bp    DNA     linear   BCT 14-FEB-2018
+DEFINITION  Klebsiella pneumoniae strain 5053 wbmVW genes, complete
+            sequence.
+ACCESSION   MG602074
+VERSION     MG602074.1
+KEYWORDS    .
+SOURCE      Klebsiella pneumoniae
+  ORGANISM  Klebsiella pneumoniae
+            Bacteria; Proteobacteria; Gammaproteobacteria; Enterobacterales;
+            Enterobacteriaceae; Klebsiella.
+REFERENCE   1  (bases 1 to 4944)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Molecular basis for structural diversity in serogroup O2-antigen
+            polysaccharides in Klebsiella pneumoniae
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 4944)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (04-DEC-2017) Dept of Molecular and Cellular Biology,
+            University of Guelph, 50 Stone Road, Guelph, Ontario N1G 2W1,
+            Canada
+COMMENT     ##Assembly-Data-START##
+            Assembly Method       :: SPades v. 3.10.0
+            Assembly Name         :: Klebsiella pneumoniae 5053 wbmVWX cluster
+            Coverage              :: 100x
+            Sequencing Technology :: Illumina
+            ##Assembly-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..2733
+                     /organism="Klebsiella pneumoniae"
+                     /mol_type="genomic DNA"
+                     /strain="5053"
+                     /serotype="O2ac"
+                     /db_xref="taxon:573"
+                     /note="Sequence edited to trim to wbmVW only, Kelly Wyres April 2021"
+                     /note="Extra genes: wbmVW"
+     gene            1..1266
+                     /gene="wbmV"
+     CDS             1..1266
+                     /gene="wbmV"
+                     /note="putative glycosyltransferase involved in
+                     biosynthesis of the K. pneumoniae O2c antigen
+                     polysaccharide"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="WbmV"
+                     /protein_id="AVA30547.1"
+                     /translation="MEWFSDIKNSKIDLSIIIPMYNVEDYIIETLNSMRGVRGFKVEL
+                     ILVDDGSTDNTLNLAKEWANSSDFDTFILSKENGGPSIARNLGLSKARGELVTFFDSD
+                     DIALSYLYTDIINIMLSHGVDFCIFRGSSFDHVTQKVYEFPDYYVWEKIMGGAEFKVL
+                     TPQQEPRLARLEPSAVVRVYRKDFITSNEIQFPENLFFEDVLFHAKCVLNAKKIALLN
+                     KTLLLYRVNREGQTTGSFGKKRRDVLKVIDLIISDYSKMKVTNDIWANLVGLLIRMNV
+                     WCSENCAYQDKADFVKESISLFSKLPKNVLEIYMNEYSYNDWEIKLCKAFIERNEKVL
+                     NVSAEGGYPIFDNVHESLHPEENQVSLVSIDGKLEHLFSQQKEGWAHDRFNVLNGKLE
+                     SLIAQNKELYEKLEHKRSISSLINKIFKG"
+     misc_feature    <1..>2733
+                     /note="wbmVWX gene cluster"
+     gene            1270..2733
+                     /gene="wbmW"
+     CDS             1270..2733
+                     /gene="wbmW"
+                     /note="putative glycosyltransferase involved in
+                     biosynthesis of the K. pneumoniae O2c antigen
+                     polysaccharide"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="WbmW"
+                     /protein_id="AVA30548.1"
+                     /translation="MLRMESFEALMEEMKFSLVDESLARKDYDRLTNSYYGKSCNPLI
+                     FCENLLIIGVRSGLEFLIAKSVNSNAVVHIVESNKSFLEKINKLNIANVTAFSSFKEY
+                     ISSVKSQKYDYVRINRVNFNLDLVAQLYSKHNILSICGELKEADCKPLTLYRLSRNSC
+                     DSFFFNIKDKNYNVAGARKCIEQPEVSVVVAAYGVENYLDECVSSIVHQTLKNIEILI
+                     VDDGSIDGTGKKADEWQKRFPDIVRVIHKENGGCASARLEGMREAKGEYVAFIDGDDW
+                     VEQPMYEDLFESAALHNSEIAQCGFYEFFADQTKNYYSTAWGADGQNGTTGLVKEPTE
+                     YLTLMPSIWRRIYKTSFLRKHGIEFPVQIRRHDDLPFAFMTIARAKRISVIPDCYYAY
+                     RLNRPGQDVGATDERLFIHFEIFEWLYEQVRPWASMAIMSNMRLVEIGTHSWVLSRLD
+                     SHLKNDYLNKSISGISERYKRYELDDGWLDRLKLASR"
+BASE COUNT      882 a    380 c    598 g    873 t
+ORIGIN
+        1 atggaatggt tttctgatat aaaaaattcg aagattgatc tatcaattat tataccgatg
+       61 tataatgttg aggattatat tattgaaact ttgaattcca tgagaggtgt caggggtttc
+      121 aaagttgagt taatactcgt tgacgatgga agcactgata atacgcttaa cctcgctaaa
+      181 gaatgggcta atagtagtga ttttgatact ttcattttaa gtaaagaaaa tggggggcca
+      241 tcaatagcaa ggaatttagg tttaagtaag gcgcgcggtg agttggtgac gttttttgac
+      301 agcgatgata ttgcactatc atatctatac acagatataa tcaatattat gctatctcat
+      361 ggagtggatt tttgcatctt cagaggcagc tctttcgacc atgtcactca aaaagtttat
+      421 gagttccctg attactatgt atgggaaaaa attatgggag gggcggaatt taaagtcctt
+      481 actccacaac aagaaccgcg tttagcacga cttgagccta gcgctgtcgt tagggtttac
+      541 agaaaagatt ttattacatc caacgaaata caatttcctg aaaacctctt ttttgaggat
+      601 gttctgtttc acgctaaatg tgtattgaac gcaaaaaaaa tcgctctttt gaataaaacg
+      661 cttctgctct atcgagtaaa ccgtgagggg cagacgaccg gttctttcgg aaaaaaaaga
+      721 agggatgtac tcaaagttat tgatctcatt atatccgatt attctaaaat gaaagtgacc
+      781 aatgatattt gggctaatct cgttgggctt ttaataagga tgaatgtttg gtgcagtgaa
+      841 aattgtgctt atcaggataa ggctgatttt gtaaaggaat caatctcttt gttttccaag
+      901 ctcccaaaga atgtgcttga gatttacatg aatgaatatt catataacga ttgggaaata
+      961 aagttgtgta aagccttcat agaaagaaat gaaaaggttt tgaatgttag cgctgaaggt
+     1021 ggttatccca tctttgataa tgttcatgaa tcattacacc cagaagaaaa tcaagtttct
+     1081 ttagtttcta ttgatgggaa gctagaacat cttttctctc agcaaaagga ggggtgggca
+     1141 cacgaccgat ttaatgtttt gaatggtaaa ttagaaagct tgattgctca gaataaagaa
+     1201 ttatacgaaa agttagagca taagcgttca atttcatctc tcattaataa aatttttaaa
+     1261 ggataagata tgttaagaat ggagtctttc gaagctctaa tggaagaaat gaagttttca
+     1321 ttagtggatg agtcattggc aagaaaagat tatgatagat taactaatag ctattatggg
+     1381 aagtcttgca atccattaat attttgcgag aacctactga tcattggagt aagatccggc
+     1441 ttggagtttt tgattgctaa aagcgttaat agcaatgcag ttgttcatat tgttgaaagt
+     1501 aacaaatctt ttttggaaaa aataaataaa cttaatattg ccaatgttac tgctttttct
+     1561 tcatttaaag aatatataag ttcagtaaag tctcaaaaat atgattacgt tagaattaat
+     1621 cgagttaatt ttaatttgga tttggtagct cagttatatt ctaagcacaa tattttatca
+     1681 atttgtgggg aattgaaaga ggctgattgt aagccgttaa ctctttacag gttgagtagg
+     1741 aatagttgtg attctttttt ctttaatatc aaggataaga attacaatgt cgcaggagca
+     1801 cgtaagtgta tcgaacagcc cgaagtatct gtagtggttg ctgcgtatgg ggttgaaaat
+     1861 tatttagatg aatgtgtctc ttcaatagta catcaaactc ttaagaatat tgaaattctc
+     1921 atcgttgatg atggctccat agatggcacc ggaaaaaaag cagacgaatg gcaaaagaga
+     1981 tttcctgata tagtgagggt aattcataaa gaaaatggtg gatgcgcttc tgcgcgctta
+     2041 gaaggcatga gggaagctaa aggcgagtat gtcgcattca ttgatggtga tgactgggtt
+     2101 gagcaaccaa tgtatgagga tttattcgaa tcagctgcgt tgcataattc tgaaatagct
+     2161 caatgtggtt tttatgagtt ttttgctgac caaactaaga attactattc aacagcttgg
+     2221 ggggctgatg gtcaaaatgg gactactgga ttagtaaaag aaccaacaga atatttgact
+     2281 ttgatgccgt ctatctggag aaggatttat aagacatcgt ttttgagaaa gcatggcatt
+     2341 gaatttcctg tgcagataag aagacatgat gatttgccat ttgcatttat gactattgcc
+     2401 cgtgcaaaaa gaataagtgt gatacctgat tgctattatg cttataggct taatcgccct
+     2461 ggacaagatg ttggtgctac agatgaacgg ctttttatac attttgaaat ttttgagtgg
+     2521 ctttatgagc aagttagacc atgggcctca atggcaatca tgagtaatat gagacttgtc
+     2581 gaaatcggaa cgcatagctg ggtcctgagc agattagata gtcatttaaa aaatgattat
+     2641 ttaaataaat ctatttctgg aattagtgaa agatataaga ggtatgagtt agatgatggc
+     2701 tggctagata gacttaagct ggccagccgc taa
+//
+LOCUS       wbbY                    2223 bp    DNA     linear   BCT 14-FEB-2018
+DEFINITION  Klebsiella pneumoniae strain CWK2 wbbY gene, complete
+            sequence.
+ACCESSION   MG458672
+VERSION     MG458672.1
+KEYWORDS    .
+SOURCE      Klebsiella pneumoniae
+  ORGANISM  Klebsiella pneumoniae
+            Bacteria; Proteobacteria; Gammaproteobacteria; Enterobacterales;
+            Enterobacteriaceae; Klebsiella.
+REFERENCE   1  (bases 1 to 5324)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Molecular basis for structural diversity in serogroup O2-antigen
+            polysaccharides in Klebsiella pneumoniae
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 5324)
+  AUTHORS   Clarke,B.R., Ovchinnikova,O.G., Kelly,S.D., Williamson,M.L.,
+            Butler,J.E., Liu,B., Wang,L., Gou,X., Follador,R., Lowary,T.L. and
+            Whitfield,C.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (30-OCT-2017) Dept of Molecular and Cellular Biology,
+            University of Guelph, 50 Stone Road, Guelph, Ontario N1G 2W1,
+            Canada
+COMMENT     ##Assembly-Data-START##
+            Assembly Method       :: SPAdes v. 3.10.0
+            Assembly Name         :: Klebsiella pneumoniae CWK2 wbbYZ region
+            Sequencing Technology :: Illumina
+            ##Assembly-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..2223
+                     /organism="Klebsiella pneumoniae"
+                     /mol_type="genomic DNA"
+                     /strain="CWK2"
+                     /serotype="O1"
+                     /db_xref="taxon:573"
+                     /note="Sequence edited to trim to wbbY only, Kelly Wyres April 2021"
+                     /note="Extra genes: wbbY"
      gene            complement(1..2223)
                      /gene="wbbY"
      CDS             complement(1..2223)
                      /gene="wbbY"
-                     /inference="ab initio prediction:Prodigal:2.60"
-                     /inference="similar to AA sequence:RefSeq:YP_006496170.1"
+                     /note="glycosyltransferase involved in biosynthesis of the
+                     O1 antigen polysaccharide (D-galactan II)"
                      /codon_start=1
                      /transl_table=11
-                     /product="glycosyl transferase"
-                     /protein_id="CZQ25346.1"
-                     /db_xref="GI:1036211141"
+                     /product="WbbY"
+                     /protein_id="AVA30562.1"
                      /translation="MKKILIMTPDIEGPVRNGGIGTAFTALATTLAKKGYDVDVLYTC
-                     GDYSESSVSKFSDWSRIYSTFGINLLRTGLIKEINIDAPYFRRKSYSIYLWLKENNTY
+                     GDYSESSVSKFSDWSRIYSTFGINLLRTGLIKEINIDAPYFRRKSYSIYLWLKENNIY
                      DTVISCEWQADLYYTLLSKKNGTDFENTKFIVNTHSSTLWADEGNYQLPYDQNHLELY
                      YMEKMVVEMADEVVSPSQYLIDWMLSKHWNVPEERHVILNCEPFQGFVTRDDVTVKIN
                      EKPASGVELVFFGRLETRKGLDIFLRALRKLSDEDKESISGVTFLGKNVTMGKTDSFT
                      YIMNQTKNLGLAVNVISDYDRTNANEYIKRKNVLVIIPSLVENSPYTVYECLINNVNF
-                     LASNVGGIPELIPQEHHAEVLFIPTPADLYGKIHYRLKNINIKPGLAESQDNIKEAWF
-                     VAVERKNNRTFKKIDEANSPLVSVCITHFERHHLLQQALASIKSQTYQNIEVILVDDG
+                     LASNVGGIPELIPQEHHAEVLFIPTPVDLYGKIHYRLKNINIKPGLAESQDNIKEAWF
+                     VAVERKNNRAFKKIDEANSPLVSVCITHFERHHLLQQALASIKSQTYQNIEVILVDDG
                      STTEDSHRYLNLIENDFNSRGWKIVRSSNNYLGAARNLAARHASGEYLMFMDDDNVAK
                      PFEVETFVTAALNSGADVLTTPSDLIFGEEFPSPFRKMTHCWLPLGPDLNIASFSNCF
                      GDANALIRKEVFEKVGGFTEDYGLGHEDWEFFAKISLQGYKLQIVPEPLFWYRVANSG
                      MLLSGNKSKNNYRSFRPFMDENVKYNYAMGLIPSYLEKIQELESEVNRLRSINGGHSV
                      SNELQLLNNKVDGLISQQRDGWAHDRFNALYEAIHVQGAKRGTSLVRRVARKVKSMLK
                      "
-     gene            2321..3130
-                     /gene="wbbZ"
-     CDS             2321..3130
-                     /gene="wbbZ"
-                     /inference="ab initio prediction:Prodigal:2.60"
-                     /codon_start=1
-                     /transl_table=11
-                     /product="Exopolysaccharide biosynthesis protein"
-                     /protein_id="CZQ25347.1"
-                     /db_xref="GI:1036211142"
-                     /translation="MTNMKLKFDLLLKSYHLSHRFVYKANPGNAGDGVIASATYDFFE
-                     RNALTYIPYRDGERYSSETDILIFGGGGNLIEGLYSEGHDFIQNNIGKFHKVIIMPST
-                     IRGYSDLFINNIDKFVVFCRENITFDYIKSLNYEPNKNVFITDDMAFYLDLNKYLSLK
-                     PVYKKQANCFRTDSESLTGDYKENNHDISLTWNGDYWDNEFLARNSTRCMINFLEEYK
-                     VVNTDRLHVAILASLLGKEVNFYPNSYYKNEAVYNYSLFNRYPKTCFITAS"
-BASE COUNT      955 a    640 c    554 g    981 t
+     misc_feature    1..2223
+                     /note="wbbY gene cluster"
+BASE COUNT      664 a    480 c    392 g    687 t
 ORIGIN
         1 ttattttaac attgatttca ctttccgggc aacccggcga accaggctgg tgcctcgttt
        61 tgcgccttgg acatgaattg cttcatacag agcattaaaa cggtcatggg cccagccatc
       121 tctttgctga gaaataagac catcaacctt attatttaaa agttgtaact cgttactgac
-      181 agaatgacca ccattgatgc tccgcaagcg attcacttca ctctcaagtt cttgaatctt
+      181 agaatgacca ccattgatgc tccgtaatcg attcacttca ctctcaagtt cttgaatctt
       241 ctcgaggtag gaaggtatca accccattgc atagttatat ttaacattct catccataaa
       301 aggacggaaa ctgcggtagt tatttttact cttatttcca cttaacaaca tgccggagtt
       361 tgcaactcta taccaaaata gaggttccgg gacgatttgc aatttatatc cctgtaatga
@@ -4326,11 +4951,11 @@ ORIGIN
       781 atagttatta gaactacgga caattttcca gcctcgagag ttaaaatcat tctcgatgag
       841 attcaaataa cgatgagaat cttctgtcgt acttccatca tcaaccaaga tgacctcaat
       901 attttggtac gtctgagatt ttattgatgc gagtgcttgc tgaagcaaat ggtgacgttc
-      961 gaagtgagtt atacacacgc taactaacgg gctgttagct tcatcgattt tcttgaatgt
+      961 gaagtgagtt atacacacgc taactaacgg gctgttagct tcatcgattt tcttgaatgc
      1021 gcggttgttt tttcgttcaa ctgcgacaaa ccaagcttct ttaatattgt cttgtgattc
-     1081 agcaagccct ggttttatat ttatattttt taagcgatag tggatttttc cgtataaatc
-     1141 ggcaggtgta ggaataaata gaacttccgc atgatgctcc tgcggaataa gctctggaat
-     1201 tccaccaacg tttgaagcga gaaaattaac gttattaatc aaacattcat aaacagtata
+     1081 agcaagccct ggttttatat ttatattttt taagcgatag tggattttcc cgtataaatc
+     1141 gacaggtgta ggaataaata gaacttccgc atgatgctcc tgcggaataa gctctggaat
+     1201 tccaccaacg tttgaagcga ggaaattaac gttattaatc aagcattcat aaacagtata
      1261 gggtgagttt tctacaagtg atggaatgat gactaataca ttttttcttt ttatatattc
      1321 attagcgttg gtacgatcat agtcgctgat gacattaact gcgagtccca aatttttagt
      1381 ctgattcata atataagtaa atgaatcagt tttccccata gtgacatttt ttccgaggaa
@@ -4342,25 +4967,10 @@ ORIGIN
      1741 ataatagagt tcaagatggt tctgatcata tggaagctgg taattacctt catcagccca
      1801 taacgttgaa ctgtgagtat ttacaatgaa ctttgtattt tcaaaatccg ttccattctt
      1861 tttgcttaat aaagtgtaat aaagatctgc ctgccactca caagaaataa cagtgtcata
-     1921 ggtgttattt tctttcaacc agagataaat tgaataactt ttccttctaa aatacggtgc
+     1921 gatgttattt tctttcaacc agagataaat tgaataactt ttccttctaa aatacggtgc
      1981 atcaatatta atctctttta tcagtccggt tcttagcaga ttgataccaa aggtactata
      2041 aatacgtgac cagtcgctaa atttcgatac agatgattca gaatagtcgc cacatgtata
-     2101 caatacatca acatcatacc ccttttttgc caaagtagtg gcaagggcag tgaaagcagt
-     2161 accaataccg ccgttacgga caggcccctc aatgtccggc gtcattataa gaattttctt
-     2221 cattgtaacc cttcctttgt aacctagact tttctatgat attagtgaat tgaagtagtg
-     2281 taagatagca gtcggtagct tctgttaaac aggataaaaa atgaccaata tgaagttaaa
-     2341 atttgatttg cttctaaaat cttatcatct atctcatcga tttgtctata aggcaaaccc
-     2401 tggtaatgct ggtgatggtg taattgcatc tgcgacgtat gacttttttg aacgaaatgc
-     2461 tcttacctat atcccttaca gagatggcga gcgctacagt tctgaaactg atattttaat
-     2521 ttttggaggc ggaggaaacc tgatagaagg attgtattct gaaggtcatg actttatcca
-     2581 gaataatatt gggaagtttc ataaagtaat aataatgccg tcgacaatca gagggtatag
-     2641 cgatttattc atcaacaata ttgataagtt tgttgttttt tgtcgcgaaa atatcacctt
-     2701 cgattatatt aaatctctca actacgaacc aaacaagaac gtattcatta ctgatgatat
-     2761 ggcattttat ctcgatctta ataaatacct gtcacttaaa cccgtctata aaaaacaggc
-     2821 caactgcttc agaacggact ccgaatctct aactggagac tacaaagaaa acaatcatga
-     2881 tatttcgctc acctggaatg gcgattattg ggataatgaa tttctggcgc gtaattctac
-     2941 ccgttgcatg ataaactttc ttgaagagta taaagttgtc aataccgaca ggctgcatgt
-     3001 ggcaatttta gcatctctgc ttggcaaaga agtcaacttc tatcctaact catattacaa
-     3061 aaatgaagct gtttacaatt attcactttt taatcgttat ccaaaaacat gctttattac
-     3121 ggcaagttga
+     2101 caatacatca acatcatacc ccttttttgc caaagtagtg gcaagagcag tgaaagcagt
+     2161 accgataccg ccgttacgga caggcccctc aatgtccggc gtcattataa gaattttctt
+     2221 cat
 //
