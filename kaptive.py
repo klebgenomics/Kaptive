@@ -47,6 +47,7 @@ import fcntl
 import gzip
 import copy
 import random
+import re
 from collections import OrderedDict
 from Bio import SeqIO
 
@@ -178,9 +179,11 @@ def check_for_blast():
 
 def find_program(name):
     """Checks to see if a program exists."""
-    process = subprocess.Popen(['which', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    return bool(out) and not bool(err)
+    try:
+        subprocess.check_call(['which', name], stdout=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        return False
+    return True
 
 
 def fix_paths(args):
@@ -977,22 +980,26 @@ def get_blast_hits(database, query, threads, genes=False, type_genes=False):
     out, err = process.communicate()
     out = convert_bytes_to_str(out)
     err = convert_bytes_to_str(err)
-    if err:
-        quit_with_error(command[0] + ' encountered an error:\n' + err)
-    if process.returncode != 0:
+    if err or process.returncode != 0:
         msg = command[0] + ' crashed!\n'
 
         # A known crash can occur with tblastn and recent versions of BLAST+ when multiple threads
         # are used. Check for this case and display an informative error message if so.
         version = get_blast_version(command[0])
-        bad_version = (version == '2.4.0') or (version == '2.5.0') or (version == '2.6.0')
-        if threads > 1 and bad_version:
+        bad_version = re.match(r'2\.(?:[4-9]|1[01])\.\d+$', version)
+        if threads > 1 and bad_version and (not err or err.startswith('terminate called')):
             msg += '\nYou are using BLAST+ v' + version + ' which may crash when running with '
             msg += 'multiple threads.\n\n'
             msg += 'To avoid this issue, try one of the following:\n'
             msg += '  1) Use an unaffected version of BLAST+ (v2.3.0 or earlier should work)\n'
             msg += '  2) Run Kaptive with "--threads 1" (will probably be slower)\n'
-        quit_with_error(msg)
+            if err:
+                msg += '\nRaw error:\n' + err
+            quit_with_error(msg)
+        elif err:
+            quit_with_error(command[0] + ' encountered an error:\n' + err)
+        else:
+            quit_with_error(msg)
 
     if genes:
         blast_hits = [GeneBlastHit(line) for line in line_iterator(out)]
@@ -1864,15 +1871,16 @@ def makeblastdb(fasta):
         print('WARNING: spaces in file paths may not work in BLAST', file=sys.stderr)
     if get_compression_type(fasta) == 'gz':
         gunzip_command = ['gunzip', '-c', fasta]
-        makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', '-', '-out', fasta,
-                               '-title', fasta]
+        makeblastdb_command = ['makeblastdb', '-blastdb_version', '4', '-dbtype', 'nucl',
+                               '-in', '-', '-out', fasta, '-title', fasta]
         gunzip = subprocess.Popen(gunzip_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         makeblastdb_process = subprocess.Popen(makeblastdb_command, stdin=gunzip.stdout,
                                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         gunzip.stdout.close()
         _, err = makeblastdb_process.communicate()
     else:  # plain text
-        makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', fasta]
+        makeblastdb_command = ['makeblastdb', '-blastdb_version', '4', '-dbtype', 'nucl',
+                               '-in', fasta]
         makeblastdb_process = subprocess.Popen(makeblastdb_command, stdout=subprocess.PIPE,
                                                stderr=subprocess.PIPE)
         _, err = makeblastdb_process.communicate()
