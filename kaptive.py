@@ -1871,16 +1871,15 @@ def makeblastdb(fasta):
         print('WARNING: spaces in file paths may not work in BLAST', file=sys.stderr)
     if get_compression_type(fasta) == 'gz':
         gunzip_command = ['gunzip', '-c', fasta]
-        makeblastdb_command = ['makeblastdb', '-blastdb_version', '4', '-dbtype', 'nucl',
-                               '-in', '-', '-out', fasta, '-title', fasta]
+        makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', '-', '-out', fasta,
+                               '-title', fasta]
         gunzip = subprocess.Popen(gunzip_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         makeblastdb_process = subprocess.Popen(makeblastdb_command, stdin=gunzip.stdout,
                                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         gunzip.stdout.close()
         _, err = makeblastdb_process.communicate()
     else:  # plain text
-        makeblastdb_command = ['makeblastdb', '-blastdb_version', '4', '-dbtype', 'nucl',
-                               '-in', fasta]
+        makeblastdb_command = ['makeblastdb', '-dbtype', 'nucl', '-in', fasta]
         makeblastdb_process = subprocess.Popen(makeblastdb_command, stdout=subprocess.PIPE,
                                                stderr=subprocess.PIPE)
         _, err = makeblastdb_process.communicate()
