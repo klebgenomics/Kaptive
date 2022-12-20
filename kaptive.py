@@ -420,6 +420,8 @@ def get_best_locus_match(assembly, refs_fasta, refs, threads):
         if hit.qseqid not in refs:
             quit_with_error('BLAST hit (' + hit.qseqid + ') not found in locus references')
         refs[hit.qseqid].add_blast_hit(hit)
+    for ref in refs.values():
+        ref.clean_up_blast_hits()
     best_ref = None
     best_cov = 0.0
     for ref in refs.values():
@@ -430,8 +432,6 @@ def get_best_locus_match(assembly, refs_fasta, refs, threads):
         elif cov == best_cov and best_ref and \
                 ref.get_mean_blast_hit_identity() > best_ref.get_mean_blast_hit_identity():
             best_ref = ref
-    if best_ref is not None:
-        best_ref.clean_up_blast_hits()
     return copy.copy(best_ref)
 
 
