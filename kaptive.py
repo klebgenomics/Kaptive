@@ -409,8 +409,8 @@ def get_best_locus_match(assembly, refs_fasta, refs, threads):
     """
     Searches for all known locus types in the given assembly and returns the best match.
     Best match is defined as the locus type for which the largest fraction of the locus has a BLAST
-    hit to the assembly. In cases of a tie, the mean identity of the locus type BLAST hits are used
-    to determine the best.
+    hit to the assembly. In cases of a tie, the number of BLAST hits (fewer is better) and the mean
+    identity of the BLAST hits (higher is better) are used to determine the best.
     """
     for ref in refs.values():
         ref.clear()
@@ -422,17 +422,16 @@ def get_best_locus_match(assembly, refs_fasta, refs, threads):
         refs[hit.qseqid].add_blast_hit(hit)
     for ref in refs.values():
         ref.clean_up_blast_hits()
-    best_ref = None
-    best_cov = 0.0
-    for ref in refs.values():
-        cov = ref.get_coverage()
-        if cov > best_cov:
-            best_cov = cov
-            best_ref = ref
-        elif cov == best_cov and best_ref and \
-                ref.get_mean_blast_hit_identity() > best_ref.get_mean_blast_hit_identity():
-            best_ref = ref
-    return copy.copy(best_ref)
+
+    sorted_refs = sorted(refs.values(), reverse=True,
+                         key=lambda ref: (ref.get_coverage(),
+                                          -len(ref.blast_hits),
+                                          ref.get_mean_blast_hit_identity()))
+    best_ref = sorted_refs[0]
+    if best_ref.get_coverage() == 0.0:
+        return None
+    else:
+        return copy.copy(best_ref)
 
 
 def type_gene_search(assembly_pieces_fasta, type_gene_names, args):
