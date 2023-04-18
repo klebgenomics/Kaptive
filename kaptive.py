@@ -87,18 +87,20 @@ def main():
         assembly = Assembly(fasta_file)
         best = get_best_locus_match(assembly, ref_seqs, refs, args.threads)
         if best is None:
-            type_gene_results = {}
             best = Locus('None', '', '', [])
-        else:
-            find_assembly_pieces(assembly, best, args)
-            assembly_pieces_fasta = save_assembly_pieces_to_file(best, assembly, args.out)
-            type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
-            if args.no_seq_out and assembly_pieces_fasta is not None:
-                os.remove(assembly_pieces_fasta)
-            protein_blast(assembly, best, gene_seqs, args)
-            apply_special_logic(best, special_logic, ref_genes)
-            if best.type == 'unknown':
-                best.type = 'unknown (' + best.name + ')'
+
+        find_assembly_pieces(assembly, best, args)
+        if not best.assembly_pieces:
+            best = Locus('None', '', '', [])
+
+        assembly_pieces_fasta = save_assembly_pieces_to_file(best, assembly, args.out)
+        type_gene_results = type_gene_search(assembly_pieces_fasta, type_gene_names, args)
+        if args.no_seq_out and assembly_pieces_fasta is not None:
+            os.remove(assembly_pieces_fasta)
+        protein_blast(assembly, best, gene_seqs, args)
+        apply_special_logic(best, special_logic, ref_genes)
+        if best.type == 'unknown':
+            best.type = 'unknown (' + best.name + ')'
 
         output(args.out, assembly, best, args, type_gene_names, type_gene_results,
                json_list, output_table, output_json, all_gene_dict)
