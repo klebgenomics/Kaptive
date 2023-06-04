@@ -31,3 +31,9 @@ setuptools*.zip
 
 # PyCharm
 .idea/
+
+# Testing Folder
+testing/
+
+# Script Folder
+scripts/
