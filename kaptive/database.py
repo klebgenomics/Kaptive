@@ -11,11 +11,13 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 from pathlib import Path
-from Bio import SeqIO
-from collections import OrderedDict
+from collections import OrderedDict  # Dicts now ordered by default in Python 3.7+
+# TODO: Remove OrderedDict and use regular dict when Python 3.6 support is dropped
 
-from .log import quit_with_error
-from .misc import quick_translate
+from Bio import SeqIO
+
+from kaptive.log import quit_with_error
+from kaptive.misc import quick_translate
 
 
 class Database(object):

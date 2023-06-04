@@ -20,8 +20,9 @@ from kaptive.version import __version__
 from kaptive.log import bold
 from kaptive.misc import get_ascii_art, check_file, check_python_version, check_programs, check_dir
 from kaptive.help_formatter import MyHelpFormatter, MyParser
-from kaptive.map import run_map
 from kaptive.database import Database
+from kaptive.reads import reads_pipeline
+from kaptive.assembly import assembly_pipeline
 
 
 # from kaptive.align import run_align
@@ -33,7 +34,7 @@ def parse_args(args):
     parser = MyParser(description=description, formatter_class=MyHelpFormatter, add_help=False)
 
     subparsers = parser.add_subparsers(title='Commands', dest='subparser_name')
-    map_subparser(subparsers)
+    reads_subparser(subparsers)
 
     longest_choice_name = max(len(c) for c in subparsers.choices)
 
@@ -59,8 +60,8 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def map_subparser(subparsers):
-    group = subparsers.add_parser('map', description='in silico serotyping of reads',
+def reads_subparser(subparsers):
+    group = subparsers.add_parser('reads', description='in silico serotyping of reads',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')
@@ -115,8 +116,8 @@ def map_subparser(subparsers):
     other_settings(other_args)
 
 
-def align_subparser(subparsers):
-    group = subparsers.add_parser('align', description='in silico serotyping of assemblies',
+def assembly_subparser(subparsers):
+    group = subparsers.add_parser('assembly', description='in silico serotyping of assemblies',
                                   formatter_class=MyHelpFormatter, add_help=False)
 
     required_args = group.add_argument_group('Required arguments')
@@ -186,17 +187,13 @@ def main():
 
     db = Database(args.reference, args.locus_label, args.type_label)
 
-    if args.subparser_name == 'map':
+    if args.subparser_name == 'reads':
         check_programs(['minimap2', 'samtools', 'bcftools', 'paftools.js'], args.verbose)
-        run_map(args, db)
+        reads_pipeline(args, db)
 
-    # elif args.subparser_name == 'align':
-    #     check_programs(['blastn', 'makeblastdb'], args.verbose)
-    #     run_align(args, db)
-    #
-    # elif args.subparser_name == 'type':
-    #     check_programs(['minimap2'], args.verbose)
-    #     run_type(args, db)
+    elif args.subparser_name == 'assembly':
+        check_programs(['blastn', 'makeblastdb'], args.verbose)
+        assembly_pipeline(args, db)
 
 
 if __name__ == '__main__':

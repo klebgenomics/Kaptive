@@ -14,7 +14,7 @@ If not, see <https://www.gnu.org/licenses/>.
 
 class IntRange(object):
     """
-    KAPTIVE INTRANGE - may differ from Ryan's Verticall class - please compare.
+    # TODO: KAPTIVE INTRANGE - may differ from Ryan's Verticall class - please compare.
     This class contains one or more integer ranges. Overlapping ranges will be merged together.
     It stores its ranges in a Python-like fashion where the last value in each range is
     exclusive.

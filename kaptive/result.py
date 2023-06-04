@@ -10,8 +10,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 details. You should have received a copy of the GNU General Public License along with kaptive-mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
-from typing import List, Tuple
-
 from kaptive.database import Locus, Gene
 from kaptive.minimap import PafLine, Minimap2Result, weighted_identity, get_overlapping_alignments, \
     target_ranges_covered_by_alignments
@@ -198,7 +196,7 @@ class ISElement:
     """
     Class that represents alignments of a single ISE corresponding to a region on the locus
     """
-    def __init__(self, name: str, alignments: List[PafLine], result: MapResult, alignment_range: Tuple[int, int]):
+    def __init__(self, name: str, alignments: list[PafLine], result: MapResult, alignment_range: tuple[int, int]):
         self.result = result
         self.locus = result.locus
         self.db = result.locus.db

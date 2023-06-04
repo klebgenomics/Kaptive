@@ -10,15 +10,15 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 details. You should have received a copy of the GNU General Public License along with kaptive-mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
-from typing import Union, List, Dict
 from pathlib import Path
-from collections import OrderedDict
+from collections import OrderedDict  # For Python 3.6 compatibility
+# TODO: Remove this when Python 3.6 support is dropped
 
-from .misc import quick_translate, run_command, find_files_with_suffixes
-from .log import quit_with_error, log, warning
-from .assembly import get_nice_contig_name, AssemblyPiece
-from .database import Gene
-from .intrange import IntRange
+from kaptive.misc import quick_translate, run_command, find_files_with_suffixes
+from kaptive.log import quit_with_error, log, warning
+from kaptive.assembly import get_nice_contig_name, AssemblyPiece
+from kaptive.database import Gene
+from kaptive.intrange import IntRange
 
 
 class BlastHit(object):

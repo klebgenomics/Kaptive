@@ -12,27 +12,18 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 import subprocess
 from re import compile
-from typing import Union, List, Dict, Tuple
 from pathlib import Path
 import time
 
-from .misc import reverse_complement, run_command, find_files_with_suffixes, merge_ranges, range_overlap
-from .log import quit_with_error, log, warning
-from .reads import ReadFile
+from kaptive.misc import reverse_complement, run_command, find_files_with_suffixes, merge_ranges, range_overlap
+from kaptive.log import quit_with_error, log, warning
+from kaptive.reads import ReadFile
 
 MAP_REGIONS_REGEX = compile(r'([0-9]+)([MIDNSP=X])')
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
-class SamLineError(Exception):
-    pass
-
-
 class SamFileError(Exception):
-    pass
-
-
-class PafLineError(Exception):
     pass
 
 
@@ -64,12 +55,16 @@ class SamFile:
                 yield SamLine(line)
 
 
+class SamLineError(Exception):
+    pass
+
+
 class SamLine:
     """
     Parses and stores a line from a SAM file into a class object
     """
 
-    def __init__(self, line: Union[str, bytes]):
+    def __init__(self, line: str | bytes):
         if not line:
             raise SamLineError("Empty line passed to SamLine")
         if line.startswith('@'):
@@ -158,12 +153,16 @@ class SamLine:
         return left, right
 
 
+class PafLineError(Exception):
+    pass
+
+
 class PafLine:
     """
     Object to store a line from a PAF output file
     """
 
-    def __init__(self, line: Union[str, bytes]):
+    def __init__(self, line: str | bytes):
         if not line:
             raise PafLineError("Empty line passed to PafLine")
 
@@ -249,10 +248,7 @@ class Minimap2Result:
         return self.paf_lines[item]
 
     def __iter__(self):
-        return iter(self.paf_lines)
-
-    def __contains__(self, item):
-        return item in self.paf_lines
+        return (paf_line for paf_line in self.paf_lines)
 
     def get_best_alignment_per_query(self, min_identity: float = 0.0, min_coverage: float = 0.0):
         best_alignments = {}
@@ -279,8 +275,8 @@ class Minimap2Result:
         return best_alignments
 
 
-def target_ranges_covered_by_alignments(alignments: List[PafLine], tolerance: int = 0)\
-        -> Dict[str, List[Tuple[int, int]]]:
+def target_ranges_covered_by_alignments(alignments: list[PafLine], tolerance: int = 0)\
+        -> dict[str: list[tuple[int, int]]]:
     """
     Get the regions of a target covered by the alignments
     :param tolerance: The number of bases to allow between alignments to be considered continuous
@@ -297,9 +293,9 @@ def target_ranges_covered_by_alignments(alignments: List[PafLine], tolerance: in
 
 
 # Functions --------------------------------------------------------------------
-def minimap2(query: Union[Path, List[ReadFile], str], target: Union[Path, str], output: Union[Path, None] = None,
+def minimap2(query: Path | list[ReadFile] | str, target: Path | str, output: Path | None = None,
              preset: str = "map-ont", threads: int = 1, extra_args: str = "",
-             verbose: bool = False) -> Union[SamFile, List[PafLine], None]:
+             verbose: bool = False) -> SamFile | list[PafLine] | None:
     """
     Run minimap2 with the given arguments
     :param verbose: Bool for logging messages for command and execution time
@@ -355,7 +351,7 @@ def minimap2(query: Union[Path, List[ReadFile], str], target: Union[Path, str], 
             return []
 
 
-def create_minimap2_index(reference: Union[Path, List[Path], str], prefix: Union[Path, None] = None, threads: int = 1,
+def create_minimap2_index(reference: Path | list[Path] | str, prefix: Path | None = None, threads: int = 1,
                           verbose: bool = False) -> Path:
     """
     Create a minimap2 index
@@ -392,7 +388,7 @@ def create_minimap2_index(reference: Union[Path, List[Path], str], prefix: Union
             quit_with_error("Failed to create minimap2 index")
 
 
-def samtools_depth(sam: Path, threads: int = 1) -> Dict[str, int]:
+def samtools_depth(sam: Path, threads: int = 1) -> dict[str: int]:
     sort_cmd = f"samtools sort -l 0 --threads {threads} {sam}".split()
     depth_cmd = "samtools depth -".split()
     sort_proc = subprocess.Popen(sort_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -416,7 +412,7 @@ def samtools_depth(sam: Path, threads: int = 1) -> Dict[str, int]:
         return depth_per_reference
 
 
-def paftools_sam2paf(sam: Union[str, SamFile], long_cs_tag: bool = False) -> List[PafLine]:
+def paftools_sam2paf(sam: str | SamFile, long_cs_tag: bool = False) -> list[PafLine]:
     """
     Convert a sam file to a paf file
     :param long_cs_tag: output the cs tag in the long form
@@ -455,7 +451,7 @@ def paftools_sam2paf(sam: Union[str, SamFile], long_cs_tag: bool = False) -> Lis
 #         return [BedRecord(i) for i in out.splitlines()]
 
 
-def minimap2_index_exists(reference: Union[Path, str]) -> bool:
+def minimap2_index_exists(reference: Path | str) -> bool:
     """
     Check if minimap2 index exists for the given reference
     :param reference: Path to reference
@@ -465,7 +461,7 @@ def minimap2_index_exists(reference: Union[Path, str]) -> bool:
     return len(find_files_with_suffixes(reference, suffixes)) == len(suffixes)
 
 
-def get_overlapping_alignments(paf_lines: List[PafLine], start: int, end: int, query: bool = False) -> List[PafLine]:
+def get_overlapping_alignments(paf_lines: list[PafLine], start: int, end: int, query: bool = False) -> list[PafLine]:
     """
     Get all alignments that overlap the given coordinates
     :param query: return query coordinates instead of target coordinates
@@ -484,7 +480,7 @@ def get_overlapping_alignments(paf_lines: List[PafLine], start: int, end: int, q
         return [i for i in paf_lines if range_overlap((i.target_start, i.target_end), (start, end))]
 
 
-def weighted_identity(paf_lines: List[PafLine], start: int, end: int):
+def weighted_identity(paf_lines: list[PafLine], start: int, end: int):
     overlapping_bases = 0
     weighted_identity_sum = 0
     for paf_line in paf_lines:

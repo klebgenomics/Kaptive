@@ -10,16 +10,19 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 details. You should have received a copy of the GNU General Public License along with kaptive-mapper.
 If not, see <https://www.gnu.org/licenses/>.
 """
-from re import compile, MULTILINE, finditer
-from io import DEFAULT_BUFFER_SIZE, BufferedReader
+
 import json
 import fcntl
-from collections import OrderedDict
+from collections import OrderedDict  # Dicts now remember insertion order
+# TODO: Remove this import once we drop support for Python 3.5
 from pathlib import Path
 
+from Bio import SeqIO
 
-# Record regexes ------------------------------------------------------------------------------------------------------
-FASTA_REGEX = compile(rb'^>(?P<header>.+?)\n(?P<sequence>(?:\n|[^>])+)', MULTILINE)
+from kaptive.log import warning
+from kaptive.database import Database
+
+# FASTA_REGEX = compile(rb'^>(?P<header>.+?)\n(?P<sequence>(?:\n|[^>])+)', MULTILINE)
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -39,31 +42,6 @@ class Assembly:
     def __len__(self):
         return self.path.stat().st_size
 
-    # def type_gene_search(self, db: 'Database'):
-    #     if db.type_gene_names and self.args.allelic_typing:
-    #         all_gene_blast_hits = blast_hit_filter(
-    #             get_blast_hits(self.fasta, str(self.args.allelic_typing), self.args, type_genes=True),
-    #             query_cov=self.args.min_gene_cov, pident=self.args.min_gene_id
-    #         )
-    #         if not self.result:
-    #             self.result = Result(db, self)
-    #
-    #         for gene_name in db.type_gene_names:
-    #             blast_hits = sorted([x for x in all_gene_blast_hits if x.gene_name == gene_name],
-    #                                 reverse=True, key=lambda z: z.bitscore)
-    #             if blast_hits:
-    #                 perfect_match = None
-    #                 for hit in blast_hits:
-    #                     if hit.pident == 100.0 and hit.query_cov == 100.0:
-    #                         perfect_match = hit
-    #                         break
-    #                 if perfect_match:
-    #                     hit = perfect_match
-    #                     hit.result = str(perfect_match.allele_number)
-    #                 else:
-    #                     hit = blast_hits[0]
-    #                     hit.result = str(blast_hits[0].allele_number) + '*'
-    #                 self.result.type_gene_results[gene_name] = hit
 
 
 class AssemblyPiece(object):
@@ -175,7 +153,7 @@ def load_fasta(filename: Path) -> dict:
     open_func = gzip.open if get_compression_type(filename) == 'gz' else open
     try:
         with open_func(filename, 'rt') as f:
-            fasta_seqs = {i[0].split(' ')[0]: i[1] for i in SimpleFastaParser(f)}
+            fasta_seqs = {i[0].split(' ')[0]: i[1] for i in SeqIO.SimpleFastaParser(f)}
     except Exception as e:
         LOGGER.error(e)
     return fasta_seqs
@@ -235,23 +213,6 @@ def write_json_file(output_prefix: Path, json_record: OrderedDict):
         fcntl.flock(json_out, fcntl.LOCK_EX)
         json.dump(json_records, json_out, indent=4)
         fcntl.flock(json_out, fcntl.LOCK_UN)
-
-
-def parse_fasta(filename, buffer_size=DEFAULT_BUFFER_SIZE):
-    """
-    Generator function that yields one record at a time from a FASTA file.
-    """
-    with open(filename, 'rb') as f:
-        buffer = BufferedReader(f)
-        while True:
-            chunk = buffer.read(buffer_size)
-            if not chunk:
-                break
-            matches = finditer(FASTA_REGEX, chunk)
-            for match in matches:
-                header = match.group('header').decode()
-                sequence = match.group('sequence').replace(b'\n', b'').decode()
-                yield header, sequence
 
 
 def merge_assembly_pieces(pieces):
@@ -325,4 +286,77 @@ def get_mean_identity(pieces):
     else:
         return identity_sum / length_sum
 
+
+def assembly_pipeline(args, db: Database):
+    for fasta_file in args.assemblies:
+        sample = load_fasta(fasta_file)
+        if not sample:
+            warning(f'No sequences found in {fasta_file.name}')
+            continue
+        sample = Assembly(fasta_file, sample)  # Create Assembly object
+
+        if args.kaptive_refs and db.loci:
+            sample.get_best_locus_match(db)
+
+        if args.allelic_typing and db.type_gene_names:
+            sample.type_gene_search(db)
+
+        if sample.result is None:
+            warning(f'No locus found for {sample.name}')
+            continue
+        else:
+            sample.result.print_result()
+            if not args.no_seq_out:
+                sample.result.write_fasta()
+            if not args.no_table:
+                sample.result.add_to_table()
+            if not args.no_json:
+                sample.result.add_to_json()
+
+        if not args.keep_db:
+            for file in sample.blast_db:
+                file.unlink(missing_ok=True)
+
+
+def get_gene_info_string(gene_hit_list):
+    """Returns a single comma-delimited string summarising the gene hits in the given list."""
+    gene_hit_strings = []
+    for gene in gene_hit_list:
+        gene_hit_string = ""
+        gene_hit_string += f'{gene.qseqid},{gene.pident}%'
+        if gene.truncated_protein:
+            gene_hit_string += f',truncated_protein({len(gene.prot_seq)}/{len(gene.gene.prot_seq)})'
+        if gene.fragmented:
+            gene_hit_string += f',fragmented({gene.get_coverage_string()})'
+        if gene.insertion:
+            gene_hit_string += ',insertion'
+        if gene.deletion:
+            gene_hit_string += ',deletion'
+        if gene.edge_of_contig:
+            gene_hit_string += ',edge_of_contig'
+        gene_hit_strings.append(gene_hit_string)
+    return ';'.join(gene_hit_strings)
+
+
+def get_scores(hits: list[BlastHit], groups: dict, attr_list=['bitscore', 'pident', 'query_cov']) -> {}:
+    """
+    For a list of blast hits, calculates the total and mean scores per group.
+
+    The key designates the group, the value should be a list of objects that a name attribute corresponding to the
+    qseqid of the blast hit and a length attribute corresponding to the length of the query sequence.
+    A group could be:
+        {KL1: [Gene, Gene], KL2: [Gene, Gene]} for gene hits
+         {KL1: [Locus], KL2: [Locus]} for locus hits
+    """
+    scores = {}
+    for group, expected in groups.items():
+        found = [i for i in hits if i.qseqid in [i.name for i in expected]]
+        if found:
+            scores[group] = {'expected': len(expected), 'found': len(found)}
+            for attr in attr_list:
+                scores[group][attr] = sum(getattr(hit, attr) for hit in found)
+                scores[group][f'mean {attr} by expected hits'] = scores[group][attr] / len(expected)
+                scores[group][f'mean {attr} by length'] = scores[group][attr] / sum(len(i) for i in found)
+                scores[group][f'mean {attr} by found hits'] = scores[group][attr] / len(found)
+    return scores
 
