@@ -4974,3 +4974,64 @@ ORIGIN
      2161 accgataccg ccgttacgga caggcccctc aatgtccggc gtcattataa gaattttctt
      2221 cat
 //
+LOCUS       UGMM01000004             810 bp    DNA              UNK 01-JAN-1980
+DEFINITION  Klebsiella pneumoniae strain NCTC11682 genome assembly, contig:
+            ERS670329SCcontig000004, whole genome shotgun sequence.
+ACCESSION   UGMM01000004
+VERSION     UGMM01000004.1  GI:1440143122
+DBLINK      BioProject: PRJEB6403
+            BioSample: SAMEA3282963
+KEYWORDS    WGS.
+SOURCE      Klebsiella pneumoniae
+  ORGANISM  Klebsiella pneumoniae
+            Bacteria; Pseudomonadota; Gammaproteobacteria; Enterobacterales;
+            Enterobacteriaceae; Klebsiella/Raoultella group; Klebsiella.
+REFERENCE   1
+  AUTHORS   Doyle,S.
+  CONSRTM   Pathogen Informatics
+  TITLE     Direct Submission
+  JOURNAL   Submitted (06-JUN-2018) WTSI, Pathogen Informatics, Wellcome Trust
+            Sanger Institute, CB10 1SA, United Kingdom
+FEATURES             Location/Qualifiers
+     source          1..3130
+                     /organism="Klebsiella pneumoniae"
+                     /mol_type="genomic DNA"
+                     /strain="NCTC11682"
+                     /serovar="not available: to be reported later"
+                     /db_xref="taxon:573"
+                     /note="contig: ERS670329SCcontig000004"
+                     /note="Extra genes: wbbZ"
+                     /note="Sequence edited to trim wbbZ only, Tom Stanton
+                     December 2023"
+     gene            complement(1..810)
+                     /locus_tag="NCTC11682_05451"
+     CDS             complement(1..810)
+                     /inference="ab initio prediction:Prodigal:2.60"
+                     /codon_start=1
+                     /transl_table=11
+                     /product="Exopolysaccharide biosynthesis protein"
+                     /protein_id="STV47229.1"
+                     /db_xref="GI:1440147897"
+                     /translation="MTNMKLKFDLLLKSYHLSHRFVYKANPGNAGDGVIASATYDFFER
+                     NALTYIPYRDGERYSSETDILIFGGGGNLIEGLYSEGHDFIQNNIGKFHKVIIMPSTIR
+                     GYSDLFINNIDKFVVFCRENITFDYIKSLNYEPNKNVFITDDMAFYLDLNKYLSLKPIY
+                     KKQANCFRTDSESLTGDYKENNHDISLTWNGDYWDNEFLARNSTRCMINFLEEYKVVNT
+                     DRLHVAILASLLGKEVNFYPNSYYKNEAVYNYSLFNRYPKTCFITAS"
+                     /gene="wbbZ"
+                     /locus_tag="Extra_genes_wbbZ_01_wbbZ"
+ORIGIN
+        1 tcaacttgcc gtaataaagc atgtttttgg ataacgatta aaaagtgaat aattgtaaac
+       61 agcttcattt ttgtaatatg agttaggata gaagttgact tctttgccaa gcagagatgc
+      121 taaaattgcc acatgcagcc tgtcggtatt gacaacttta tactcttcaa gaaagtttat
+      181 catgcaacgg gtagaattac gcgccagaaa ttcattatcc caataatcgc cattccaggt
+      241 gagcgaaata tcatgattgt tttctttata gtctccagtt agagattcgg agtccgttct
+      301 gaagcagttg gcctgttttt tatagatggg tttaagtgac aggtatttat taagatcgag
+      361 ataaaatgcc atatcatcag taatgaatac gttcttgttt ggttcgtagt tgagagattt
+      421 aatataatcg aaggtgatat tttcgcgaca aaaaacaaca aacttatcaa tattgttgat
+      481 gaataaatcg ctataccctc tgattgtcga cggcattatt attactttat gaaacttccc
+      541 aatattattc tggataaagt catgaccttc agaatacaat ccttctatca ggtttcctcc
+      601 gcctccaaaa attaaaatat cagtttcaga actgtagcgc tcgccatctc tgtaagggat
+      661 ataggtaaga gcatttcgtt caaaaaagtc atatgtcgca gatgcaatta caccatcacc
+      721 agcattacca gggtttgcct tatagacaaa tcgatgagat agatgataag attttagaag
+      781 caaatcaaat tttaacttca tattggtcat
+//
