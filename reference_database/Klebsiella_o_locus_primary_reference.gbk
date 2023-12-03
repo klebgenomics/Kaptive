@@ -1,6 +1,6 @@
 LOCUS       LT174596               12064 bp    DNA     linear   BCT 13-JUN-2016
 DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
-            gene cluster, type: OL101.
+            gene cluster, type: O13 (formerly known as OL101).
 ACCESSION   LT174596
 VERSION     LT174596.1  GI:1036211031
 KEYWORDS    .
@@ -24,10 +24,11 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="262"
-                     /serovar="rfb_OL101"
                      /db_xref="taxon:573"
-                     /note="O locus: OL101"
-                     /note="O type: unknown"
+                     /note="O locus: OL13"
+                     /note="O type: O13"
+                     /note="Locus alias: OL101"
+                     /note="Updated from OL101 to OL13 by K Wyres, Nov 2023"
      gene            1..1065
                      /gene="rfbB"
      CDS             1..1065
