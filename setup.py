@@ -12,27 +12,37 @@ details. You should have received a copy of the GNU General Public License along
 not, see <http://www.gnu.org/licenses/>.
 """
 
-from setuptools import setup
+from setuptools import setup, find_packages
+from distutils.util import convert_path
 
 with open('README.md', 'rb') as readme:
     long_description = readme.read()
 if not isinstance(long_description, str):
     long_description = long_description.decode()
 
-# Get the version from kaptive.py.
+# Get the version from kaptive.__version__.py.
 __version__ = '0.0.0'
-kaptive_script_lines = open('kaptive.py').readlines()
-version_line = [x for x in kaptive_script_lines if x.startswith('__version__')][0]
-exec(version_line)
+ver_path = convert_path('kaptive/version.py')
+with open(ver_path) as ver_file:
+    exec(ver_file.read())
 
-setup(name='Kaptive',
-      version=__version__,
-      description='K and O locus typing for Klebsiella assemblies',
-      long_description=long_description,
-      url='http://github.com/katholt/Kaptive',
-      author='Ryan Wick',
-      author_email='rrwick@gmail.com',
-      license='GPLv3',
-      scripts=['kaptive.py'],
-      install_requires=['biopython'],
-      zip_safe=False)
+setup(
+    name='Kaptive',
+    version=__version__,
+    description='In silico serotyping',
+    long_description=long_description,
+    url='http://github.com/klebgenomics/Kaptive',
+    author='Tom Stanton',
+    author_email='tomdstanton@gmail.com',
+    license='GPLv3',
+    install_requires=['biopython'],
+    zip_safe=False,
+    packages=find_packages(),
+    package_data={'kaptive': ['reference_database/*', 'extras/*']},
+    package_dir={'kaptive': 'kaptive'},
+    entry_points={
+        'console_scripts': [
+            'kaptive = kaptive.__main__:main',
+        ]
+    }
+)

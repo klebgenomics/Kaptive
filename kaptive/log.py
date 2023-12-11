@@ -1,22 +1,24 @@
 """
 Copyright 2023 Tom Stanton (tomdstanton@gmail.com)
-https://github.com/tomdstanton/kaptive-mapper
+https://github.com/klebgenomics/Kaptive
 
-This file is part of kaptive-mapper. kaptive-mapper is free software: you can redistribute it and/or modify
+This file is part of Kaptive. Kaptive is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version. kaptive-mapper is distributed
+either version 3 of the License, or (at your option) any later version. Kaptive is distributed
 in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License along with kaptive-mapper.
+details. You should have received a copy of the GNU General Public License along with Kaptive.
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import datetime
 import os
+import datetime
 import textwrap
 import sys
 
+
 END_FORMATTING = '\033[0m'
+ITALICS = '\033[3m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 RED = '\033[31m'
@@ -29,20 +31,12 @@ CYAN = '\033[36m'
 WHITE = '\033[37m'
 
 
-def log(message: str = '', end='\n', sep=' ', flush=True):
-    print(message, file=sys.stderr, flush=flush, end=end, sep=sep)
-
-
-def section_header(text: str):
-    log()
-    time = get_timestamp()
-    time_str = dim('(' + time + ')')
-    header = bold_magenta_underline(text)
-    print(header + ' ' + time_str, file=sys.stderr, flush=True)
-
-
 def bold(text: str):
     return BOLD + text + END_FORMATTING
+
+
+def italic(text: str):
+    return ITALICS + text + END_FORMATTING
 
 
 def bold_yellow(text: str):
@@ -77,34 +71,30 @@ def bold_magenta_underline(text: str):
     return MAGENTA + BOLD + UNDERLINE + text + END_FORMATTING
 
 
-def explanation(text: str, indent_size=4):
-    text = ' ' * indent_size + text
-    terminal_width, _ = get_terminal_size_stderr()
-    for line in textwrap.wrap(text, width=terminal_width - 1):
-        log(dim(line))
-    log()
+def log(message: str = '', verbose: bool = True, end: str = '\n', sep: str = ' ', flush: bool = True, file=sys.stderr):
+    if verbose:
+        print(f"{get_timestamp()}: {message}", file=file, flush=flush, end=end, sep=sep)
 
 
 def warning(text: str):
-    text = 'WARNING: ' + text
-    terminal_width, _ = get_terminal_size_stderr()
-    for line in textwrap.wrap(text, width=terminal_width - 1):
-        log(bold_yellow(line))
-    log()
+    width, _ = get_terminal_size_stderr()
+    for line in textwrap.wrap(text, width=width-1):
+        log(bold_yellow(f"WARNING: {line}"))
 
 
 def error(text: str):
-    text = 'ERROR: ' + text
-    terminal_width, _ = get_terminal_size_stderr()
-    for line in textwrap.wrap(text, width=terminal_width - 1):
-        log(bold_red(line))
-    log()
+    width, _ = get_terminal_size_stderr()
+    for line in textwrap.wrap(text, width=width-1):
+        log(bold_red(f"ERROR: {line}"))
 
 
 def quit_with_error(text: str):
-    log()
     error(text)
     sys.exit(1)
+
+
+def get_timestamp():
+    return '{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
 
 
 def get_terminal_size_stderr(fallback=(80, 24)):
@@ -116,7 +106,3 @@ def get_terminal_size_stderr(fallback=(80, 24)):
     except (AttributeError, ValueError, OSError):
         size = os.terminal_size(fallback)
     return size
-
-
-def get_timestamp():
-    return '{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())

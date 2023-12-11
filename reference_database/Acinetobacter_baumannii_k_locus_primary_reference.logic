@@ -1,8 +1,8 @@
-locus	extra_loci	type
+locus	extra_genes	type
 KL1	None	K1
 KL1	wzy-GI1,atr25-GI	K1-Wzy/Atr25-GI1
 KL1	wzy-GI1	K1-Wzy-GI1
-KL1	atr25-GI1	K1-Atr25-GI
+KL1	atr25-GI	K1-Atr25-GI
 KL5	None	K5
 KL5	atr30-Ph	K5-Atr30-Ph
 KL19	None	unknown (KL19)

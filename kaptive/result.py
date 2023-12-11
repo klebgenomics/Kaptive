@@ -1,639 +1,713 @@
 """
 Copyright 2023 Tom Stanton (tomdstanton@gmail.com)
-https://github.com/tomdstanton/kaptive-mapper
+https://github.com/klebgenomics/Kaptive
 
-This file is part of kaptive-mapper. kaptive-mapper is free software: you can redistribute it and/or modify
+This file is part of Kaptive. Kaptive is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version. kaptive-mapper is distributed
+either version 3 of the License, or (at your option) any later version. Kaptive is distributed
 in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License along with kaptive-mapper.
+details. You should have received a copy of the GNU General Public License along with Kaptive.
 If not, see <https://www.gnu.org/licenses/>.
 """
-from kaptive.database import Locus, Gene
-from kaptive.minimap import PafLine, Minimap2Result, weighted_identity, get_overlapping_alignments, \
-    target_ranges_covered_by_alignments
-from kaptive.snps import VcfRecord, get_mutation
-from kaptive.misc import range_overlap
+from __future__ import annotations
+
+import re
+from functools import cached_property
+from json import dumps, loads
+from typing import Generator
+
+from Bio.Seq import Seq
+# from Bio.SeqFeature import SeqFeature, FeatureLocation
+# from Bio.Graphics import GenomeDiagram
+# from reportlab.lib.colors import black
+
+from kaptive.intrange import merge_ranges
+from kaptive.database import Database, Locus, Gene
+from kaptive.alignment import Alignment, cull_conflicting_alignments, cull_all_conflicting_alignments
+from kaptive.assembly import Assembly, Contig
 from kaptive.log import warning
 
 
+# Classes -------------------------------------------------------------------------------------------------------------
+class ResultError(Exception):
+    pass
+
+
 class Result:
-    def __init__(self, locus: Locus, sample):
-        self.sample = sample
-        self.name = sample.name
-        self.locus = locus
-        self.db = locus.db
+    def __init__(self, db: Database | None = None, best_match: Locus | None = None,
+                 extra_genes: list[GeneResult] | None = None, gene_results: dict[str, GeneResult] | None = None,
+                 truncated_genes: list[GeneResult] | None = None, missing_expected_genes: list[Gene] | None = None,
+                 scores: dict[str, float] | None = None):
+        self.db = db
+        self.best_match = best_match
+        self.missing_expected_genes = missing_expected_genes or []
+        self.extra_genes = extra_genes or []
+        self.gene_results = gene_results or {}
+        self.truncated_genes = truncated_genes or []
+        self.scores = scores or {}
 
 
-class MapResult(Result):
-    """
-    Result class to hold results for a single locus
-    """
+class AssemblyResult(Result):
+    def __init__(self, db: Database | None = None, assembly: 'Assembly' | None = None,
+                 contig_pieces: list[ContigPiece] | None = None,
+                 expected_genes_inside_locus: list[AssemblyGeneResult] | None = None,
+                 expected_genes_outside_locus: list[AssemblyGeneResult] | None = None,
+                 other_genes_inside_locus: list[AssemblyGeneResult] | None = None,
+                 other_genes_outside_locus: list[AssemblyGeneResult] | None = None, **kwargs):
 
-    def __init__(self, locus: Locus, sample, alignments: Minimap2Result):
-        super().__init__(locus, sample)
-        self.alignments = alignments
-        self.aligned_ranges = self.alignments.target_ranges[self.locus.name]
-        self.length = len(self.locus)
-        self.aligned_bases = sum(i[1] - i[0] for i in self.aligned_ranges)
-        self.coverage = self.aligned_bases / self.length * 100
-        self.identity = weighted_identity(self.alignments.targets[self.locus.name], 0, self.length)
-        self.ises = {}
-        self.snps = {}
-        self.expected_genes = []
-        self.missing_genes = []
+        super().__init__(db, **kwargs)
+        self.assembly = assembly
+        self.contig_pieces = contig_pieces or []
+        self.expected_genes_inside_locus = expected_genes_inside_locus or []
+        self.expected_genes_outside_locus = expected_genes_outside_locus or []
+        self.other_genes_inside_locus = other_genes_inside_locus or []
+        self.other_genes_outside_locus = other_genes_outside_locus or []
 
-        for gene in self.locus.genes:
-            if overlap := sum(
-                    range_overlap(aligned_range, (int(gene.feature.location.start), int(gene.feature.location.end)))
-                    for aligned_range in self.aligned_ranges):
-                self.expected_genes.append(GeneResult(self, self.alignments.targets[self.locus.name], gene, overlap))
+    @classmethod
+    def from_best_locus(
+            cls, db: Database, best_locus: Locus, assembly: 'Assembly', best_locus_alignments: list[Alignment],
+            other_locus_alignments: list[Alignment | None], is_element_alignments: list[Alignment | None],
+            gene_threshold: float = 95, gene_distance: int = 10000, **kwargs):
+        self = cls(
+            db=db, assembly=assembly, best_match=best_locus, missing_expected_genes=[
+                v for k, v in best_locus.genes.items() if k not in [i.query_name for i in best_locus_alignments]],
+            **kwargs
+        )
+        # Cull all overlapping alignments of genes which are not in the best locus
+        other_locus_alignments = cull_all_conflicting_alignments(other_locus_alignments)
+        for alignment in best_locus_alignments:  # Then cull other genes if they are overlapped by expected genes
+            other_locus_alignments = list(cull_conflicting_alignments(alignment, other_locus_alignments))
+
+        contig_results = {}  # Dict to store alignments on each contig
+        for alignment in best_locus_alignments + other_locus_alignments:  # Iterate over all remaining alignments
+            if alignment.target_name not in contig_results:
+                contig_results[alignment.target_name] = []
+            contig_results[alignment.target_name].append(alignment)
+
+        for alignment in cull_all_conflicting_alignments(is_element_alignments):
+            if alignment.target_name in contig_results:  # We only care about alignments that are in the locus
+                contig_results[alignment.target_name].append(alignment)
+
+        # Construct piece(s) of locus on each contig where the best locus gene alignments were found
+        gene_pos = {g: n for n, g in enumerate(best_locus.genes, start=1)}  # Get expected positions of expected genes
+        for contig, alignments in contig_results.items():  # Iterate over each contig
+            # Collect the alignment ranges from each expected gene on the contig if they are in the expected order
+            ranges, previous_alignment, contig = [], None, assembly[contig]
+            for alignment in sorted(alignments, key=lambda x: x.target_start):  # Sort by start, can be on either strand
+                if alignment.query_name in gene_pos:  # Test if the alignment is for an expected gene
+                    if previous_alignment:  # Test if the position of alignment follows expected order
+                        # Do this by checking if difference between positions is 1 or less
+                        if abs(gene_pos[previous_alignment.query_name] - gene_pos[alignment.query_name]) <= 1:
+                            # If so, add the previous alignment to the ranges
+                            ranges.append((previous_alignment.target_start, previous_alignment.target_end))
+                    previous_alignment = alignment  # Update previous alignment
+            if previous_alignment:  # Add the last alignment to the ranges
+                ranges.append((previous_alignment.target_start, previous_alignment.target_end))
+
+            if ranges:  # Merge together ranges of expected genes in expected order with a tolerance from gene_distance
+                contig_pieces = [  # Create a ContigPiece for each range
+                    ContigPiece(assembly=assembly, contig=contig, start=start, end=end, result=self)
+                    for start, end in merge_ranges(ranges, tolerance=gene_distance)]
             else:
-                self.missing_genes.append(gene.name)
+                contig_pieces = []
+            for alignment in alignments:  # Add gene alignments on this contig to the contig pieces and the result
+                contig_piece, category = None, None
+                below_threshold = alignment.percent_identity < gene_threshold
+                gene, is_element = (db.is_elements[alignment.query_name], True) \
+                    if alignment.query_name in db.is_elements else (db.genes[alignment.query_name], False)
+
+                # Find the contig piece that the alignment belongs to
+                contig_piece = next((p for p in contig_pieces if p.start <= alignment.target_start <= alignment.target_end <= p.end), None)
+                if not contig_piece:  # OUTSIDE locus
+                    if not is_element:  # Exclude IS elements outside the locus
+                        category = 'expected_genes_outside_locus' if alignment.query_name in self.best_match.genes \
+                            else 'other_genes_outside_locus'  # Add to the correct category
+                else:  # INSIDE locus
+                    category = 'expected_genes_inside_locus' if alignment.query_name in self.best_match.genes \
+                        else 'other_genes_inside_locus'  # Add to the correct category
+
+                if category:  # Gene result will be created and reported, then added to the correct category
+                    self.gene_results[gene_result.gene.name] = (gene_result := AssemblyGeneResult(
+                        gene, alignment, contig, below_threshold=below_threshold))
+
+                    if gene_result.alignment.percent_query_coverage == 100 and not is_element:
+                        gene_result.compare_translation()  # compare the translation to check for truncation
+
+                    getattr(self, category).append(gene_result)  # Add to the correct category using attribute name
+                    alignment.query_name.startswith('Extra') and self.extra_genes.append(gene_result)  # Add to extra
+                    gene_result.truncated_protein and self.truncated_genes.append(gene_result)  # Add to truncated
+                    contig_piece and contig_piece.add_gene_result(gene_result)  # Add gene result to the contig piece
+
+            for contig_piece in contig_pieces:  # Add the contig pieces to the result
+                contig_piece.guess_strand()  # Guess the strand of the contig piece once all alignments are added
+                self.contig_pieces.append(contig_piece)
+        return self
+
+    @classmethod
+    def from_dict(cls, result_dict: dict, db: Database):
+        try:
+            assembly = Assembly(name=result_dict['Assembly'])
+            [assembly.add_contig(Contig(name=contig)) for contig in {i['Contig'] for i in result_dict['Contig pieces']}]
+            self = cls(db=db, assembly=assembly, best_match=db.loci[result_dict['Best match locus']],
+                       missing_expected_genes=[db.genes[i] for i in result_dict['Missing expected genes']])
+            for contig_piece in result_dict['Contig pieces']:
+                contig_piece = ContigPiece.from_dict(contig_piece, self)
+                for gene_result in contig_piece.gene_results.values():
+                    self.gene_results[gene_result.gene.name] = gene_result
+                    if gene_result.gene.name in self.best_match.genes:
+                        self.expected_genes_inside_locus.append(gene_result)
+                    else:
+                        self.other_genes_inside_locus.append(gene_result)
+                self.contig_pieces.append(contig_piece)
+            for gene_result in result_dict['Expected genes outside locus']:
+                gene_result = AssemblyGeneResult.from_dict(gene_result, self)
+                self.gene_results[gene_result.gene.name] = gene_result
+                self.expected_genes_outside_locus.append(gene_result)
+            for gene_result in result_dict['Other genes outside locus']:
+                gene_result = AssemblyGeneResult.from_dict(gene_result, self)
+                self.gene_results[gene_result.gene.name] = gene_result
+                self.other_genes_outside_locus.append(gene_result)
+        except ValueError:
+            raise ResultError(f"Invalid dict: {result_dict}")
+        return self
+
+    def __len__(self):
+        return sum([len(i) for i in self.contig_pieces]) if self.contig_pieces else 0
+
+    @cached_property  # Cache the phenotype so it is only calculated once
+    def phenotype(self) -> str:
+        phenotype = self.best_match.type
+        if phenotype == 'special logic':  # If there is special logic, apply it here
+            g = {i.gene.gene_name for i in self.extra_genes}  # Names of all the extra genes that were found
+            for locus_type, gene_names in self.best_match.special_logic.items():
+                # Use set operations to match all extra loci, this way they don't need to be sorted
+                if gene_names == g or (len(g) == 0 and len(gene_names) == 0):
+                    phenotype = locus_type
+                    break
+        if self.truncated_genes:  # Check if CPS phenotype dependant genes are truncated
+            for gene_result in self.truncated_genes:
+                for core_gene in ["wcaJ", "wbaP"]:
+                    if (x := gene_result.gene) and x.gene_name == core_gene:
+                        phenotype += f" ({core_gene} truncated)"
+
+        if not phenotype:  # Assert that the phenotype is not None
+            raise ResultError(f"Phenotype is None: {self}")
+        return phenotype
+
+    @cached_property  # Cache the percent identity so it is only calculated once
+    def percent_identity(self) -> float:
+        return sum(i.alignment.percent_identity for i in self.expected_genes_inside_locus) / \
+               len(self.expected_genes_inside_locus) if self.expected_genes_inside_locus else 0
+
+    @cached_property  # Cache the percent coverage so it is only calculated once
+    def percent_coverage(self) -> float:
+        return sum(i.alignment.percent_query_coverage for i in self.expected_genes_inside_locus) / \
+               len(self.expected_genes_inside_locus) if self.expected_genes_inside_locus else 0
+
+    @cached_property  # Cache the problems string so it is only calculated once
+    def problems(self) -> str:
+        problems = "-" if self.missing_expected_genes else ""
+        problems += "+" if self.other_genes_inside_locus else ""
+        problems += "?" if len(self.contig_pieces) > 1 else ""
+        problems += "*" if any(i.below_threshold for i in self.expected_genes_inside_locus) else ""
+        problems += "!" if self.truncated_genes else ""
+        return problems
+
+    def as_list(self) -> list[str]:
+        return [
+            self.assembly.name,
+            self.best_match.name,
+            self.phenotype,
+            self.problems,
+            f"{self.percent_coverage:.2f}%",
+            f"{self.percent_identity:.2f}%",
+            f"{self.__len__() - len(self.best_match)} bp" if len(self.contig_pieces) == 1 else 'n/a',
+            f"{(x := len(self.expected_genes_inside_locus))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
+            f"{';'.join(str(i) for i in self.expected_genes_inside_locus) if self.expected_genes_inside_locus else ''}",
+            f"{';'.join(i.name for i in self.missing_expected_genes) if self.missing_expected_genes else ''}",
+            f"{len(self.other_genes_inside_locus)}",
+            f"{';'.join(str(i) for i in self.other_genes_inside_locus) if self.other_genes_inside_locus else ''}",
+            f"{(x := len(self.expected_genes_outside_locus))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
+            f"{';'.join(str(i) for i in self.expected_genes_outside_locus) if self.expected_genes_outside_locus else ''}",
+            f"{len(self.other_genes_outside_locus)}",
+            f"{';'.join(str(i) for i in self.other_genes_outside_locus) if self.other_genes_outside_locus else ''}"
+        ]
+
+    def as_fasta(self) -> str:
+        """Returns a fasta-formatted nucleotide sequence of the locus with a newline character at the end."""
+        return "".join(i.as_fasta() for i in self.contig_pieces)
+
+    def as_gene_fasta(self) -> str:
+        """Returns a fasta-formatted nucleotide sequence of the locus genes with a newline character at the end."""
+        return "".join(i.as_fasta() for i in self.gene_results.values())
+
+    def as_protein_fasta(self) -> str:
+        """
+        Returns a fasta-formatted protein sequence of the locus genes with a newline character at the end."""
+        return "".join(i.as_protein_fasta() for i in self.gene_results.values())
+
+    def as_json(self, **kwargs) -> str:
+        """Returns a JSON string representation of the result with a newline character at the end."""
+        return dumps({
+            'Assembly': self.assembly.name,
+            'Best match locus': self.best_match.name,
+            'Best match type': self.phenotype,
+            'Problems': self.problems,
+            'Percent identity': f"{self.percent_identity:.2f}%",
+            'Percent coverage': f"{self.percent_coverage:.2f}%",
+            'Contig pieces': [i.as_dict() for i in self.contig_pieces],
+            # All genes inside the locus will be reported in Contig pieces, so only need missing and outside locus
+            'Missing expected genes': [i.name for i in self.missing_expected_genes],
+            'Expected genes outside locus': [i.as_dict() for i in self.expected_genes_outside_locus],
+            'Other genes outside locus': [i.as_dict() for i in self.other_genes_inside_locus]
+        }, **kwargs) + "\n"
+
+    # def as_diagram(self):
+    #     d = GenomeDiagram.Diagram(f"{self.assembly} {self.best_match}")
+    #     t = d.new_track(track_level=1, name="test", greytrack=False, start=0, end=len(self.best_match),
+    #                     scale_ticks=0)
+    #     s = t.new_set()
+    #     for gene_result in self.expected_genes_inside_locus + self.other_genes_inside_locus:
+    #         s.add_feature(gene_result.gene.feature, sigil=get_gene_shape(gene_result), label_size=20,
+    #                       label_angle=20, color=get_gene_colour(gene_result), label=True,
+    #                       name=gene_result.gene.name, label_position="middle",
+    #                       label_strand=1, arrowshaft_height=1.0, border=black)
+    #     t.add_set(s)
+    #     d.draw(format="linear", pagesize=(1800, 200), x=0, yt=0, yb=0, y=0, fragments=1, start=0, end=len(self.best_match))
+    #     d.write(f"kaptive_{self.assembly.name}_{self.best_match}.svg", "SVG")
+
+
+class ContigPieceError(Exception):
+    pass
+
+
+class ContigPiece:
+    def __init__(self, contig: 'Contig' | None = None, strand: str | None = None, result: AssemblyResult | None = None,
+                 alignments: list[Alignment] | None = None, assembly: 'Assembly' | None = None,
+                 gene_results: dict[str, AssemblyGeneResult] | None = None, sequence: Seq | None = None,
+                 start: int | None = None, end: int | None = None):
+        """
+        Represents a part of a contig derived from alignments within a certain proximity to each other.
+        """
+        self.result = result
+        self.contig = contig
+        self.assembly = assembly
+        self.start = start or 0
+        self.end = end or 0
+        self.gene_results = gene_results or {}
+        self.strand = strand
+        self.alignments = alignments or []
+        self.sequence = sequence or Seq("")
+
+    @classmethod
+    def from_dict(cls, contig_piece_dict: dict, result: AssemblyResult, **kwargs):
+        return cls(
+            result=result, contig=result.assembly.contigs[contig_piece_dict['Contig']],
+            start=contig_piece_dict['Start'] - 1, end=contig_piece_dict['End'], strand=contig_piece_dict['Strand'],
+            sequence=Seq(contig_piece_dict['Sequence']),
+            gene_results={i['Gene']: AssemblyGeneResult.from_dict(i, result) for i in contig_piece_dict['Genes']},
+            **kwargs
+        )
+
+    def __len__(self):
+        return self.end - self.start
 
     def __repr__(self):
-        return f'{self.name} {self.locus.name}'
+        return f"{self.contig.name}:{self.start}-{self.end}"
 
-    def get_results(self, synonymous: bool = False):
+    def __iter__(self):
+        return iter(self.gene_results.values())
+
+    def guess_strand(self):
         """
-        Function to get results for a single locus
+        Guess the piece strand by comparing the consensus strand of gene references compared to the consensus strand
+        of the gene alignments.
         """
-        cols = [self.name,
-                # str(self.locus.db),
-                self.locus.name, self.locus.type, f"{self.identity:.1f}",
-                f"{self.coverage:.1f}", ";".join(str(i) for i in self.aligned_ranges)]
+        expected_strand = "+" if max(i.gene.strand for i in self.gene_results.values() if i.gene) == 1 else "-"
+        alignment_strand = max(i.strand for i in self.alignments)
+        if alignment_strand == expected_strand:
+            self.strand = alignment_strand
+        elif alignment_strand == "-" and expected_strand == "+":
+            self.strand = "-"
+        elif alignment_strand == "+" and expected_strand == "-":
+            self.strand = "+"
+        else:
+            raise ContigPieceError(f"Strand mismatch: {self} has alignments on both strands")
 
-        gene_column, mutations_column, ise_column, snp_column = [], [], [], []
+    def add_gene_result(self, gene_result: AssemblyGeneResult):
+        gene_result.contig_piece = self
+        self.add_alignment(gene_result.alignment)
+        self.gene_results[gene_result.gene.name] = gene_result
 
-        for gene in self.expected_genes:
-            gene_column.append(f"{gene.name} {gene.identity:.1f}%")
-            if gene.mutation:
-                mutations_column.append(f"{gene.name} {gene.mutation}")
+    def add_alignment(self, alignment: Alignment):
+        # Update start and end if necessary
+        if alignment.target_start < self.start:
+            self.start = alignment.target_start
+        if alignment.target_end > self.end:
+            self.end = alignment.target_end
+        self.alignments.append(alignment)
 
-        for ise in self.ises.values():
-            ise_column.append(f"{ise.name} {ise.identity:.1f}% {ise.coverage:.1f}% {ise.locus_region[0]} "
-                              f"{ise.locus_region[1]} {' '.join(i.name for i in ise.genes)}")
-
-        for snp in self.snps.values():
-            if snp.consequence == "synonymous":
-                if synonymous:
-                    snp_column.append(f"{snp.biotype} {snp.dna_pos}")
+    def extract_sequence(self):
+        if len(self.sequence) == 0:  # Only extract sequence if it is not already stored
+            if self.strand == "-":
+                self.sequence = self.contig.sequence[self.start:self.end].reverse_complement()
             else:
-                snp_column.append(f"{snp.biotype} {snp.dna_pos}")
+                self.sequence = self.contig.sequence[self.start:self.end]
 
-        cols += [";".join(gene_column), ";".join(self.missing_genes), ";".join(ise_column),
-                 ";".join(mutations_column), ";".join(snp_column)]
+    def as_dict(self):
+        self.extract_sequence()
+        return {
+            'Contig': self.contig.name,
+            'Start': self.start + 1,  # Add 1 to start to make it 1-based
+            'End': self.end,
+            'Strand': self.strand,
+            'Sequence': str(self.sequence),
+            'Genes': [gene.as_dict() for gene in self.gene_results.values()]
+        }
 
-        return "\t".join(cols)
+    def as_fasta(self) -> str:
+        self.extract_sequence()
+        return f">{self.__repr__()}{self.strand}\n{self.sequence}\n"
 
-    def add_snps(self, vcf: str, all_csqs: bool):
-        """
-        Function to call SNPs in the locus using the snp_calling_pipeline function
-        """
-        # Get consensus fasta
-        # self.consensus_fasta = seq_to_dict(vcf2consensus(vcf, self.locus.get_fasta()))
-        # if len(self.consensus_fasta) > 1:
-        #     raise ValueError("More than one sequence in consensus fasta")
 
-        # Parse vcf output into VcfRecord objects
-        snps = [VcfRecord(record) for record in vcf.splitlines() if record and not record.startswith("#")]
-        # If SNP is part of same locus, add to snp dict
-        self.snps |= {snp.pos: snp for snp in snps if snp.chrom == self.locus.name}
-        # Add snps to genes
-        for gene in self.expected_genes:
-            gene.snps = [snp for snp in snps if snp.gene_id == gene.name]
-            if gene.snps:
-                gene.mutation = get_mutation(gene.snps, all_mutations=all_csqs)
-
-    def add_ises(self, ise_paf: Minimap2Result, ise_range_merge_tolerance: int = 0):
-        # Get reads that aligned to the best locus that are also in the ISE PAF
-        locus_reads = {}
-        for paf in self.alignments.targets[self.locus.name]:
-            if paf.read in ise_paf.queries:
-                if paf.read in locus_reads:
-                    locus_reads[paf.read].append(paf)
-                else:
-                    locus_reads[paf.read] = [paf]
-
-        if not locus_reads:
-            return  # Failsafe 1
-
-        # Get ISEs that have reads that aligned to the best locus
-        ise_queries_in_locus = {}
-        for read in locus_reads.keys():
-            for paf in ise_paf.queries[read]:
-                if paf.target_name in ise_queries_in_locus:
-                    ise_queries_in_locus[paf.target_name].append(paf)
-                else:
-                    ise_queries_in_locus[paf.target_name] = [paf]
-
-        if not ise_queries_in_locus:
-            return  # Failsafe 2
-
-        # Regions on the locus that are covered by alignments corresponding to ISEs alignments
-        locus_paf = [i for paf in locus_reads.values() for i in paf]
-        locus_ise_regions = target_ranges_covered_by_alignments(locus_paf, ise_range_merge_tolerance)[self.locus.name]
-
-        # Iterate over each region and determine which ISE is in the region
-        for n, region in enumerate(locus_ise_regions):
-            best_ise = None
-            best_overlap = 0
-            # Iterate over each ISE query
-            for ise, pafs in ise_queries_in_locus.items():
-                # Get all alignments for the ISE that are in the locus
-                locus_alignments_for_ise = [i for paf in pafs for i in locus_reads[paf.read]]
-                
-                ise_regions = target_ranges_covered_by_alignments(locus_alignments_for_ise, ise_range_merge_tolerance)[self.locus.name]
-
-                for ise_region in ise_regions:
-                    overlap = range_overlap(ise_region, region)
-                    if overlap > best_overlap:
-                        best_overlap = overlap
-
-                        is_element = ISElement(ise, pafs, self, ise_region)
-                        is_element.locus_region = region
-                        if not best_ise or is_element.identity > best_ise.identity:
-                            best_ise = is_element
-
-            if best_ise:
-                self.ises[f"ise_{n + 1}"] = best_ise
-                for gene in self.expected_genes:
-                    if range_overlap(region, (int(gene.feature.location.start), int(gene.feature.location.end))):
-                        gene.ises.append(best_ise)
-                        best_ise.genes.append(gene)
-            else:
-                warning(f"No ISE found for region {region} in {self.locus.name}")
+class GeneResultError(Exception):
+    pass
 
 
 class GeneResult:
     """
-    Class to store results for a single gene including SNPs and IS elements based on the output of bedtools coverage
+    Class to store alignment results for a single gene in a locus for either a ReadResult or a AssemblyResult.
     """
 
-    def __init__(self, result: MapResult, alignments: List[PafLine], gene: Gene, overlapping_bases: int):
-        self.result = result
-        self.alignments = get_overlapping_alignments(alignments, int(gene.feature.location.start),
-                                                     int(gene.feature.location.end))
+    def __init__(self, gene: Gene, dna_seq: Seq | None = None, protein_seq: Seq | None = None):
         self.gene = gene
-        self.name = gene.name
-        self.locus = gene.locus
-        self.db = gene.locus.db
-        self.overlapping_bases = overlapping_bases
-        self.coverage = overlapping_bases / len(gene.feature) * 100
-        self.feature = gene.feature
-        self.identity = weighted_identity(self.alignments, int(gene.feature.location.start),
-                                          int(gene.feature.location.end))
-        self.snps = []
-        self.ises = []
-        self.mutation = ''
-
-    def __repr__(self):
-        return self.name
+        self.dna_seq = dna_seq or Seq("")
+        self.protein_seq = protein_seq or Seq("")
 
 
-class ISElement:
-    """
-    Class that represents alignments of a single ISE corresponding to a region on the locus
-    """
-    def __init__(self, name: str, alignments: list[PafLine], result: MapResult, alignment_range: tuple[int, int]):
-        self.result = result
-        self.locus = result.locus
-        self.db = result.locus.db
-        self.name = name
-        self.alignments = alignments
-        self.reads = set(paf.read for paf in alignments)
-        self.length = alignments[0].target_length
-        # self.alignment_ranges = target_ranges_covered_by_alignments(alignments)[name]
-        self.alignment_range = alignment_range
-        # self.overlapping_bases = sum(end - start for start, end in self.alignment_ranges)
-        self.overlapping_bases = self.alignment_range[1] - self.alignment_range[0]
-        self.coverage = self.overlapping_bases / self.length * 100
-        self.identity = weighted_identity(alignments, 0, self.length)
-        self.genes = []
-        self.locus_region = None
+class AssemblyGeneResult(GeneResult):
+    def __init__(self, gene: Gene, alignment: Alignment, contig: 'Contig',
+                 contig_piece: ContigPiece | None = None,
+                 truncated_protein: bool | None = None, below_threshold: bool | None = None, **kwargs):
+        """
+        This class represents ONE alignment of a locus gene to an assembly.
+        """
+        super().__init__(gene, **kwargs)
+        self.alignment = alignment
+        alignment.add_query_sequence(self.gene.dna_seq)
+        self.contig = contig
+        self.contig_piece = contig_piece
+        self.edge_of_contig = alignment.target_start == 0 or alignment.target_end == alignment.target_length
+        self.truncated_protein = truncated_protein or False
+        self.below_threshold = below_threshold or False
 
-    def __repr__(self):
-        return f'{self.name} {self.coverage:.2f}% {self.identity:.2f}%'
+    @classmethod
+    def from_dict(cls, gene_result_dict: dict, result: AssemblyResult, **kwargs):
+        if gene_result_dict['Gene'] in result.db.genes:
+            gene = result.db.genes[gene_result_dict['Gene']]
+        elif gene_result_dict['Gene'] in result.db.is_elements:
+            gene = result.db.is_elements[gene_result_dict['Gene']]
+        else:
+            raise GeneResultError(f"Gene {gene_result_dict['Gene']} not found in database, did you pass --is-seqs?")
+        return cls(
+            gene=gene,
+            alignment=Alignment(
+                strand=gene_result_dict['Strand'], query_name=gene_result_dict['Gene'],
+                target_name=gene_result_dict['Contig'], target_start=gene_result_dict['Start'] - 1,
+                target_end=gene_result_dict['End'], percent_identity=gene_result_dict['Percent identity'],
+                percent_query_coverage=gene_result_dict['Percent coverage']
+            ),
+            dna_seq=Seq(gene_result_dict['Sequence']),
+            contig=result.assembly.contigs[gene_result_dict['Contig']],
+            truncated_protein=gene_result_dict['Truncated protein'],
+            below_threshold=gene_result_dict['Below threshold'],
+            **kwargs
+        )
+
+    def __str__(self):
+        return f'{self.gene.name},{self.alignment.percent_identity:.2f}%,{self.alignment.percent_query_coverage:.2f}%' \
+               f'{",trunc" if self.truncated_protein else ""}' \
+               f'{",edge" if self.edge_of_contig else ""}'
+
+    def extract_dna_seq(self):
+        """
+        Extracts the DNA sequence from the alignment and stores it in self.dna_seq.
+        """
+        if len(self.dna_seq) == 0:  # Only extract sequence if it is not already stored
+            if self.alignment and self.contig:
+                self.dna_seq = self.contig.sequence[self.alignment.target_start:self.alignment.target_end]
+                if self.alignment.strand == "-":
+                    self.dna_seq = self.dna_seq.reverse_complement()
+            else:
+                raise GeneResultError(f'No DNA sequence for {self}')
+
+    def extract_translation(self, table: int = 11, cds: bool = False, to_stop: bool = True, gap: str = '-',
+                            stop_symbol: str = '*'):
+        """
+        Extracts the translation from the DNA sequence of the gene result. Implemented as a method so
+        unnecessary translations are not performed.
+        :param table: NCBI translation table number
+        :param cds: if True, only translates the CDS
+        :param to_stop: if True, stops translation at the first stop codon
+        :param gap: gap character
+        :param stop_symbol: stop codon character
+        """
+        if len(self.protein_seq) == 0:  # Only translate if the protein sequence is not already stored
+            self.extract_dna_seq()
+            self.protein_seq = self.dna_seq.translate(table=table, cds=cds, to_stop=to_stop, gap=gap,
+                                                      stop_symbol=stop_symbol)
+            if len(self.protein_seq) == 0:
+                raise GeneResultError(f'No protein sequence for {self}')
+
+    def compare_translation(self, **kwargs):
+        """
+        Convenience method to compare the protein sequence of the gene result to the protein sequence of the gene.
+        """
+        self.extract_translation(**kwargs)
+        self.gene.extract_translation(**kwargs)
+        if len(self.protein_seq) < len(self.gene.protein_seq):
+            self.truncated_protein = True
+
+    def as_dict(self):
+        self.extract_dna_seq()
+        return {
+            'Gene': self.gene.name,
+            'Contig': self.alignment.target_name,
+            'Start': self.alignment.target_start + 1,  # Add 1 to start to make it 1-based
+            'End': self.alignment.target_end,
+            'Strand': self.alignment.strand,
+            'Percent identity': self.alignment.percent_identity,
+            'Percent coverage': self.alignment.percent_query_coverage,
+            'Truncated protein': self.truncated_protein,
+            'Edge of contig': self.edge_of_contig,
+            'Below threshold': self.below_threshold,
+            'Sequence': str(self.dna_seq),
+        }
+
+    def as_fasta(self) -> str:
+        """Returns a fasta-formatted nucleotide sequence with a newline character at the end."""
+        self.extract_dna_seq()
+        return f'>{self.contig.assembly.name}_{self.gene.name}\n{self.dna_seq}\n'
+
+    def as_protein_fasta(self) -> str:
+        """Returns a fasta-formatted protein sequence with a newline character at the end."""
+        try:  # Try to extract the translation or return an empty string, some genes (or IS) may be severely truncated
+            self.extract_translation()
+        except GeneResultError:
+            warning(f'Could not translate {self}')
+            return ""
+        return f'>{self.contig.assembly.name}_{self.gene.name}\n{self.protein_seq}\n'
+
+    # def as_feature(self) -> SeqFeature:
+    #     try:  # Try to extract the translation or return an empty string, some genes (or IS) may be severely truncated
+    #         self.extract_translation()
+    #     except GeneResultError:
+    #         warning(f'Could not translate {self}')
+    #     return SeqFeature(
+    #         type="CDS", id=self.gene.name,
+    #         qualifiers={"gene": [self.gene.gene_name], "locus_tag": [self.gene.name], "product": [self.gene.product],
+    #                     "translation": [str(self.protein_seq)]},
+    #         location=FeatureLocation(self.alignment.target_start, self.alignment.target_end,
+    #                                  strand=-1 if self.alignment.strand == "-" else 1)
+    #     )
+
+
+# class ReadsResult(Result):
+#     """
+#     Result class to hold results for a single locus
+#     """
+#
+#     def __init__(self, db: Database | None = None, read_group: 'ReadGroup' | None = None,
+#                  truncated_genes: list[ReadsGeneResult] | None = None,
+#                  expected_genes_inside_locus: list[ReadsGeneResult] | None = None,
+#                  expected_genes_outside_locus: list[ReadsGeneResult] | None = None,
+#                  other_genes_inside_locus: list[ReadsGeneResult] | None = None,
+#                  other_genes_outside_locus: list[ReadsGeneResult] | None = None,
+#                  gene_results: dict[str: ReadsGeneResult] | None = None, **kwargs):
+#
+#         super().__init__(db, **kwargs)
+#         self.read_group = read_group
+#         self.expected_genes_inside_locus = expected_genes_inside_locus or []
+#         self.expected_genes_outside_locus = expected_genes_outside_locus or []
+#         self.other_genes_inside_locus = other_genes_inside_locus or []
+#         self.other_genes_outside_locus = other_genes_outside_locus or []
+#         self.gene_results = gene_results or {}
+#         self.truncated_genes = truncated_genes or []
+#
+#     def add_best_locus(self, db: Database, best_locus: Locus, read_group: 'ReadGroup',
+#                        best_locus_alignments: list[Alignment]):
+#         self.best_match, self.read_group, self.db = best_locus, read_group, db
+#
+#         # Add gene results for each gene in the locus if reads overlap the gene range
+#         for g in best_locus.genes.values():
+#             gene_alignments = [i for i in best_locus_alignments if  i.target_start <= g.gene.feature.location.start <= i.target_end or
+#                                i.target_start <= g.gene.feature.location.end <= i.target_end]
+#             if gene_alignments:
+#                 gene_result = ReadsGeneResult.from_alignments(g, gene_alignments)
+#                 self.gene_results[g.name] = gene_result
 #
 #
-# class AlignResult(Result):
-#     def __init__(self, locus, sample):
-#         super().__init__(locus, sample)
-#         self.scores = None
-#         self.blast_hits = []
-#         self.hit_ranges = IntRange()
-#         self.assembly_pieces = []
-#         self.identity = 0.0
-#         self.expected_hits_inside_locus = []
-#         self.missing_expected_genes = []
-#         self.expected_hits_outside_locus = []
-#         self.other_hits_inside_locus = []
-#         self.other_hits_outside_locus = []
-#         # self.locus_fasta = Path(f'{self.args.out}_{self.assembly.name}.fasta')
-#
-#     def add_best_match_locus(self, locus: 'Locus', scores):
-#         self.locus = locus
-#         self.seq = locus.seq
-#         self.name = locus.name
-#         self.type = locus.type
-#         self.scores = scores
-#
-#     def find_assembly_pieces(self):
+# class ReadsGeneResult(GeneResult):
+#     def __init__(self, alignments: list[Alignment] | None = None, truncated_protein: bool | None = None,
+#                  below_threshold: bool | None = None, **kwargs):
 #         """
-#         This function uses the BLAST hits in the given locus type to find the corresponding pieces of
-#         the given assembly. It saves its results in the Locus object.
+#         This class represents alignments of reads overlapping a range representing the locus gene.
+#         There are multiple alignments that may extend past the gene,
+#         so coverage and identity are calculated a little differently.
 #         """
-#         if not self.blast_hits:
-#             return
-#         assembly_pieces = [x.get_assembly_piece(self.assembly) for x in self.blast_hits]
-#         merged_pieces = merge_assembly_pieces(assembly_pieces)
-#         length_filtered_pieces = [x for x in merged_pieces if len(x) >= self.args.min_assembly_piece]
-#         if not length_filtered_pieces:
-#             return
-#         self.assembly_pieces = fill_assembly_piece_gaps(length_filtered_pieces, self.args.gap_fill_size, self.assembly)
-#         # Now check to see if the biggest assembly piece seems to capture the whole locus. If so, this
-#         # is an ideal match.
-#         biggest_piece = sorted(self.assembly_pieces, key=lambda z: len(z), reverse=True)[0]
-#         start = biggest_piece.earliest_hit_coordinate()
-#         end = biggest_piece.latest_hit_coordinate()
-#         if good_start_and_end(start, end, len(self.locus), self.args.start_end_margin):
-#             self.assembly_pieces = [biggest_piece]
+#         super().__init__(**kwargs)
+#         self.alignments = alignments
+#         self.truncated_protein = truncated_protein or False
+#         self.below_threshold = below_threshold or False
 #
-#         # If it isn't the ideal case, we still want to check if the start and end of the locus were
-#         # found in the same contig. If so, fill all gaps in between so we include the entire
-#         # intervening sequence.
-#         else:
-#             earliest, latest, same_contig_and_strand = self.get_earliest_and_latest_pieces()
-#             start = earliest.earliest_hit_coordinate()
-#             end = latest.latest_hit_coordinate()
-#             if good_start_and_end(start, end, len(self.locus), self.args.start_end_margin) and \
-#                     same_contig_and_strand:
-#                 gap_filling_piece = AssemblyPiece(self.assembly, earliest.contig_name, earliest.start,
-#                                                   latest.end, earliest.strand)
-#                 self.assembly_pieces = merge_assembly_pieces(self.assembly_pieces + [gap_filling_piece])
-#         pieces_across_contigs = len(set([piece.contig_name for piece in self.assembly_pieces]))
-#         self.identity = get_mean_identity(self.assembly_pieces)
-#
-#     def add_blast_hit(self, hit):
-#         """Adds a BLAST hit and updates the hit ranges."""
-#         self.blast_hits.append(hit)
-#         self.hit_ranges.add_range(hit.qstart, hit.qend)
-#
-#     def get_mean_blast_hit_identity(self):
-#         """Returns the mean identity (weighted by hit length) for all BLAST hits in the locus."""
-#         identity_sum = 0.0
-#         length_sum = 0
-#         for hit in self.blast_hits:
-#             length_sum += hit.length
-#             identity_sum += hit.length * hit.pident
-#         if identity_sum == 0.0:
-#             return 0.0
-#         else:
-#             return identity_sum / length_sum
-#
-#     def get_coverage(self, cumulative=False):
+#     @classmethod
+#     def from_alignments(cls, gene: Gene, alignments: list[Alignment], **kwargs):
 #         """
-#         Returns the % of this locus which is covered by BLAST hits in the given assembly.
-#         If cumulative==True, returns the % of the non-fragmented, expected genes this locus
-#         Updated in Kaptive v3 to reflect the biology of the gene-based approach.
-#         Missing and fragmented genes drag down the coverage score, and the two are correlated, so it has a snowball
-#         effect on the confidence.
-#         If we consider the cumulative coverage of the genes we KNOW are inside the locus, it gives us a more
-#         realistic idea of the coverage, but we can still judge confidence based on missing genes.
+#         Creates a ReadsGeneResult for a single gene from a list of alignments against the locus.
 #         """
-#         try:
-#             if not cumulative:
-#                 return 100.0 * self.hit_ranges.get_total_length() / len(self.seq)
-#             else:
-#                 good_hits = [hit for hit in self.expected_hits_inside_locus if not hit.fragmented]
-#                 return sum([i.query_cov for i in good_hits]) / len(good_hits)
-#         except ZeroDivisionError:
-#             return 0.0
+#         return cls(gene=gene, alignments=alignments, **kwargs)
 #
-#     def get_coverage_string(self):
-#         return '%.2f' % self.get_coverage() + '%'
-#
-#     def get_identity_string(self):
-#         return f"{'%.2f' % self.identity}%"
-#
-#     def clean_up_blast_hits(self):
+#     def add_snps(self, vcf: str, all_csqs: bool):
 #         """
-#         This function removes unnecessary BLAST hits from self.blast_hits.
-#         For each BLAST hit, we keep it if it offers new parts of the locus. If, on the other
-#         hand, it lies entirely within an existing hit (in locus positions), we ignore it. Since
-#         we first sort the BLAST hits longest to shortest, this strategy will prioritise long hits
-#         over short ones.
+#         Function to call SNPs in the locus using the snp_calling_pipeline function
 #         """
-#         self.blast_hits.sort(key=lambda x: x.length, reverse=True)
-#         kept_hits = []
-#         range_so_far = IntRange()
-#         for hit in self.blast_hits:
-#             hit_range = hit.get_query_range()
-#             if not range_so_far.contains(hit_range):
-#                 range_so_far.merge_in_range(hit_range)
-#                 kept_hits.append(hit)
-#         self.blast_hits = kept_hits
+#         # Get consensus fasta
+#         # self.consensus_fasta = seq_to_dict(vcf2consensus(vcf, self.locus.get_fasta()))
+#         # if len(self.consensus_fasta) > 1:
+#         #     raise ValueError("More than one sequence in consensus fasta")
 #
-#     def get_match_uncertainty_chars(self):
-#         """
-#         Returns the character code which indicates uncertainty with how this locus was found in
-#         the current assembly.
-#         '?' means the locus was found in multiple discontinuous assembly pieces.
-#         '-' means that one or more expected genes were missing.
-#         '+' means that one or more additional genes were found in the locus assembly parts.
-#         '*' means that at least one of the expected genes in the locus is low identity.
-#         """
-#         uncertainty_chars = ''
-#         if len(self.assembly_pieces) > 1:
-#             uncertainty_chars += '?'
-#         if self.missing_expected_genes:
-#             uncertainty_chars += '-'
-#         if self.other_hits_inside_locus:
-#             uncertainty_chars += '+'
-#         if not all([x.over_identity_threshold for x in self.expected_hits_inside_locus]):
-#             uncertainty_chars += '*'
-#         return uncertainty_chars
+#         # Parse vcf output into VcfRecord objects
+#         snps = [VcfRecord(record) for record in vcf.splitlines() if record and not record.startswith("#")]
+#         # If SNP is part of same locus, add to snp dict
+#         self.snps |= {snp.pos: snp for snp in snps if snp.chrom == self.locus.name}
+#         # Add snps to genes
+#         for gene in self.expected_genes:
+#             gene.snps = [snp for snp in snps if snp.gene_id == gene.name]
+#             if gene.snps:
+#                 gene.mutation = get_mutation(gene.snps, all_mutations=all_csqs)
 #
-#     def get_length_discrepancy(self):
-#         """
-#         Returns an integer of the base discrepancy between the locus in the assembly and the
-#         reference locus sequence.
-#         E.g. if the assembly match was 5 bases shorter than the reference, this returns -5.
-#         This function only applies to cases where the locus was found in a single piece. In
-#         other cases, it returns None.
-#         """
-#         if len(self.assembly_pieces) != 1:
-#             return None
-#         only_piece = self.assembly_pieces[0]
-#         a_start = only_piece.start
-#         a_end = only_piece.end
-#         start = only_piece.earliest_hit_coordinate()
-#         end = only_piece.latest_hit_coordinate()
-#         expected_length = end - start
-#         actual_length = a_end - a_start
-#         return actual_length - expected_length
-#
-#     def get_length_discrepancy_string(self):
-#         """
-#         Returns the length discrepancy, not as an integer but as a string with a sign and units.
-#         """
-#         length_discrepancy = self.get_length_discrepancy()
-#         if length_discrepancy is None:
-#             return 'n/a'
-#         length_discrepancy_string = str(length_discrepancy) + ' bp'
-#         if length_discrepancy > 0:
-#             length_discrepancy_string = '+' + length_discrepancy_string
-#         return length_discrepancy_string
-#
-#     def get_earliest_and_latest_pieces(self):
-#         """
-#         Returns the AssemblyPiece with the earliest coordinate (closest to the locus start) and
-#         the AssemblyPiece with the latest coordinate (closest to the locus end)
-#         """
-#         earliest_piece = sorted(self.assembly_pieces, key=lambda x: x.earliest_hit_coordinate())[0]
-#         latest_piece = sorted(self.assembly_pieces, key=lambda x: x.latest_hit_coordinate())[-1]
-#         same_contig_and_strand = earliest_piece.contig_name == latest_piece.contig_name and \
-#                                  earliest_piece.strand == latest_piece.strand
-#
-#         # Even though the pieces are on the same contig and strand, we still need to check whether
-#         # the earliest piece comes before the latest piece in that contig.
-#         if same_contig_and_strand:
-#             if earliest_piece.strand == '+' and earliest_piece.start > latest_piece.end:
-#                 same_contig_and_strand = False
-#             elif earliest_piece.strand == '-' and earliest_piece.start < latest_piece.end:
-#                 same_contig_and_strand = False
-#         return earliest_piece, latest_piece, same_contig_and_strand
-#
-#     def apply_special_logic(self):
-#         """
-#         This function has special logic for dealing with the locus -> type situations that depend on
-#         other genes in the genome.
-#         """
-#         found_loci = sorted({x.locus.name.replace(  # Set comprehension to remove duplicates (fixes O2ac bug)
-#             'Extra_genes_', '') for x in self.other_hits_outside_locus if x.qseqid.startswith('Extra_genes_')})
-#         new_types = [
-#             logic['type'] for logic in self.locus.special_logic if
-#             self.name == logic['locus'] and found_loci == logic['extra_loci']
-#         ]
-#
-#         if len(new_types) == 0:
-#             self.type = 'unknown'
-#         elif len(new_types) == 1:
-#             self.type = new_types[0]
-#         else:  # multiple matches - shouldn't happen!
-#             quit_with_error('redundancy in special logic file')
-#
-#     def get_match_confidence(self):
-#         """
-#         These confidence thresholds match those specified in the paper supp. text, with the
-#         addition of two new top-level categories: perfect and very high
-#         """
-#         single_piece = len(self.assembly_pieces) == 1
-#         cov = self.get_coverage(cumulative=True)  # Use the cumulative coverage of non-fragmented expected genes
-#         ident = self.identity
-#         missing = len(self.missing_expected_genes)
-#         extra = len(self.other_hits_inside_locus)
-#
-#         # Define thresholds for each confidence category
-#         thresholds = {
-#             "ident": [100, 95.0, 95.0, 95.0, 95.0],
-#             "cov": [100, 95.0, 90.0, 85.0, 80.0],  # Relax the coverage thresholds
-#             "missing": [0, 0, 2, 3, 4],
-#             "extra": [0, 0, 0, 1, 2]
-#         }
-#         # Perfect logic
-#         if single_piece and \
-#                 cov == thresholds['cov'][0] and \
-#                 ident == thresholds['ident'][0] and \
-#                 missing == thresholds['missing'][0] and \
-#                 extra == thresholds['extra'][0] and \
-#                 self.get_length_discrepancy() == 0:
-#             confidence = 'Perfect'
-#         # Very high logic
-#         elif single_piece and \
-#                 cov >= thresholds['cov'][1] and \
-#                 ident >= thresholds['ident'][1] and \
-#                 missing == thresholds['missing'][1] and \
-#                 extra == thresholds['extra'][1]:
-#             confidence = 'Very high'
-#         # High logic
-#         elif single_piece and \
-#                 cov >= thresholds['cov'][2] and \
-#                 missing <= thresholds['missing'][2] and \
-#                 extra == thresholds['extra'][2]:
-#             confidence = 'High'
-#         # Good logic
-#         elif (single_piece or cov >= thresholds['cov'][3]) and \
-#                 missing <= thresholds['missing'][3] and \
-#                 extra <= thresholds['extra'][3]:
-#             confidence = 'Good'
-#         # Low logic
-#         elif (single_piece or cov >= thresholds['cov'][4]) and \
-#                 missing <= thresholds['missing'][4] and \
-#                 extra <= thresholds['extra'][4]:
-#             confidence = 'Low'
-#         # None logic
-#         else:
-#             confidence = 'None'
-#         return confidence
-#
-#     def add_to_table(self):
-#         """
-#         Writes a line to the output table describing all that we've learned about the given locus and
-#         writes to stdout as well.
-#         """
-#         try:
-#             expected_in_locus_per = 100.0 * len(self.expected_hits_inside_locus) / len(self.locus.gene_names)
-#             expected_out_locus_per = 100.0 * len(self.expected_hits_outside_locus) / len(self.locus.gene_names)
-#             expected_genes_in_locus_str = f'{len(self.expected_hits_inside_locus)} / ' \
-#                                           f'{len(self.locus.gene_names)} ({expected_in_locus_per:.1f}%)'
-#             expected_genes_out_locus_str = f'{len(self.expected_hits_outside_locus)} / ' \
-#                                            f'{len(self.locus.gene_names)} ({expected_out_locus_per:.1f}%)'
-#             missing_per = 100.0 * len(self.missing_expected_genes) / len(self.locus.gene_names)
-#             missing_genes_str = f'{len(self.missing_expected_genes)} / {len(self.locus.gene_names)} ({missing_per}%)'
-#         except ZeroDivisionError:
-#             expected_genes_in_locus_str, expected_genes_out_locus_str, missing_genes_str = '', '', ''
-#
-#         line = [self.assembly.name,
-#                 self.name,
-#                 self.type,
-#                 self.get_match_confidence(),
-#                 self.get_match_uncertainty_chars(),
-#                 self.get_coverage_string(),
-#                 self.get_identity_string(),
-#                 self.get_length_discrepancy_string(),
-#                 expected_genes_in_locus_str,
-#                 get_gene_info_string(self.expected_hits_inside_locus),
-#                 ';'.join(self.missing_expected_genes),
-#                 str(len(self.other_hits_inside_locus)),
-#                 get_gene_info_string(self.other_hits_inside_locus),
-#                 expected_genes_out_locus_str,
-#                 get_gene_info_string(self.expected_hits_outside_locus),
-#                 str(len(self.other_hits_outside_locus)),
-#                 get_gene_info_string(self.other_hits_outside_locus)]
-#
-#         for gene_name in self.db.type_gene_names:
-#             hit = self.type_gene_results[gene_name]
-#             line.append('-' if not hit else hit.result)
-#
-#         with open(f'{self.args.out}_table.txt', 'at') as table:
-#             table.write('\t'.join(line) + '\n')
-#
-#     def add_to_scores(self):
-#         with open(f'{self.args.out}_scores.txt', 'at') as scores:
-#             scores.write(
-#                 '\n'.join([
-#                     '\t'.join([self.assembly.name, i[0]] + [str(x) for x in i[1].values()]) for i in self.scores
-#                 ]) + '\n')
-#
-#     def add_to_json(self):
-#         expected_genes_in_locus = {x.qseqid: x for x in self.expected_hits_inside_locus}
-#         expected_hits_outside_locus = {x.qseqid: x for x in self.expected_hits_outside_locus}
-#         other_hits_inside_locus = {x.qseqid: x for x in self.other_hits_inside_locus}
-#         other_hits_outside_locus = {x.qseqid: x for x in self.other_hits_outside_locus}
-#         uncertainty_chars = self.get_match_uncertainty_chars()
-#
-#         json_record = OrderedDict({
-#             'Assembly name': self.assembly.name,
-#             'Best match': OrderedDict({
-#                 'Locus name': self.name,
-#                 'Type': self.locus.type,
-#                 'Match confidence': self.get_match_confidence(),
-#                 'Reference': OrderedDict({
-#                     'Length': len(self.seq), 'Sequence': self.seq
-#                 })
-#             }),
-#             'Problems': OrderedDict({
-#                 'Locus assembled in multiple pieces': str('?' in uncertainty_chars),
-#                 'Missing genes in locus': str('-' in uncertainty_chars),
-#                 'Extra genes in locus': str('+' in uncertainty_chars),
-#                 'At least one low identity gene': str('*' in uncertainty_chars)
-#             }),
-#             'blastn result': OrderedDict({
-#                 'Coverage': self.get_coverage_string(),
-#                 'Identity': self.get_identity_string(),
-#                 'Length discrepancy': self.get_length_discrepancy_string(),
-#                 'Locus assembly pieces': [
-#                     OrderedDict({
-#                         'Contig name': piece.contig_name,
-#                         'Contig start position': piece.start + 1,
-#                         'Contig end position': piece.end,
-#                         'Contig strand': piece.strand,
-#                         'Length': len(piece_seq := piece.get_sequence()),
-#                         'Sequence': piece_seq
-#                     }) for i, piece in enumerate(self.assembly_pieces)
-#                 ]
-#             }),
-#             'Locus genes': [
-#                 OrderedDict({
-#                     'Name': gene.name,
-#                     'Result': (
-#                         'Found in locus' if gene.name in expected_genes_in_locus else 'Found outside locus' if
-#                         gene.name in expected_hits_outside_locus else 'Not found'),
-#                     'Reference': gene.get_reference_info_json_dict(),
-#                     'blastn result': hit.get_blast_result_json_dict() if (
-#                         hit := {**expected_genes_in_locus, **expected_hits_outside_locus}.get(
-#                             gene.name)) else None,
-#                     'Match confidence': hit.get_match_confidence() if hit else 'Not found'
-#                 }) for gene in self.locus.genes],
-#             'Other genes in locus': OrderedDict({
-#                 gene_name: OrderedDict({
-#                     'Reference': hit.gene.get_reference_info_json_dict(),
-#                     'blastn result': hit.get_blast_result_json_dict()
-#                 }) for gene_name, hit in other_hits_inside_locus.items()
-#             }),
-#             'Other genes outside locus': OrderedDict({
-#                 gene_name: OrderedDict({
-#                     'Reference': hit.gene.get_reference_info_json_dict(),
-#                     'blastn result': hit.get_blast_result_json_dict()
-#                 }) for gene_name, hit in other_hits_outside_locus.items()}),
-#             'Scores': self.scores if self.args.scores else None
-#         })
-#
-#         if self.db.type_gene_names:
-#             allelic_typing = OrderedDict()
-#             for gene_name in self.db.type_gene_names:
-#                 allelic_type = OrderedDict()
-#                 if not self.type_gene_results[gene_name]:
-#                     allelic_type['Allele'] = 'Not found'
+#     def add_is_elements(self, ise_paf: Alignments, ise_range_merge_tolerance: int = 0):
+#         # Get reads that aligned to the best locus that are also in the ISE PAF
+#         locus_reads = {}
+#         for paf in self.alignments.targets[self.locus.name]:
+#             if paf.read in ise_paf.queries:
+#                 if paf.read in locus_reads:
+#                     locus_reads[paf.read].append(paf)
 #                 else:
-#                     blast_hit = self.type_gene_results[gene_name]
-#                     allele = blast_hit.result
-#                     if allele.endswith('*'):
-#                         perfect_match = False
-#                         allele = allele[:-1]
-#                     else:
-#                         perfect_match = True
-#                     try:
-#                         allele = int(allele)
-#                     except ValueError:
-#                         pass
-#                     allelic_type['Allele'] = allele
-#                     allelic_type['Perfect match'] = str(perfect_match)
-#                     allelic_type['blastn result'] = blast_hit.get_blast_result_json_dict()
-#                 allelic_typing[gene_name] = allelic_type
-#             json_record['Allelic_typing'] = allelic_typing
+#                     locus_reads[paf.read] = [paf]
 #
-#         write_json_file(self.args.out, json_record)
+#         if not locus_reads:
+#             return  # Failsafe 1
 #
-#     def write_fasta(self):
-#         """
-#         Creates a single FASTA file for all the assembly pieces.
-#         Assumes all assembly pieces are from the same assembly.
-#         """
-#         if self.assembly_pieces:
-#             with open(self.locus_fasta, 'wt') as f:
-#                 f.write('\n'.join(
-#                     [f'>{self.assembly.name}_{piece.get_header()}\n{fasta_wrap(piece.get_sequence())}' for piece in
-#                      self.assembly_pieces]))
-#                 f.write('\n')
+#         # Get is_elements that have reads that aligned to the best locus
+#         ise_queries_in_locus = {}
+#         for read in locus_reads.keys():
+#             for paf in ise_paf.queries[read]:
+#                 if paf.target_name in ise_queries_in_locus:
+#                     ise_queries_in_locus[paf.target_name].append(paf)
+#                 else:
+#                     ise_queries_in_locus[paf.target_name] = [paf]
 #
-#     def print_result(self):
-#         out_string = self.assembly.name
-#         if self.locus:
-#             out_string += f': {self.name}{self.get_match_uncertainty_chars()}'
-#         for gene_name in self.type_gene_results.items():
-#             result = 'Not found' if not self.type_gene_results[gene_name] else self.type_gene_results[gene_name].result
-#             out_string += f', {gene_name}({result})'
-#         print(out_string)
+#         if not ise_queries_in_locus:
+#             return  # Failsafe 2
+#
+#         # Regions on the locus that are covered by alignments corresponding to is_elements alignments
+#         locus_paf = [i for paf in locus_reads.values() for i in paf]
+#         locus_ise_regions = target_ranges_covered_by_alignments(locus_paf, ise_range_merge_tolerance)[self.locus.name]
+#
+#         # Iterate over each region and determine which ISE is in the region
+#         for n, region in enumerate(locus_ise_regions):
+#             best_ise = None
+#             best_overlap = 0
+#             # Iterate over each ISE query
+#             for ise, pafs in ise_queries_in_locus.items():
+#                 # Get all alignments for the ISE that are in the locus
+#                 locus_alignments_for_ise = [i for paf in pafs for i in locus_reads[paf.read]]
+#
+#                 ise_regions = target_ranges_covered_by_alignments(locus_alignments_for_ise, ise_range_merge_tolerance)[self.locus.name]
+#
+#                 for ise_region in ise_regions:
+#                     overlap = range_overlap(ise_region, region)
+#                     if overlap > best_overlap:
+#                         best_overlap = overlap
+#
+#                         is_element = ISElement(ise, pafs, self, ise_region)
+#                         is_element.locus_region = region
+#                         if not best_ise or is_element.identity > best_ise.identity:
+#                             best_ise = is_element
+#
+#             if best_ise:
+#                 self.is_elements[f"ise_{n + 1}"] = best_ise
+#                 for gene in self.expected_genes:
+#                     if range_overlap(region, (int(gene.feature.location.start), int(gene.feature.location.end))):
+#                         gene.is_elements.append(best_ise)
+#                         best_ise.genes.append(gene)
+#             else:
+#                 warning(f"No ISE found for region {region} in {self.locus.name}")
+
+
+# class ISElementResult:
+#     """
+#     Class that represents alignments of a single ISE corresponding to a region on the locus
+#     """
+#
+#     def __init__(self, name: str, alignments: list[Alignment], result: ReadResult, alignment_range: tuple[int, int]):
+#         self.result = result
+#         self.locus = result.locus
+#         self.db = result.locus.db
+#         self.name = name
+#         self.alignments = alignments
+#         self.reads = set(paf.read for paf in alignments)
+#         self.length = alignments[0].target_length
+#         # self.alignment_ranges = target_ranges_covered_by_alignments(alignments)[name]
+#         self.alignment_range = alignment_range
+#         # self.overlapping_bases = sum(end - start for start, end in self.alignment_ranges)
+#         self.overlapping_bases = self.alignment_range[1] - self.alignment_range[0]
+#         self.coverage = self.overlapping_bases / self.length * 100
+#         self.identity = weighted_identity(alignments, 0, self.length)
+#         self.genes = []
+#         self.locus_region = None
+#
+#     def __repr__(self):
+#         return f'{self.name} {self.coverage:.2f}% {self.identity:.2f}%'
+
+
+# def get_gene_colour(gene_result: AssemblyGeneResult):
+#     if gene_result.alignment.percent_identity >= 99.5:
+#         return "#7F407F"
+#     elif gene_result.alignment.percent_identity >= 98:
+#         return "#995C99"
+#     elif gene_result.alignment.percent_identity >= 95:
+#         return "#B27DB2"
+#     elif gene_result.alignment.percent_identity >= 90:
+#         return "#CCA3CC"
+#     elif gene_result.alignment.percent_identity >= 80:
+#         return "#D9C3D9"
+#     else:
+#         return "#E5E5E5"
+#
+#
+# def get_gene_shape(gene_result: AssemblyGeneResult):
+#     if gene_result.truncated_protein:
+#         return "JAGGY"
+#     elif gene_result.edge_of_contig:
+#         return "BOX"
+#     else:
+#         return "BIGARROW"
+
+def parse_results(json, db: Database, regex: re.Pattern | None, samples: list[str] | None, loci: list[str] | None
+                  ) -> Generator[AssemblyResult, None, None]:
+    with json.open() as f:
+        for json_line in f.readlines():
+            if regex and not regex.search(json_line):
+                continue
+            try:
+                result_dict = loads(json_line)
+                if samples and result_dict['Assembly'] not in samples:
+                    continue
+                if loci and result_dict['Best match locus'] not in loci:
+                    continue
+                yield AssemblyResult.from_dict(result_dict, db)
+            except ValueError:
+                raise f"Invalid JSON: {json_line}"
