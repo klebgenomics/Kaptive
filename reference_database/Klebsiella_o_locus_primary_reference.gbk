@@ -1790,7 +1790,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O1/O2 Variant 1"
                      /db_xref="taxon:573"
                      /note="O locus: O1/O2v1"
-                     /note="O type: special logic"
+                     /note="O type: O2a"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -2094,7 +2094,7 @@ FEATURES             Location/Qualifiers
                      /serovar="O1/O2 Variant 2"
                      /db_xref="taxon:573"
                      /note="O locus: O1/O2v2"
-                     /note="O type: special logic"
+                     /note="O type: O2afg"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -4046,7 +4046,7 @@ FEATURES             Location/Qualifiers
                      /note="Statens Serum Institut Klebsiella pnuemoniae
                      serotype O8 reference strains"
                      /note="O locus: O8"
-                     /note="O type: special logic"
+                     /note="O type: O2a"
                      /note="original sequence manually trimmed"
      gene            1..780
                      /gene="wzm"
@@ -4372,7 +4372,7 @@ FEATURES             Location/Qualifiers
                      /note="Sequence edited to remove hisI gene, Kelly Wyres
                      April 2021"
                      /note="O locus: O1/O2v3"
-                     /note="O type: special logic"
+                     /note="O type: O2a"
      gene            1..768
                      /gene="wzm"
      CDS             1..768

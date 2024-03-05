@@ -12,7 +12,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Generator
 
 
 class IntRangeError(Exception):
@@ -91,33 +91,27 @@ class IntRange(object):
         return False
 
 
-def merge_ranges(ranges: list[tuple[int, int]], tolerance=0) -> list[tuple[int, int]]:
+def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False) -> Generator[tuple[int | float, int | float]]:
     """
-    Merge overlapping ranges, ASSUMES EACH RANGE IS SORTED
+    Merge overlapping ranges
     :param ranges: List of tuples of start and end positions
-    :param tolerance: The number of bases to allow between alignments to be considered continuous
+    :param tolerance: Integer or float of tolerance for merging ranges
+    :param skip_sort: Skip sorting the ranges before merging
     :return: List of merged ranges
     """
     if not ranges:
-        return []
-
-    sorted_ranges, merged_ranges = sorted(ranges, key=lambda x: x[0]), []
-
-    # current_range = sorted(sorted_ranges[0])  # Sort the first range to ensure the start is before the end
-    current_range = sorted_ranges[0]
-    for start, end in sorted_ranges[1:]:
-        # start, end = sorted((start, end))  # Sort the range to ensure the start is before the end
-        if start - tolerance <= current_range[1]:
-            # Ranges overlap, merge them
+        raise IntRangeError('No ranges to merge')
+    if len(ranges) == 1:
+        yield ranges[0]
+        return
+    current_range = (ranges := ranges if skip_sort else sorted(ranges, key=lambda x: x[0]))[0]  # Start with the first range
+    for start, end in ranges[1:]:  # Iterate through the ranges
+        if start - tolerance <= current_range[1]:  # Overlap, merge the ranges
             current_range = (current_range[0], max(current_range[1], end))
-        else:
-            # No overlap, add the current range to the merged list and start a new range
-            merged_ranges.append(current_range)
-            current_range = (start, end)
-
-    # Add the last range to the merged list
-    merged_ranges.append(current_range)
-    return merged_ranges
+        else:  # No overlap, add the current range to the merged list and start a new range
+            yield current_range  # Yield the current range
+            current_range = (start, end)   # Start a new range
+    yield current_range  # Yield the last range
 
 
 def range_overlap(range1: tuple[int, int], range2: tuple[int, int], skip_sort: bool = False) -> int:

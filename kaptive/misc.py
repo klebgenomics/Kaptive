@@ -14,11 +14,22 @@ If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 from pathlib import Path
+from typing import Generator
+from gzip import open as gzopen
 
-from kaptive.log import log, quit_with_error
+from kaptive.log import log, quit_with_error, bold_cyan
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _GZIP_MAGIC = b'\x1f\x8b'
+_LOGO = r"""
+    __               __  _           _____
+   / /______ _____  / /_(_)   _____ |__  /
+  / //_/ __ `/ __ \/ __/ / | / / _ \ /_ < 
+ / ,< / /_/ / /_/ / /_/ /| |/ /  __/__/ / 
+/_/|_|\__,_/ .___/\__/_/ |___/\___/____/  
+          /_/
+"""
+_REVCOMP = str.maketrans('ACGTNacgtn', 'TGCANtgcan')
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
@@ -31,7 +42,7 @@ def check_programs(progs: list[str], verbose: bool = False):
     }
     for program in progs:
         if program in bins.keys():
-            log(f'{program}:\t{bins[program]}', verbose)
+            log(f'{program}: {bins[program]}', verbose)
         else:
             quit_with_error(f'{program} not found')
 
@@ -78,11 +89,7 @@ def check_python_version(major: int = 3, minor: int = 9):
 
 def is_gzipped(bytes_string: bytes) -> bool:
     """Detects gzipped byte-string"""
-    return bytes_string[:2] in _GZIP_MAGIC
-
-
-def decode_line(line: str | bytes):
-    return line.decode().strip() if isinstance(line, bytes) else line.strip()
+    return bytes_string[:2] == _GZIP_MAGIC
 
 
 def find_files_with_suffixes(prefix: Path, suffixes: list[str], min_size: int = 1) -> list[Path]:
@@ -97,11 +104,36 @@ def find_files_with_suffixes(prefix: Path, suffixes: list[str], min_size: int = 
             (p := prefix.with_suffix(prefix.suffix + i)).exists() and p.stat().st_size >= min_size]
 
 
-LOGO = r"""
-    __               __  _           _____
-   / /______ _____  / /_(_)   _____ |__  /
-  / //_/ __ `/ __ \/ __/ / | / / _ \ /_ < 
- / ,< / /_/ / /_/ / /_/ /| |/ /  __/__/ / 
-/_/|_|\__,_/ .___/\__/_/ |___/\___/____/  
-          /_/
-"""
+def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the logo
+    return bold_cyan(f'{_LOGO}\n{message.center(width)}')
+
+
+def parse_fasta(path: Path) -> Generator[tuple[str, str, str], None, None]:
+    """Wrapper around fasta_parser for parsing fasta files"""
+    open_func = open if path.suffix != '.gz' else gzopen
+    try:  # Try to open file and parse it
+        with open_func(path, 'rt') as f:
+            if (first_char := (fasta_string := f.read())[0]) != '>':  # Check first character
+                quit_with_error(f'First character of {path} is {first_char}, not ">"')
+            yield from fasta_parser(fasta_string)
+    except Exception as e:
+        quit_with_error(f"Could not parse {path}: {e}, if gzipped, ensure file ends in .gz")
+
+
+def fasta_parser(fasta: str) -> Generator[tuple[str, str, str], None, None]:
+    """A simple fasta parser that yields a tuple of id, description, sequence for each record in a fasta file."""
+    record = []
+    for line in fasta.splitlines():
+        if line.startswith('>'):  # New record
+            if record:  # If previous record exists, yield it
+                name, desc = record[0].split(' ', maxsplit=1) if ' ' in record[0] else (record[0], '')
+                yield name[1:], desc,  ''.join(record[1:])  # Yield record
+            record = []  # Reset record
+        record.append(line)  # Add line to record
+    if record:  # Yield last record
+        name, desc = record[0].split(' ', maxsplit=1) if ' ' in record[0] else (record[0], '')
+        yield name[1:], desc, ''.join(record[1:])  # Yield record
+
+
+def reverse_complement(seq: str) -> str:
+    return seq.translate(_REVCOMP)[::-1]

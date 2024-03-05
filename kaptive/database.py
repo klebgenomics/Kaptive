@@ -12,30 +12,36 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 from typing import Generator
 import re
-from itertools import chain
+import warnings
 
 from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from kaptive.log import quit_with_error
-from kaptive.misc import check_file
+from kaptive.log import log, quit_with_error, warning
+from kaptive.misc import parse_fasta
 
 # Constants -----------------------------------------------------------------------------------------------------------
-LOCUS_REGEX = r'(?<=locus:)\w+|(?<=locus: ).*'
-TYPE_REGEX = r'(?<=type:)\w+|(?<=type: ).*'
-DB_KEYWORDS = {
+_LOCUS_REGEX = re.compile(r'(?<=locus:)\w+|(?<=locus: ).*')
+_TYPE_REGEX = re.compile(r'(?<=type:)\w+|(?<=type: ).*')
+_DB_KEYWORDS = {
     'Klebsiella_k_locus_primary_reference': ['kpsc_k', 'kp_k', 'k_k'],
     'Klebsiella_k_locus_variant_reference': ['kpsc_k_variant', 'kp_k_variant', 'k_k_variant'],
     'Klebsiella_o_locus_primary_reference': ['kpsc_o', 'kp_o', 'k_o'],
     'Acinetobacter_baumannii_k_locus_primary_reference': ['ab_k'],
-    'Acinetobacter_baumannii_OC_locus_primary_reference': ['ab_o'],
-    'VibrioPara_Kaptivedb_K': ['vp_k'],
-    'VibrioPara_Kaptivedb_O': ['vp_o'],
+    'Acinetobacter_baumannii_OC_locus_primary_reference': ['ab_o']
+}
+_GENE_THRESHOLDS = {
+    'Klebsiella_k_locus_primary_reference': 83.5,
+    'Klebsiella_k_locus_variant_reference': 83.5,
+    'Klebsiella_o_locus_primary_reference': 83.5,
+    'Acinetobacter_baumannii_k_locus_primary_reference': 85,
+    'Acinetobacter_baumannii_OC_locus_primary_reference': 85
 }
 
 
@@ -47,15 +53,16 @@ class DatabaseError(Exception):
 class Database(object):
     def __init__(self, path: Path | None = None, name: str | None = None, loci: dict[str, Locus] | None = None,
                  genes: dict[str, Gene] | None = None, is_elements: dict[str, Gene] | None = None,
-                 # extra_loci: dict[str, Locus] | None = None, extra_genes: dict[str, Gene] | None = None
-                 ):
+                 extra_loci: dict[str, Locus] | None = None, extra_genes: dict[str, Gene] | None = None,
+                 gene_threshold: float | None = 0):
         self.path = path or Path()
-        self.name = name or self.path.stem.replace('_', ' ')
+        self.name = name or self.path.stem
         self.loci = loci or {}
-        # self.extra_loci = extra_loci or {}
+        self.extra_loci = extra_loci or {}
         self.genes = genes or {}
-        # self.extra_genes = extra_genes or {}
+        self.extra_genes = extra_genes or {}
         self.is_elements = is_elements or {}
+        self.gene_threshold = gene_threshold
 
     @classmethod
     def from_genbank(cls, path: Path, is_elements: Path | None = None, *args, **kwargs):
@@ -63,74 +70,83 @@ class Database(object):
             self.add_locus(locus)
         if not self.loci:  # Check that loci were properly loaded
             raise DatabaseError(f'No loci found in database {self.name}')
-        for locus in self.loci.values():  # Load special logic
-            if not locus.name.startswith('Extra') and locus.type == 'special logic':
-                for locus_name, genes, type_name in load_special_logic(self.path):
-                    if locus_name not in self.loci:
-                        raise DatabaseError(f'Special logic locus {locus_name} not found in {self.name}')
-                    else:
-                        self.loci[locus_name].special_logic[type_name] = {} if genes == "None" else set(
-                            genes.split(','))
-                break
-        if is_elements:
-            try:
-                self.is_elements |= {(x := Gene.from_seq(i, strand='+', gene_name='tnp')
-                                      ).name: x for i in SeqIO.parse(is_elements, 'fasta')}
-            except ValueError as e:
-                raise DatabaseError(f'Could not parse IS element file {is_elements}: {e}')
+        self.gene_threshold = _GENE_THRESHOLDS.get(self.name, 0)  # Set the locus gene threshold
+        if (logic_file := self.path.with_suffix(".logic")).is_file():  # Load phenotype logic
+            [self.add_phenotype(*i) for i in parse_logic(logic_file)]
+        if is_elements:  # Load IS elements
+            self.is_elements |= {(x := Gene.from_seq(i, strand='+', gene_name='tnp')).name: x for i in parse_fasta(is_elements)}
         return self
 
+    def add_phenotype(self, loci: list[str], genes: dict[str, str], phenotype: str):
+        if 0 < len(extra_genes := {g.name: 'present' for g in self.extra_genes.values() if g.gene_name in genes}):
+            if len(extra_genes) < len(genes):  # If there are extra genes, they must be the only genes
+                raise PhenotypeError(f'Extra genes {extra_genes} combined with specific genes {genes} in phenotype {phenotype}')
+            genes = {'ALL': 'present'}  # If there are only extra genes, set genes to ALL
+        for locus in self.loci.keys() if loci == ["ALL"] else loci:
+            if locus not in self.loci:
+                raise PhenotypeError(f'Could not find {locus} in database {self.name}')
+            self.loci[locus].add_phenotype(genes, extra_genes, phenotype, strict=loci != ["ALL"])
+
     def __repr__(self):
+        return (f"{self.name} ({len(self.loci)} Loci) ({len(self.genes)} Genes) ({len(self.extra_loci)} Extra Loci) "
+                f"({len(self.extra_genes)} Extra Genes) ({len(self.is_elements)} IS Elements)")
+
+    def __str__(self) -> str:
         return self.name
 
-    def __str__(self):
-        return f"{self.name} - {len(self.loci)} Loci; {len(self.genes)} Genes; IS Elements {len(self.is_elements)}"
-
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.loci)
 
-    def __iter__(self):
-        for locus_name, locus in self.loci.items():
-            yield locus_name, locus
+    def __iter__(self) -> Generator[Locus, None, None]:
+        return self.get_loci()
 
-    def __getitem__(self, item):
-        if item not in self.loci:
-            raise KeyError(f'No locus named {item} in database {self.name}')
-        return self.loci[item]
+    def __getitem__(self, item) -> Locus | Gene:
+        if not (result := self.loci.get(item, self.extra_loci.get(item, self.genes.get(item, self.extra_genes.get(item, self.is_elements.get(item)))))):
+            raise DatabaseError(f'Could not find {item} in database {self.name}')
+        return result
+
+    @cached_property
+    def largest_locus(self) -> Locus:
+        return max(self.loci.values(), key=len)
 
     def add_locus(self, locus: Locus):
         """
         Adds a locus and its genes to the database. Checks that the locus and genes don't already exist in the database.
         """
-        # locus_dict, gene_dict = (self.loci, self.genes) if not locus.name.startswith('Extra_genes') else (
-        #     self.extra_loci, self.extra_genes)
-        if locus.name in self.loci:
+        locus_dict, gene_dict = (self.loci, self.genes) if not locus.extra() else (self.extra_loci, self.extra_genes)
+        if locus.name in locus_dict:
             raise DatabaseError(f'Locus {locus.name} already exists in database {self.name}.')
-        self.loci[locus.name] = locus
+        locus_dict[locus.name] = locus
         locus.db = self
-        for gene_name, gene in locus:
-            if gene_name in self.genes:
-                raise DatabaseError(f'Gene {gene_name} already exists in database {self.name}.')
-            self.genes[gene_name] = gene
+        for gene in locus:
+            if gene.name in gene_dict:
+                raise DatabaseError(f'Gene {gene} already exists in database {self.name}.')
+            gene_dict[gene.name] = gene
+
+    def get_loci(self) -> Generator[Locus, None, None]:
+        yield from self.loci.values()
+        if self.extra_loci:
+            yield from self.extra_loci.values()
+
+    def get_genes(self) -> Generator[Gene, None, None]:
+        yield from self.genes.values()
+        if self.extra_genes:
+            yield from self.extra_genes.values()
+        if self.is_elements:
+            yield from self.is_elements.values()
 
     def as_fasta(self) -> str:
         if not self.loci:
             raise DatabaseError(f'No loci in database {self.name}')
-        return ''.join(locus.as_fasta() for locus in self.loci.values())
+        return ''.join(locus.as_fasta() for locus in self.get_loci())
 
     def as_gene_fasta(self) -> str:
-        if not self.genes:
-            raise DatabaseError(f'No genes in database {self.name}')
-        return ''.join(gene.as_fasta() for gene in chain(self.genes.values(), self.is_elements.values()))
+        return ''.join(gene.as_fasta() for gene in self.get_genes())
 
-    def as_protein_fasta(self) -> str:
-        if not self.genes:
-            raise DatabaseError(f'No genes in database {self.name}')
-        return ''.join(gene.as_protein_fasta() for gene in chain(self.genes.values(), self.is_elements.values()))
+    def as_protein_fasta(self, **kwargs) -> str:
+        return ''.join(gene.as_protein_fasta(**kwargs) for gene in self.get_genes())
 
     def as_gff_string(self) -> str:
-        if not self.loci:
-            raise DatabaseError(f'No loci in database {self.name}')
         return f"##gff-version 3\n{''.join([i.as_gff_string() for i in self.loci.values()])}"
 
 
@@ -138,25 +154,30 @@ class LocusError(Exception):
     pass
 
 
+class PhenotypeError(Exception):
+    pass
+
+
 class Locus(object):
-    def __init__(self, name: str | None = None, type_: str | None = None, seq: Seq | None = None,
-                 genes: dict[str: Gene] | None = None, db: Database | None = None,
-                 special_logic: dict | None = None, length: int | None = None):
+    def __init__(self, name: str | None = None, seq: Seq | None = None, genes: dict[str: Gene] | None = None,
+                 db: Database | None = None, phenotypes: list[tuple[set[tuple[str, str]], str]] | None = None,
+                 length: int | None = None):
         self.name = name or ''
         self.db = db
-        self.type = type_ or ''
         self.seq = seq or Seq('')
         self.length = length or len(self.seq)
         self.genes = genes or {}
-        self.special_logic = special_logic or {}
+        self.phenotypes = phenotypes or []
 
     @classmethod
     def from_seqrecord(cls, record: SeqRecord, locus_name: str, type_name: str, load_seq: bool = True):
         if load_seq:
-            self = cls(name=locus_name, type_=type_name, seq=record.seq)
+            self = cls(name=locus_name, seq=record.seq)
         else:
-            self = cls(name=locus_name, type_=type_name, length=len(record.seq))
+            self = cls(name=locus_name, length=len(record.seq))
         [self.add_gene(Gene.from_feature(record, feature)) for feature in record.features if feature.type == 'CDS']
+        if not self.extra():
+            self.add_phenotype({'ALL': 'present'}, {}, type_name)  # Add the default phenotype
         return self
 
     def __hash__(self):
@@ -168,9 +189,19 @@ class Locus(object):
     def __len__(self):
         return self.length
 
-    def __iter__(self):
-        for gene_name, gene in self.genes.items():
-            yield gene_name, gene
+    def __getitem__(self, item) -> Gene:
+        if not (result := self.genes.get(item)):
+            raise LocusError(f'Could not find {item} in locus {self.name}')
+        return result
+
+    def __iter__(self) -> Generator[Gene, None, None]:
+        return self.get_genes()
+
+    def extra(self) -> bool:
+        return self.name.startswith('Extra_genes')
+
+    def get_genes(self) -> Generator[Gene, None, None]:
+        yield from self.genes.values()
 
     def add_gene(self, gene: Gene):
         if gene.name in self.genes:
@@ -180,6 +211,22 @@ class Locus(object):
         else:
             gene.locus = self
         self.genes[gene.name] = gene
+
+    def add_phenotype(self, genes: dict[str, str], extra_genes: dict[str, str], phenotype: str, strict: bool = False):
+        """
+        Genes is a dictionary of gene names/gene_names and states, e.g. {'wcaJ': 'present', 'wbaP': 'absent'}.
+        Locus genes will be checked to see if their gene name/gene_name is present in the genes dictionary, and
+        their full gene name will be used if it is (e.g. KL1_01_galF will be used if galF is present in the genes dictionary).
+        If extra_genes is not None, it is a dictionary of gene names and states, and genes is set to {'ALL': 'present'}
+        This method is aware of the ALL gene and will raise an error if it is used in conjunction with specific genes.
+        """
+        if not (genes := {(gene.name, state) for gene in self if (state := genes.get('ALL', genes.get(
+            gene.gene_name, genes.get(gene.name, None))))}):
+            if strict:
+                raise PhenotypeError(f"Phenotype ({phenotype}) based on ({genes}) does not apply to {self}")
+        else:
+            genes |= set(extra_genes.items())   # Add extra genes to the genes set
+            self.phenotypes = sorted(self.phenotypes + [(genes, phenotype)], key=lambda x: len(x[0]), reverse=True)
 
     def as_fasta(self):
         """Returns the locus sequence as a FASTA string."""
@@ -192,10 +239,10 @@ class Locus(object):
             raise LocusError(f'Locus {self.name} has no genes.')
         return ''.join(gene.as_fasta() for gene in self.genes.values())
 
-    def as_protein_fasta(self) -> str:
+    def as_protein_fasta(self, **kwargs) -> str:
         if not self.genes:
             raise LocusError(f'Locus {self.name} has no genes.')
-        return ''.join(gene.as_protein_fasta() for gene in self.genes.values())
+        return ''.join(gene.as_protein_fasta(**kwargs) for gene in self.genes.values())
 
     def as_gff_record(self) -> GffRecord:
         return GffRecord(seqid=self.name, source='Kaptive', type_='region', start=1, end=self.length, score=0,
@@ -235,22 +282,24 @@ class Gene(object):
 
     @classmethod
     def from_feature(cls, record: SeqRecord, feature: SeqFeature, **kwargs):
-        self = cls(start=feature.location.start, end=feature.location.end, strand='+' if feature.strand == 1 else '-',
+        self = cls(start=feature.location.start, end=feature.location.end, strand='+' if feature.location.strand == 1 else '-',
                    **kwargs)
-        if 'locus_tag' not in feature.qualifiers:
+        if not (locus_tag := feature.qualifiers.get('locus_tag', [None])[0]):
             raise GeneError(f'{feature} does not have a locus tag.')
-        self.name = feature.qualifiers['locus_tag'][0]
-        self.gene_name = feature.qualifiers['gene'][0] if 'gene' in feature.qualifiers else ''
-        self.product = feature.qualifiers['product'][0] if 'product' in feature.qualifiers else ''
+        self.name = locus_tag
+        self.gene_name = feature.qualifiers.get('gene', [self.name])[0]  # Use locus tag if gene name is not present
+        self.product = feature.qualifiers.get('product', [''])[0]  # Use empty string if product is not present
         self.dna_seq = feature.extract(record.seq)
-        if 'translation' in feature.qualifiers:
-            self.protein_seq = Seq(feature.qualifiers['translation'][0])
+        # TODO: force on-the-fly translation or use existing translation?
+        #  Existing translation is faster but may be incorrect
+        # if 'translation' in feature.qualifiers:
+        #     self.protein_seq = Seq(feature.qualifiers['translation'][0])
         return self
 
     @classmethod
-    def from_seq(cls, record: SeqRecord, **kwargs):
+    def from_seq(cls, record: tuple[str, str, str], **kwargs):
         """This function allows the creation of a gene from a fasta file. Currently used for storing IS elements"""
-        return cls(name=record.id, product=record.description, dna_seq=record.seq, **kwargs)
+        return cls(name=record[0], product=record[1], dna_seq=Seq(record[2]), **kwargs)
 
     def __hash__(self):
         return hash(self.name)
@@ -260,6 +309,9 @@ class Gene(object):
 
     def __len__(self):
         return len(self.dna_seq)
+
+    def extra(self) -> bool:
+        return self.name.startswith('Extra_genes')
 
     def extract_translation(self, table: int = 11, cds: bool = False, to_stop: bool = True, gap: str = '-',
                             stop_symbol: str = '*'):
@@ -276,19 +328,31 @@ class Gene(object):
         if len(self.protein_seq) == 0:  # Only translate if the protein sequence is not already stored
             if len(self.dna_seq) == 0:
                 raise GeneError(f'No DNA sequence for reference {self}')
-            self.protein_seq = self.dna_seq.translate(table=table, cds=cds, to_stop=to_stop, gap=gap,
-                                                      stop_symbol=stop_symbol)
+            with warnings.catch_warnings(record=True) as w:
+                self.protein_seq = self.dna_seq.translate(table=table, cds=cds, to_stop=to_stop, gap=gap,
+                                                          stop_symbol=stop_symbol)
+                # for i in w:
+                #     warning(f"{i.message}: {self.__repr__()}")
             if len(self.protein_seq) == 0:
-                raise GeneError(f'No protein sequence for reference {self}')
+                # raise GeneError(f'No protein sequence for reference {self}\nDNA sequence: {self.dna_seq}')
+                warning(f'No protein sequence for reference {self}')
 
     def as_fasta(self) -> str:
-        if len(self.dna_seq) == 0:
+        if len(self.dna_seq) > 0:
+            return f'>{self.name}\n{self.dna_seq}\n'
+        else:
             raise GeneError(f'No DNA sequence for reference {self}')
-        return f'>{self.name}\n{self.dna_seq}\n'
 
-    def as_protein_fasta(self) -> str:
+    def as_protein_fasta(self, min_proportion: int = 0.1) -> str:
+        """
+        Returns the protein sequence as a FASTA string. If the proportion of the translated sequence to the DNA sequence
+        is less than min_proportion, an empty string is returned.
+        """
         self.extract_translation()
-        return f'>{self.name}\n{self.protein_seq}\n'
+        if len(self.protein_seq) / (len(self.dna_seq) / 3) >= min_proportion:
+            return f'>{self.name}\n{self.protein_seq}\n'
+        else:
+            return ''
 
     def as_gff_record(self, ensembl_format: bool = False) -> list[GffRecord]:
         """
@@ -363,41 +427,23 @@ class GffRecord:
         self.phase = phase or 0
         self.attributes = attributes or {}
 
-    # @classmethod
-    # def from_tsv(cls, line: str | bytes, **kwargs):
-    #     if not line:
-    #         raise GffRecordError("Empty line passed to GffRecord")
-    #
-    #     line = line.decode().strip() if isinstance(line, bytes) else line.strip()
-    #     if line.startswith('#'):
-    #         raise GffRecordError("Comment line passed to GffRecord")
-    #
-    #     self = cls(**kwargs)
-    #     if len(line := line.split('\t')) < 9:
-    #         raise GffRecordError(f"Gff line has less than 9 columns: {line}")
-    #
-    #     self.seqid = line[0]
-    #     self.source = line[1]
-    #     self.type = line[2]
-    #     self.start = int(line[3])
-    #     self.end = int(line[4])
-    #     self.score = line[5]
-    #     self.strand = line[6]
-    #     self.phase = line[7]
-    #     self.attributes = parse_attributes(line[8])
-    #     return self
-
     def __str__(self):
         return f"{self.seqid}\t{self.source}\t{self.type}\t{self.start}\t{self.end}\t{self.score}\t{self.strand}\t" \
                f"{self.phase}\t{';'.join(f'{key}={value}' for key, value in self.attributes.items() if value)}\n"
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def name_from_record(record: SeqRecord, locus_regex: re.Pattern, type_regex: re.Pattern
-                     ) -> tuple[str | None, str | None]:
+def name_from_record(record: SeqRecord, locus_regex: re.Pattern | None = _LOCUS_REGEX,
+                     type_regex: re.Pattern | None = _TYPE_REGEX) -> tuple[str | None, str | None]:
+    """
+    This function extracts the locus and type names from a genbank record using regular expressions.
+    If the locus_regex or type_regex are not provided, the default regexes are used.
+    """
+
+    locus_regex, type_regex = locus_regex or _LOCUS_REGEX, type_regex or _TYPE_REGEX  # If None, use the default regexes
     locus_name, type_name = set(), set()
-    source = next((f for f in record.features if f.type == 'source'), None)
-    if not source:
+
+    if not (source := next((f for f in record.features if f.type == 'source'), None)):
         quit_with_error(f'Could not find source feature in genbank record: {record.id}')
     if "note" not in source.qualifiers:
         quit_with_error(f'Could not find note qualifier in source feature of genbank record: {record.id}')
@@ -420,32 +466,14 @@ def name_from_record(record: SeqRecord, locus_regex: re.Pattern, type_regex: re.
     return locus_name.pop() if len(locus_name) == 1 else None, type_name.pop() if len(type_name) == 1 else None
 
 
-def load_special_logic(genbank: Path) -> Generator[tuple[str, str, str], None, None]:
-    """
-    This function loads special logic file if  any of the reference loci have a type of 'special logic',
-    that implies that a corresponding file exists to describe that logic.
-    Logic files are tab-delimited files with 3 columns: Locus name, Extra genes, Type.
-    Returns a dictionary with the locus name as the key and the extra genes and type as the value.
-    """
-    special_logic_filename = check_file(genbank.with_suffix(".logic"))
-    lines = [i.split('\t') for i in special_logic_filename.read_text().splitlines()]
-    if lines[0] != ['locus', 'extra_genes', 'type']:
-        quit_with_error(f'Invalid special logic file: {special_logic_filename}')
-    for line in lines[1:]:
-        yield line[0], line[1], line[2]
-
-
-# def parse_attributes(attr_string: str) -> dict:
-#     # attr_dict = {match[0]: match[1] for match in re.findall(GFF_ATTRIBUTE_REGEX, attr_string)}
-#     attr_dict = {}
-#     for attr in attr_string.split(';'):
-#         if len(key_value := attr.split('=')) == 2:
-#             attr_dict[key_value[0]] = key_value[1]
-#     return attr_dict
-
-
-def join_attributes(attr_dict: dict) -> str:
-    return ';'.join([f'{key}={value}' for key, value in attr_dict.items()])
+def parse_logic(logic_file: Path, verbose: bool = False) -> Generator[tuple[list[str], dict[str, str], str], None, None]:
+    log(f'Parsing logic {logic_file}', verbose=verbose)
+    with logic_file.open() as f:
+        if (line := f.readline()) != 'loci\tgenes\tphenotype\n':
+            quit_with_error(f'Logic file {logic_file} has invalid header: {line}')
+        for line in f:
+            loci, genes, phenotype = line.strip().split('\t')
+            yield loci.split(';'), dict(gene.split(",", 1) if "," in gene else (gene, 'present') for gene in genes.split(';')), phenotype
 
 
 def extract(args):
@@ -461,9 +489,9 @@ def extract(args):
                 args.out.write(f"{locus_name}\t{type_name}\n")
             else:
                 args.out.write(record.format('genbank'))  # Do we need to add a newline?
-    else:
-        for locus in parse_database(args.db, args.locus_regex, args.type_regex, args.filter,
-                                    load_seq=args.format == 'loci'):
+    else:  # load seqs == True if format == 'loci' else False
+        for locus in parse_database(args.db, args.filter, args.format == 'loci', locus_regex=args.locus_regex,
+                                    type_regex=args.type_regex):
             if args.format == 'loci':
                 args.out.write(locus.as_fasta())
             elif args.format == 'genes':
@@ -482,34 +510,33 @@ def get_database(argument: str) -> Path:
     """
     if (db_path := Path(argument)).is_file():
         return db_path
-    if not (dbs_in_package := list((Path(__file__).parent.parent / "reference_database").glob('*.gbk'))):
-        quit_with_error('No databases found in kaptive package')
+    if not (dbs_in_package := list(expected_path := (Path(__file__).parent.parent / "reference_database").glob('*.gbk'))):
+        quit_with_error(f'No databases found in expected path: {expected_path}')
 
     for db in dbs_in_package:
         if argument.lower() == db.name.lower():
             return db
         if argument.lower() == db.stem.lower():
             return db
-        if argument.lower() in [i.lower() for i in DB_KEYWORDS[db.stem]]:
+        if argument.lower() in [i.lower() for i in _DB_KEYWORDS[db.stem]]:  # Check for keywords
             return db
 
     quit_with_error(f'No database found for {argument}')
 
 
-def parse_database(
-        genbank: Path, locus_regex: re.Pattern = re.compile(LOCUS_REGEX),
-        type_regex: re.Pattern = re.compile(TYPE_REGEX),
-        locus_filter: re.Pattern | None = None, load_seq: bool = True) -> Generator[Locus, None, None]:
+def parse_database(genbank: Path, locus_filter: re.Pattern | None = None, load_seq: bool = True, verbose: bool = False,
+                   **kwargs) -> Generator[Locus, None, None]:
     """
     Wrapper around SeqIO.parse to parse a Kaptive database genbank file and return a generator of Locus objects
     """
+    log(f'Parsing database {genbank}', verbose=verbose)
     try:
         for record in SeqIO.parse(genbank, 'genbank'):
-            locus_name, type_name = name_from_record(record, locus_regex, type_regex)
+            locus_name, type_name = name_from_record(record, **kwargs)
             if not locus_name:
                 raise DatabaseError(f'Could not parse locus name from {record.id}')
             if type_name == "unknown" or (not type_name and not locus_name.startswith('Extra')):
-                type_name = f'unknown ({locus_name})'
+                type_name = f'unknown ({locus_name})'  # Add the locus name to the type name if it is unknown
             if locus_filter and not locus_filter.search(locus_name):
                 continue
             yield Locus.from_seqrecord(record, locus_name, type_name, load_seq)
