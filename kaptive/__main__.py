@@ -15,6 +15,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
+import io
 import sys
 import re
 import argparse
@@ -82,33 +83,38 @@ def assembly_subparser(subparsers):
     opts = assembly_parser.add_argument_group(bold('Inputs'), "")
     opts.add_argument('db', type=get_database, help='Kaptive database path or keyword')
     opts.add_argument('input', nargs='+', type=check_file, help='Assemblies in fasta(.gz) format')
+
     opts = assembly_parser.add_argument_group(bold('Output options'), "")
     output_opts(opts)
-    opts = assembly_parser.add_argument_group(bold('Alignment options'), "")
-    alignment_opts(opts)
+
     opts = assembly_parser.add_argument_group(bold('Scoring options'), "")
-    opts.add_argument("--score", type=str, default='AS', metavar='',
+    opts.add_argument("--score-metric", type=str, default='AS', metavar='',
                       help="Alignment metric to use for scoring (default: %(default)s)")
-    opts.add_argument("--min-zscore", type=float, metavar='', default=3.0,
-                      help="Minimum zscore for confidence (default: %(default)s)")
-    opts.add_argument("--weight", type=str, metavar='', default='prop_genes_found',
+    opts.add_argument("--weight-metric", type=str, metavar='', default='prop_genes_found',
                       help="Weighting for scoring metric (default: %(default)s)\n"
                            " - none: No weighting\n"
                            " - locus_length: length of the locus\n"
                            " - genes_expected: # of genes expected in the locus\n"
                            " - genes_found: # of genes found in the locus\n"
                            " - prop_genes_found: genes_found / genes_expected")
-    opts = assembly_parser.add_argument_group(bold('Locus reconstruction options'), "")
+    opts.add_argument("--min-zscore", type=float, metavar='', default=3.0,
+                      help="Minimum zscore for confidence (default: %(default)s)")
+    opts.add_argument('--min-cov', type=float, required=False, default=50.0, metavar='',
+                      help='Minimum gene %%coverage to be used for scoring (default: %(default)s)')
     opts.add_argument("--gene-threshold", type=float, metavar='',
                       help="Species-level locus gene identity threshold (default: database specific)")
-    opts.add_argument('--min-cov', type=float, required=False, default=50.0, metavar='',
-                      help='Minimum %%coverage for gene alignment to be used for scoring (default: %(default)s)')
+
     opts = assembly_parser.add_argument_group(bold('Database options'), "")
     db_opts(opts)
     # opts.add_argument('--is-seqs', type=check_file, metavar='',
     #                   help='Fasta file of IS element sequences to include in the database (default: None)')
+
     opts = assembly_parser.add_argument_group(bold('Other options'), "")
     other_opts(opts)
+    # opts.add_argument('-@', '--mp', const=8, nargs='?', type=int, metavar='#',
+    #                   help="Process multiple samples in parallel, optionally pass max workers (default: %(const)s)")
+    opts.add_argument('-t', '--threads', type=check_cpus, default=1, metavar='',
+                      help="Number of threads for alignment (default: %(default)s)")
 
 
 # def reads_subparser(subparsers):
@@ -195,30 +201,22 @@ def db_opts(opts: argparse.ArgumentParser):
                       help='Pattern to select loci to include in the database (default: All)')
 
 
-def alignment_opts(opts: argparse.ArgumentParser):
-    # opts.add_argument('-@', '--mp', const=8, nargs='?', type=int, metavar='#',
-    #                   help="Process multiple samples in parallel, optionally pass max workers (default: %(const)s)")
-    opts.add_argument('-t', '--threads', type=check_cpus, default=check_cpus, metavar='',
-                      help="Number of threads for minimap2 (default: %(default)s)")
-    opts.add_argument('--args', metavar='', default='',
-                      help='Additional arguments for minimap2 (default: %(default)s)')
-    opts.add_argument('--preset', help='Preset for minimap2 (default: None)', metavar='',
-                      choices=['map-pb', 'map-ont', 'map-hifi', 'ava-pb', 'ava-ont', 'asm5', 'asm10', 'asm20',
-                               'splice', 'splice:hq', 'sr'])
-
-
 def output_opts(opts: argparse.ArgumentParser):
     opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
                       help='Output file (default: stdout)')
     opts.add_argument('--fasta', metavar='path', nargs='?', default=None, const='.', type=check_dir,
-                      help='Output locus sequence to "{input}_kaptive_results.fna"'
+                      help='Output locus sequence to "{input}_kaptive_results.fna"\n'
                            'Optionally pass output directory (default: current directory)')
-    opts.add_argument('--json', metavar='prefix', nargs='?', default=None, const='kaptive_results.json',
+    opts.add_argument('--json', metavar='path', nargs='?', default=None, const='kaptive_results.json',
                       type=argparse.FileType('at'),
-                      help='Output results to json, optionally pass file name (default: %(const)s)')
-    opts.add_argument('--figures', metavar='path', nargs='?', default=None, const='.', type=check_dir,
-                      help='Output locus figures to "{input}_kaptive_results.png"'
+                      help='Output results to JSON lines\n'
+                           'Optionally pass file name (default: %(const)s)')
+    opts.add_argument('--draw', metavar='path', nargs='?', default=None, const='.', type=check_dir,
+                      help='Output locus figures to "{input}_kaptive_results.{fmt}"\n'
                            'Optionally pass output directory (default: current directory)')
+    opts.add_argument('--draw-fmt', default='png', metavar='png,svg',
+                      help='Format for locus figures (default: %(default)s)')
+    # opts.add_argument('--bokeh', action='store_true', help='Plot locus figures using bokeh')
     opts.add_argument('--no-header', action='store_true', help='Do not print header line')
     opts.add_argument('--debug', action='store_true', help='Append debug columns to table output')
 
@@ -229,17 +227,15 @@ def other_opts(opts: argparse.ArgumentParser):
     opts.add_argument('-h', '--help', help='Show this help message and exit', metavar='')
 
 
-def write_headers(args):
+def write_headers(out: io.TextIOWrapper, no_header: bool = False, subparser_name: str = '', debug: bool = False):
     """
     Write headers to output file if not already written
     """
-    if args.out.name != '<stdout>' and args.out.tell() != 0:  # If file is path and not already written to
-        args.no_header = True  # Headers already written, useful for running on HPC
-    if not args.no_header:
-        if args.subparser_name == 'assembly':
-            args.out.write('\t'.join(_ASSEMBLY_HEADERS + _ASSEMBLY_EXTRA_HEADERS if args.debug else _ASSEMBLY_HEADERS) + '\n')
-        # elif mode == 'reads':
-        #     return _READS_HEADERS + _READS_EXTRA_HEADERS if extra_headers else _READS_HEADERS
+    if out.name != '<stdout>' and out.tell() != 0:  # If file is path and not already written to
+        no_header = True  # Headers already written, useful for running on HPC
+    if not no_header:
+        if subparser_name == 'assembly':
+            out.write('\t'.join(_ASSEMBLY_HEADERS + _ASSEMBLY_EXTRA_HEADERS if debug else _ASSEMBLY_HEADERS) + '\n')
 
 
 # Main -----------------------------------------------------------------------------------------------------------------
@@ -247,43 +243,35 @@ def main():
     check_python_version()
     args = parse_args(sys.argv[1:])
 
-    # args = parse_args([
-    #     'assembly',
-    #     # 'ab_k',
-    #     'kpsc_k',
-    #     # '/Users/tom/MyDrive/PostDoc/kaptive_project/test_data/abau/ncbi_subsampled/assemblies/SAMN27010226_hybrid.fasta',
-    #     # '/Users/tom/MyDrive/PostDoc/kaptive_project/test_data/klebs/is_kooka/assemblies/KP_NORM_BLD_111588.fna.gz',
-    #     # '/Users/tom/MyDrive/PostDoc/kaptive_project/test_data/klebs/KLEBGAP_hybrid/assemblies/NK_H14_058_10.fasta',
-    #     '/Users/tom/MyDrive/PostDoc/serology_project/WITS_VIDA/assemblies/SAAA00136.fasta',
-    #     '--no-header', '-V', '-t', '8'
-    # ])
-
     if args.subparser_name == 'assembly':
-        check_programs(['minimap2'], verbose=args.verbose)
-        args.db = Database.from_genbank(  # Load database in memory, we don't need to load the full sequences (False)
-            args.db, None, args.filter, False, locus_regex=args.locus_regex, type_regex=args.type_regex)
-        if args.gene_threshold:
-            args.db.gene_threshold = args.gene_threshold
-        write_headers(args)
-        from kaptive.assembly import typing_pipeline
-        [typing_pipeline(assembly, args) for assembly in args.input]
+        check_programs(['minimap2'], verbose=args.verbose)  # Check for minimap2
 
-        # elif args.subparser_name == 'reads':
-        #     from kaptive.reads import type_reads
-        #     temp_index = Path('kaptive_genes.mmi')  # Will replace with NamedTemporaryFile
-        #     if not temp_index.is_file():
-        #         log(f"Creating minimap2 index {temp_index}", args.verbose)
-        #         with Popen(f"minimap2 -d {temp_index} -t {args.threads} -".split(), stdin=PIPE, stderr=DEVNULL) as proc:
-        #             proc.communicate(db.as_gene_fasta().encode())
-        #
-        #     for name, reads in groupby(args.reads, lambda x: x.name):   # Group the args.reads by name
-        #         reads = list(reads)  # Get the reads for the current sample
-        #         type_reads(reads, db, temp_index, args)
+        # Load database in memory, we don't need to load the full sequences (False)
+        db = Database.from_genbank(
+            path=args.db, gene_threshold=args.gene_threshold, locus_filter=args.filter, verbose=args.verbose,
+            load_seq=False, locus_regex=args.locus_regex, type_regex=args.type_regex)
 
-    # TODO: Implement multiprocessing to process multiple samples in parallel
-    # In the current implementation, typing_pipeline is the same speed with concurrent.futures.ThreadPoolExecutor
-    # concurrent.futures.ProcessPoolExecutor is faster but it tries to write to the same file at the same time
-    # which causes the output json and table to be malformed.
+        # Write headers to output file if not already written
+        write_headers(args.out, args.no_header, args.subparser_name, args.debug)
+
+        from kaptive.assembly import typing_pipeline  # Import here to avoid circular import
+        if args.draw:
+            from matplotlib import pyplot as plt  # Import here to avoid unnecessary imports
+
+        for assembly in args.input:  # type: 'Path'
+            if (result := typing_pipeline(
+                    assembly, db, args.threads, args.min_cov, args.min_zscore, args.score_metric, args.weight_metric, args.verbose)):
+                args.out.write(result.as_table(args.debug))  # type: 'TextIOWrapper'
+                if args.fasta:  # Create and write locus pieces to fasta file
+                    (args.fasta / f'{result.assembly.name}_kaptive_results.fna').write_text(result.as_fasta())
+                if args.json:  # type: 'TextIOWrapper'
+                    args.json.write(result.as_json())
+                if args.draw:  # type: 'Path'
+                    ax = result.as_GraphicRecord().plot()[0]  # Create figure and axis
+                    ax.set_title(
+                        f"{result.assembly.name} {result.best_match} ({result.phenotype}) - {result.confidence}")  # Add title
+                    ax.figure.savefig(args.draw / f'{result.assembly.name}_kaptive_results.{args.draw_fmt}')  # Save figure
+                    plt.close()  # Close figure to prevent memory leaks
 
     elif args.subparser_name == 'extract':
         from kaptive.database import extract

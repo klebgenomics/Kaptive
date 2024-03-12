@@ -37,9 +37,9 @@ _DB_KEYWORDS = {
     'Acinetobacter_baumannii_OC_locus_primary_reference': ['ab_o']
 }
 _GENE_THRESHOLDS = {
-    'Klebsiella_k_locus_primary_reference': 83.5,
-    'Klebsiella_k_locus_variant_reference': 83.5,
-    'Klebsiella_o_locus_primary_reference': 83.5,
+    'Klebsiella_k_locus_primary_reference': 82.5,
+    'Klebsiella_k_locus_variant_reference': 82.5,
+    'Klebsiella_o_locus_primary_reference': 82.5,
     'Acinetobacter_baumannii_k_locus_primary_reference': 85,
     'Acinetobacter_baumannii_OC_locus_primary_reference': 85
 }
@@ -54,7 +54,7 @@ class Database(object):
     def __init__(self, path: Path | None = None, name: str | None = None, loci: dict[str, Locus] | None = None,
                  genes: dict[str, Gene] | None = None, is_elements: dict[str, Gene] | None = None,
                  extra_loci: dict[str, Locus] | None = None, extra_genes: dict[str, Gene] | None = None,
-                 gene_threshold: float | None = 0):
+                 gene_threshold: float | None = None):
         self.path = path or Path()
         self.name = name or self.path.stem
         self.loci = loci or {}
@@ -62,19 +62,19 @@ class Database(object):
         self.genes = genes or {}
         self.extra_genes = extra_genes or {}
         self.is_elements = is_elements or {}
-        self.gene_threshold = gene_threshold
+        self.gene_threshold = gene_threshold or _GENE_THRESHOLDS.get(self.name, 0)
 
     @classmethod
-    def from_genbank(cls, path: Path, is_elements: Path | None = None, *args, **kwargs):
-        for locus in parse_database((self := cls(path)).path, *args, **kwargs):
+    def from_genbank(cls, path: Path, locus_filter: re.Pattern | None = None, load_seq: bool = True,
+                     gene_threshold: float | None = None, verbose: bool = False, **kwargs):
+        for locus in parse_database((self := cls(path=path, gene_threshold=gene_threshold)).path, locus_filter, load_seq, verbose, **kwargs):
             self.add_locus(locus)
         if not self.loci:  # Check that loci were properly loaded
             raise DatabaseError(f'No loci found in database {self.name}')
-        self.gene_threshold = _GENE_THRESHOLDS.get(self.name, 0)  # Set the locus gene threshold
         if (logic_file := self.path.with_suffix(".logic")).is_file():  # Load phenotype logic
             [self.add_phenotype(*i) for i in parse_logic(logic_file)]
-        if is_elements:  # Load IS elements
-            self.is_elements |= {(x := Gene.from_seq(i, strand='+', gene_name='tnp')).name: x for i in parse_fasta(is_elements)}
+        # if is_elements:  # Load IS elements
+        #     self.is_elements |= {(x := Gene.from_seq(i, strand='+', gene_name='tnp')).name: x for i in parse_fasta(is_elements)}
         return self
 
     def add_phenotype(self, loci: list[str], genes: dict[str, str], phenotype: str):

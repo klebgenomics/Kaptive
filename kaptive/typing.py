@@ -12,25 +12,18 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-import argparse
 import re
 from functools import cached_property
 from json import dumps, loads
 from typing import Generator
 import warnings
-from itertools import groupby, chain
+from itertools import chain
 
 from Bio.Seq import Seq
 from dna_features_viewer import GraphicFeature, GraphicRecord
 
-from kaptive.intrange import merge_ranges, range_overlap
 from kaptive.database import Database, Locus, Gene
-from kaptive.alignment import Alignment, cull_conflicting_alignments, cull_all_conflicting_alignments
 from kaptive.log import warning
-
-# Constants -----------------------------------------------------------------------------------------------------------
-_IGNORED_ARGS = {'input', 'out', 'json', 'fasta', 'is_seqs', 'no_header', 'debug', 'mp', 'threads', 'subparser_name',
-                 'verbose', 'version', 'help', 'figure'}  # Arguments to ignore when storing args_dict
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -39,15 +32,17 @@ class TypingResultError(Exception):
 
 
 class TypingResult:
-    def __init__(self, best_match: Locus | None = None,
+    def __init__(self, db: Database | None = None, best_match: Locus | None = None,
                  score: float | None = 0, zscore: float | None = 0, pieces: list[LocusPiece] | None = None,
                  expected_genes_inside_locus: list[GeneResult] | None = None,
                  expected_genes_outside_locus: list[GeneResult] | None = None, missing_genes: list[str] | None = None,
                  unexpected_genes_inside_locus: list[GeneResult] | None = None,
                  unexpected_genes_outside_locus: list[GeneResult] | None = None,
                  extra_genes: list[GeneResult] | None = None, is_elements: list[GeneResult] | None = None,
-                 truncated_genes: list[GeneResult] | None = None,
-                 scores: dict[str, dict[str, list[float]]] | None = None, args_dict: dict | None = None):
+                 truncated_genes: list[GeneResult] | None = None, scores: dict[str, dict[str, list[float]]] | None = None,
+                 min_zscore: float | None = 0, min_cov: float | None = 0, gene_threshold: float | None = 0,
+                 score_metric: str | None = None, weight_metric: str | None = None):
+        self.db = db
         self.best_match = best_match
         self.score = score
         self.zscore = zscore
@@ -61,7 +56,11 @@ class TypingResult:
         self.truncated_genes = truncated_genes or []  # Genes that are truncated
         self.is_elements = is_elements or []  # in db.is_elements, ALWAYS inside locus (gene_result.piece != None)
         self.scores = scores or {}
-        self.args_dict = args_dict or {}  # Dict of args minus input and output files
+        self.min_zscore = min_zscore
+        self.min_cov = min_cov
+        self.gene_threshold = gene_threshold
+        self.score_metric = score_metric or ""
+        self.weight_metric = weight_metric or ""
 
     def __len__(self):
         return sum(len(i) for i in self.pieces) if self.pieces else 0
@@ -86,7 +85,7 @@ class TypingResult:
 
     @cached_property  # Cache the confidence so it is only calculated once
     def confidence(self) -> str:
-        if self.zscore >= self.args_dict.get('min_zscore', 0):
+        if self.zscore >= self.min_zscore:
             if len(self.pieces) == 1:
                 if any(i.below_threshold for i in self.expected_genes_inside_locus):
                     return "Novel"
@@ -120,7 +119,7 @@ class TypingResult:
         problems += '-' if self.missing_genes else ''
         problems += '+' if self.unexpected_genes_inside_locus else ''
         problems += '*' if any(i.below_threshold for i in self.expected_genes_inside_locus) else ''
-        problems += '!' if any(i.phenotype == 'truncated' for i in self.expected_genes_inside_locus) else ''
+        # problems += '!' if any(i.phenotype == 'truncated' for i in self.expected_genes_inside_locus) else ''
         return problems
 
     def as_fasta(self) -> str:
@@ -149,106 +148,6 @@ class AssemblyTypingResult(TypingResult):
     def __init__(self, assembly: 'Assembly' | None = None, **kwargs):
         super().__init__(**kwargs)
         self.assembly = assembly
-
-    @classmethod
-    def from_alignments(
-            cls, assembly: 'Assembly', gene_alignments: dict[str: Alignment],
-            extra_gene_alignments: dict[str: Alignment | None], is_element_alignments: list[Alignment | None],
-            scores: dict[str, dict[str, list[tuple[Locus, float, float]]]], args: argparse.Namespace):
-
-        self = cls(assembly=assembly, scores=scores,
-                                    args_dict={k: v for k, v in vars(args).items() if k not in _IGNORED_ARGS})
-        self.best_match, self.score, self.zscore = scores[args.score][args.weight][0]
-        self.missing_genes = [i for i in self.best_match.genes if i not in gene_alignments]
-
-        # LOGIC PER CONTIG ---------------------------------------------------------------------------------------------
-        for contig, alignments in groupby(sorted(chain(  # Group alignments by contig (target_name)
-                gene_alignments.values(), extra_gene_alignments.values(), is_element_alignments
-        ), key=lambda x: x.target_name), key=lambda x: x.target_name):
-
-            # SORT ALIGNMENTS ON CONTIG --------------------------------------------------------------------------------
-            contig = assembly.contigs[contig]  # Get contig object from assembly
-            expected, unexpected = {}, []  # Init dicts to store alignments
-            for a in alignments:  # Store best locus gene alignments in dict to get expected order later
-                if a.query_name in self.best_match.genes:
-                    expected[a.query_name] = a
-                else:  # Store other alignments in a list for quick culling
-                    unexpected.append(a)
-            unexpected = cull_all_conflicting_alignments(unexpected)  # Remove conflicting other alignments
-            for a in expected.values():  # Remove other alignments overlapping best match gene alignments
-                unexpected = list(cull_conflicting_alignments(a, unexpected))
-
-            # GET PIECES FROM EXPECTED GENES ---------------------------------------------------------------------------
-            contig_pieces = []
-            if expected:  # If there are any expected gene alignments
-                strand = "+" if max(  # Determine strand of the locus on the contig
-                    i.strand == self.best_match.genes[i.query_name].strand for i in expected.values()) else "-"
-                last_pos, last_gene = max([(int(a.query_name.split("_")[1]), a) for a in expected.values()],
-                                          key=lambda x: x[0])
-                ranges = [  # Collect ranges of expected gene alignments
-                    (a.target_start, a.target_end) for a in expected.values()
-                ] if last_pos != len(self.best_match.genes) else [  # If the last gene is not the last gene in the locus
-                    (a.target_start, a.target_end) for a in expected.values() if \
-                    (a.strand == "+" and a.target_end <= last_gene.target_end) or \
-                    (a.strand == "-" and a.target_start >= last_gene.target_start)
-                ]  # Else only collect ranges that don't extend beyond the last gene
-                for start, end in merge_ranges(ranges, tolerance=len(self.best_match.db.largest_locus)):
-                    contig_pieces.append(
-                        ContigPiece(
-                            contig, start=start, end=end, result=self, strand=strand,
-                            sequence=contig.sequence[start:end] if strand == "+" else contig.sequence[start:end].reverse_complement()
-                        )
-                    )
-            # SORT GENES ON CONTIG -------------------------------------------------------------------------------------
-            previous_result, piece = None, None  # For determining neighbouring genes
-            for a in sorted(chain(expected.values(), unexpected), key=lambda x: x.target_start):  # Add gene results
-                # Determine gene type, gene, and piece edge threshold
-                if a.query_name in expected:
-                    gene_type, gene, piece_edge = 'expected_genes', self.best_match.genes[a.query_name], 0
-                elif (gene := self.best_match.db.extra_genes.get(a.query_name, None)):
-                    gene_type, piece_edge = 'extra_genes', 0
-                elif (gene := self.best_match.db.is_elements.get(a.query_name, None)):
-                    gene_type, piece_edge = 'is_elements', 200  # IS elements are allowed to be 200 bp outside piece
-                else:
-                    gene_type, gene, piece_edge = 'unexpected_genes', self.best_match.db.genes[a.query_name], 0
-                # Determine if alignment is below threshold
-                below_threshold = a.percent_identity < self.best_match.db.gene_threshold
-                # Determine if gene outside locus (piece == None) or inside locus (piece != None)
-                if contig_pieces:  # Get the piece the alignment is in if there are any pieces
-                    piece = next((p for p in contig_pieces if range_overlap((p.start - piece_edge, p.end + piece_edge),
-                                                                            (a.target_start, a.target_end))), None)
-                if not piece:  # Assert exceptions and additional logic
-                    if gene_type == 'is_elements' or below_threshold:
-                        continue  # Ignore IS elements and below threshold genes outside the locus (orthologs)
-                else:
-                    if gene_type == "extra_genes":
-                        warning(
-                            f"Extra gene {gene.name} found inside locus {self.best_match.name} on contig {contig.name}")
-                        continue  # Ignore extra genes inside the locus
-                    if gene_type == "unexpected_genes" and not below_threshold:
-                        gene_type = 'expected_genes'  # If unexpected gene is not below threshold, it is expected
-
-                # Create gene result and add it to the result
-                gene_result = AssemblyGeneResult(
-                    contig, gene, start=a.target_start, end=a.target_end, strand=a.strand,
-                    percent_identity=a.percent_identity, percent_coverage=a.percent_query_coverage,
-                    piece=piece, below_threshold=below_threshold, gene_type=gene_type,
-                    neighbour_left=previous_result,
-                    dna_seq=contig.sequence[a.target_start:a.target_end] if a.strand == "+" else \
-                        contig.sequence[a.target_start:a.target_end].reverse_complement()
-                )
-                self.add_gene_result(gene_result)
-                previous_result = gene_result
-
-            self.pieces += contig_pieces  # Add the pieces to the result
-
-        # Sort the pieces by the sum of the expected gene order to get the expected order of the pieces
-        self.pieces.sort(key=lambda x: min(int(i.gene.name.split("_")[1]) for i in x.expected_genes))
-        self.expected_genes_inside_locus.sort(key=lambda x: int(x.gene.name.split("_")[1]))  # Sort expected genes
-        self.expected_genes_outside_locus.sort(key=lambda x: int(x.gene.name.split("_")[1]))  # Sort expected genes
-        self.unexpected_genes_inside_locus.sort(key=lambda x: int(x.gene.name.split("_")[1]))
-        self.unexpected_genes_outside_locus.sort(key=lambda x: int(x.gene.name.split("_")[1]))
-        return self
 
     # @classmethod
     # def from_dict(cls, result_dict: dict, db: Database):
@@ -313,7 +212,8 @@ class AssemblyTypingResult(TypingResult):
                     f"{s}_{w}:{'|'.join(f'{l},{x:.4f},{y:.4f}' for l, x, y in self.scores[s][w][:2])}" for s in
                     self.scores for w in self.scores[s]
                 ),
-                ';'.join(f"{k}={v}" for k, v in self.args_dict.items())  # Args
+                f'min_zscore={self.min_zscore};min_cov={self.min_cov};gene_threshold={self.db.gene_threshold};'
+                f'score_metric={self.score_metric};weight_metric={self.weight_metric}',
             ])
         ) + "\n"
 
@@ -394,7 +294,7 @@ class LocusPiece:
                 strand = gene.gene.strand if gene.strand != gene.gene.strand else gene.strand
             yield GraphicFeature(
                 start=gene_start, end=gene_end, strand=0 if gene.phenotype == "truncated" else 1 if strand == "+" else -1,
-                color=("green" if gene.gene_type == 'expected' else "orange", gene.percent_identity / 100),
+                color=("green" if gene.gene_type == 'expected_genes' else "orange", gene.percent_identity / 100),
                 linecolor='red' if gene.below_threshold else "yellow" if gene.phenotype == "truncated" else 'black',
                 legend_text=gene.gene_type, label=gene.__repr__()
             )
@@ -635,24 +535,6 @@ class AssemblyGeneResult(GeneResult):
 #         self.gene_results = gene_results or {}
 #         self.truncated_genes = truncated_genes or []
 #         self.reads = reads or {}
-#
-#     @classmethod
-#     def from_best_locus(cls, db: Database, best_locus: Locus, read_group: 'ReadGroup',
-#                         alignments: dict[Gene, list[Alignment]], **kwargs):
-#         self = cls(db=db, read_group=read_group, best_match=best_locus, **kwargs)
-#         # self = ReadsResult(db=db, read_group=read_group, best_match=best_locus)
-#         for gene in best_locus.genes.values():
-#             if (gene_alignments := alignments.get(gene, None)):
-#                 self.gene_results[gene.name] = (gene_result := ReadsGeneResult.from_alignments(gene, gene_alignments))
-#                 for read, read_alignments in gene_result.reads.items():
-#                     self.reads[read] = self.reads.get(read, []) + read_alignments
-#                 if (piece := next((p for p in self.pieces if set(gene_result.reads) & set(p.reads)), None)) is None:
-#                     piece = ReadsPiece(read_group, result=self, name=f"{best_locus}_piece_{len(self.pieces) + 1}")
-#                     self.pieces.append(piece)
-#                 piece.add_gene_result(gene_result)
-#             else:
-#                 self.missing_expected_genes.append(gene)
-#         return self
 #
 #
 # class ReadsGeneResult(GeneResult):
