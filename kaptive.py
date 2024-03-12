@@ -51,7 +51,7 @@ import re
 from collections import OrderedDict
 from Bio import SeqIO
 
-__version__ = '2.0.8'
+__version__ = '2.0.9'
 
 
 def main():

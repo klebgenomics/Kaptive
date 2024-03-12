@@ -9,8 +9,8 @@
 project = 'Kaptive'
 copyright = '2024, Tom Stanton, Ryan Wick, Kathryn Holt, Kelly Wyres'
 author = 'Tom Stanton'
-release = '2.0.8'
-version = '2.0.8'
+release = '2.0.9'
+version = '2.0.9'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
