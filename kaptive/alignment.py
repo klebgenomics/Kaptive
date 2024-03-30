@@ -16,7 +16,7 @@ import re
 from typing import Iterable, Generator
 from operator import attrgetter, le, ge
 
-from kaptive.intrange import range_overlap
+from kaptive.misc import range_overlap
 
 # Constants -----------------------------------------------------------------------------------------------------------
 # _CS_OPS_REGEX = re.compile(r'([=:\*\+\-~])([0-9]+)?([acgtn]+)?')  # Regex to match cs tag operations
@@ -141,7 +141,7 @@ class Alignment:
         else:
             raise AttributeError(f"{self.__class__.__name__} object has no attribute {item}")
 
-    def conflicts(self, other: Alignment, overlap_fraction: float = 0.5):
+    def conflicts(self, other: Alignment, overlap_fraction: float = 0.1):
         """
         Returns whether this hit conflicts with the other hit on the target sequence.
         A conflict is defined as the hits overlapping by 50% or more of the shortest hit's length.
@@ -161,8 +161,7 @@ class Cigar:
         :param cigar: Cigar string"""
         self._cigar = cigar or ''
         self._operations = []  # list[(op: str, num_bases: int)] Populated when cigar has been iterated over once.
-        [setattr(self, i, 0) for i in ('M', 'N', 'ql', 'tl', 'mm', 'clip_left', 'clip_right',
-                                       'I', 'D')]
+        [setattr(self, i, 0) for i in ('M', 'N', 'ql', 'tl', 'mm', 'clip_left', 'clip_right', 'I', 'D')]
         self.ext_cigar = False
         if len(self._cigar) > 0:
             self.parse()
@@ -307,9 +306,7 @@ def get_best_alignments(alignments: Iterable[Alignment], group: str = "query_nam
 
 def filter_alignments(alignments: Iterable[Alignment], metric: str = "matching_bases", threshold: float = 0.0,
                       reverse_sort: bool = True) -> Generator[Alignment, None, None]:
-    """
-    Filter alignments based on a metric and threshold
-    """
+    """Filter alignments based on a metric and threshold"""
     operator = ge if reverse_sort else le
     for alignment in alignments:
         if not hasattr(alignment, metric):
@@ -358,23 +355,23 @@ def cull_all_conflicting_alignments(alignments: Iterable[Alignment], sort_by: st
     return kept_alignments
 
 
-def alignments_in_range(alignments: Iterable[Alignment], start: int, end: int, query: bool = False
-                        ) -> Generator[Alignment, None, None]:
-    """
-    Return the alignments that are within the given range
-    """
-    if query:
-        return (i for i in alignments if i.query_start >= start and i.query_end <= end)
-    else:
-        return (i for i in alignments if i.target_start >= start and i.target_end <= end)
-
-
-def alignments_overlapping_range(alignments: Iterable[Alignment], start: int, end: int, query: bool = False
-                                 ) -> Generator[Alignment, None, None]:
-    """
-    Return the alignments that are within or overlap the given range
-    """
-    if query:
-        return (i for i in alignments if start <= i.query_start <= end or start <= i.query_end <= end)
-    else:
-        return (i for i in alignments if start <= i.target_start <= end or start <= i.target_end <= end)
+# def alignments_in_range(alignments: Iterable[Alignment], start: int, end: int, query: bool = False
+#                         ) -> Generator[Alignment, None, None]:
+#     """
+#     Return the alignments that are within the given range
+#     """
+#     if query:
+#         return (i for i in alignments if i.query_start >= start and i.query_end <= end)
+#     else:
+#         return (i for i in alignments if i.target_start >= start and i.target_end <= end)
+#
+#
+# def alignments_overlapping_range(alignments: Iterable[Alignment], start: int, end: int, query: bool = False
+#                                  ) -> Generator[Alignment, None, None]:
+#     """
+#     Return the alignments that are within or overlap the given range
+#     """
+#     if query:
+#         return (i for i in alignments if start <= i.query_start <= end or start <= i.query_end <= end)
+#     else:
+#         return (i for i in alignments if start <= i.target_start <= end or start <= i.target_end <= end)

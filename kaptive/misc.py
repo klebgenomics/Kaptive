@@ -14,22 +14,22 @@ If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 from pathlib import Path
-from typing import Generator
 from gzip import open as gzopen
+from bz2 import open as bzopen
+from typing import Generator
+
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 
 from kaptive.log import log, quit_with_error, bold_cyan
 
 # Constants -----------------------------------------------------------------------------------------------------------
-_GZIP_MAGIC = b'\x1f\x8b'
-_LOGO = r"""
-    __               __  _           _____
-   / /______ _____  / /_(_)   _____ |__  /
-  / //_/ __ `/ __ \/ __/ / | / / _ \ /_ < 
- / ,< / /_/ / /_/ / /_/ /| |/ /  __/__/ / 
-/_/|_|\__,_/ .___/\__/_/ |___/\___/____/  
-          /_/
+_COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip'}
+_LOGO = r"""  _  __    _    ____ _____ _____     _______ 
+ | |/ /   / \  |  _ \_   _|_ _\ \   / / ____|
+ | ' /   / _ \ | |_) || |  | | \ \ / /|  _|  
+ | . \  / ___ \|  __/ | |  | |  \ V / | |___ 
+ |_|\_\/_/   \_\_|    |_| |___|  \_/  |_____|                                   
 """
-_REVCOMP = str.maketrans('ACGTNacgtn', 'TGCANtgcan')
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
@@ -82,58 +82,72 @@ def check_dir(path: str, parents: bool = True, exist_ok: bool = True) -> Path:
         quit_with_error(f"Could not create directory {path}: {e}")
 
 
-def check_python_version(major: int = 3, minor: int = 9):
+def check_python_version(major: int = 3, minor: int = 8):
     if sys.version_info.major < major or sys.version_info.minor < minor:
         quit_with_error(f'Python version {major}.{minor} or greater required')
 
 
-def is_gzipped(bytes_string: bytes) -> bool:
-    """Detects gzipped byte-string"""
-    return bytes_string[:2] == _GZIP_MAGIC
-
-
-def find_files_with_suffixes(prefix: Path, suffixes: list[str], min_size: int = 1) -> list[Path]:
-    """
-    Find files with given suffixes for the given prefix, useful for finding blast database or bwa index files
-    :param suffixes: List of existing Paths with suffixes
-    :param prefix: Prefix as Path
-    :param min_size: Minimum size of file in bytes
-    :return: List[Path]
-    """
-    return [p for i in suffixes if
-            (p := prefix.with_suffix(prefix.suffix + i)).exists() and p.stat().st_size >= min_size]
+def parse_fasta(fasta: Path, skip_plasmids: bool = False, verbose: bool = False) -> Generator[tuple[str, str, str], None, None]:
+    log(f'Parsing {fasta.name}', verbose)
+    with open(fasta, 'rb') as f:  # Read the first two bytes to determine the compression format
+        compression = _COMPRESSION_MAGIC.get(f.read(2), 'uncompressed')  # Default to uncompressed
+    if compression == 'uncompressed':
+        opener = open  # Use the built-in open function
+    elif compression == 'gz':
+        opener = gzopen  # Use the gzip open function
+    elif compression == 'bz2':
+        opener = bzopen  # Use the bzip2 open function
+    else:
+        quit_with_error(f'Unsupported compression format: {compression}')
+    try:
+        plasmid_markers = {'plasmid', '__pl'}
+        with opener(fasta, 'rt') as f:
+            for header, sequence in SimpleFastaParser(f):
+                if skip_plasmids and any(i in header for i in plasmid_markers):
+                    continue
+                yield (x := header.split(' ', 1))[0], x[1] if len(x) == 2 else '', sequence
+    except Exception as e:
+        quit_with_error(f'Error reading {fasta}: {e}')
 
 
 def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the logo
     return bold_cyan(f'{_LOGO}\n{message.center(width)}')
 
 
-def parse_fasta(path: Path) -> Generator[tuple[str, str, str], None, None]:
-    """Wrapper around fasta_parser for parsing fasta files"""
-    open_func = open if path.suffix != '.gz' else gzopen
-    try:  # Try to open file and parse it
-        with open_func(path, 'rt') as f:
-            if (first_char := (fasta_string := f.read())[0]) != '>':  # Check first character
-                quit_with_error(f'First character of {path} is {first_char}, not ">"')
-            yield from fasta_parser(fasta_string)
-    except Exception as e:
-        quit_with_error(f"Could not parse {path}: {e}, if gzipped, ensure file ends in .gz")
+def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False) -> Generator[tuple[int | float, int | float], None, None]:
+    """
+    Merge overlapping ranges
+    :param ranges: List of tuples of start and end positions
+    :param tolerance: Integer or float of tolerance for merging ranges
+    :param skip_sort: Skip sorting the ranges before merging
+    :return: List of merged ranges
+    """
+    if not ranges:
+        return
+    if len(ranges) == 1:
+        yield ranges[0]
+        return
+    current_range = (ranges := ranges if skip_sort else sorted(ranges, key=lambda x: x[0]))[0]  # Start with the first range
+    for start, end in ranges[1:]:  # Iterate through the ranges
+        if start - tolerance <= current_range[1]:  # Overlap, merge the ranges
+            current_range = (current_range[0], max(current_range[1], end))
+        else:  # No overlap, add the current range to the merged list and start a new range
+            yield current_range  # Yield the current range
+            current_range = (start, end)   # Start a new range
+    yield current_range  # Yield the last range
 
 
-def fasta_parser(fasta: str) -> Generator[tuple[str, str, str], None, None]:
-    """A simple fasta parser that yields a tuple of id, description, sequence for each record in a fasta file."""
-    record = []
-    for line in fasta.splitlines():
-        if line.startswith('>'):  # New record
-            if record:  # If previous record exists, yield it
-                name, desc = record[0].split(' ', maxsplit=1) if ' ' in record[0] else (record[0], '')
-                yield name[1:], desc,  ''.join(record[1:])  # Yield record
-            record = []  # Reset record
-        record.append(line)  # Add line to record
-    if record:  # Yield last record
-        name, desc = record[0].split(' ', maxsplit=1) if ' ' in record[0] else (record[0], '')
-        yield name[1:], desc, ''.join(record[1:])  # Yield record
+def range_overlap(range1: tuple[int, int], range2: tuple[int, int], skip_sort: bool = False) -> int:
+    """
+    Returns the overlap between two ranges
+    :param range1: Tuple of start and end positions
+    :param range2: Tuple of start and end positions
+    :param skip_sort: Skip sorting each range before calculating the overlap
+    :return: Integer of overlap
+    """
+    start1, end1 = range1 if skip_sort else sorted(range1)
+    start2, end2 = range2 if skip_sort else sorted(range2)
+    overlap_start = max(start1, start2)
+    overlap_end = min(end1, end2)
+    return max(0, overlap_end - overlap_start)
 
-
-def reverse_complement(seq: str) -> str:
-    return seq.translate(_REVCOMP)[::-1]
