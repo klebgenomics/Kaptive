@@ -10,6 +10,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 details. You should have received a copy of the GNU General Public License along with Kaptive.
 If not, see <https://www.gnu.org/licenses/>.
 """
+from __future__ import annotations
 
 import os
 import sys
