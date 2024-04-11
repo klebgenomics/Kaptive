@@ -1,0 +1,23 @@
+**************************************
+Installation
+**************************************
+
+Dependencies
+=============
+
+Kaptive requires the following software and libraries to be installed and available in your path:
+
+* `Python <https://python.org/>`_ >=3.8
+* `Biopython <https://biopython.org/>`_ >=1.78
+* `minimap2 <https://lh3.github.io/minimap2/>`_.
+* `DNA Features Viewer <https://edinburgh-genome-foundry.github.io/DnaFeaturesViewer/>`_
+
+
+Download and install Kaptive
+=============================
+
+.. code-block:: bash
+
+   git clone https://github.com/klebgenomics/Kaptive.git
+   pip install Kaptive/
+

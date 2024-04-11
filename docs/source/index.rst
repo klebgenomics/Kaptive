@@ -6,13 +6,16 @@
 .. toctree::
    :hidden:
 
-   Databases
-   In-silico-serotyping-of-assemblies
+   Installation
+   Usage
+   Method
+   Outputs
    Interpreting-the-results
+   Databases
    FAQs
 
 ########################
-*In silico* Serotyping
+Introducing Kaptive 3
 ########################
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10252121.svg
@@ -60,24 +63,6 @@ Citation
 * If you use the *A. baumannii* K or OC locus database(s) in your research please cite [#aci]_ and [#aciupdate]_.
 * Lists of papers describing each of the individual *A. baumannii* reference loci can be found `here <https://github.com/katholt/Kaptive/tree/master/extras>`_.
 
-Installation
-==============
-Kaptive depends on the following software and libraries:
-
-* `Python <https://python.org/>`_ >=3.8
-* `Biopython <https://biopython.org/>`_ >=1.78
-* `minimap2 <https://lh3.github.io/minimap2/>`_.
-* `DNA Features Viewer <https://edinburgh-genome-foundry.github.io/DnaFeaturesViewer/>`_
-
-And can be installed with conda::
-
-     conda install -y -c bioconda kaptive
-
-Or from source::
-
- git clone https://github.com/klebgenomics/Kaptive.git
- pip install Kaptive/
-
 Tutorial
 ==========
 Step-by-step `video <https://klebnet.org/training/>`_ and
@@ -101,11 +86,6 @@ People
 - `A/Prof. Johanna Kenyon <https://experts.griffith.edu.au/45350-johanna-kenyon>`_
 
 `Contact Kelly and Tom <kaptive.typing@gmail.com>`_ for help with Kaptive, or to report bugs or request features.
-
-Coming soon...
-===============
-- *In silico* serotyping of raw sequencing reads
-- Detection of IS insertions and phenotypic consequences
 
 
 References

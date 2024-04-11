@@ -4,16 +4,14 @@ Databases
 
 What is a locus?
 ======================
-A locus in the Kaptive sense refers to a biosynthetic gene cluster that is responsible for the synthesis of a surface
-antigen, e.g. the *Klebsiella pneumoniae* K locus is responsible for the synthesis of the capsular polysaccharide.
+A locus in the Kaptive sense refers to a biosynthetic gene cluster that is responsible for the synthesis of a bacterial surface
+polysaccharide, e.g. the *Klebsiella pneumoniae* K locus is responsible for the synthesis of the capsular polysaccharide, also known as the K antigen.
 Each locus in the Kaptive databases has been defined based on a unique set of genes, with the assumption that this
-encodes a unique antigen, and therefore a specific immunological response and serotype.
+encodes a unique polysaccharide structure. In many cases, these unique structures will result in unique immunological serotypes.
 
-The gene translations (protein sequences) from each loci are compared by pairwise alignment, and must fall under a
+The gene translations (protein sequences) from each locus are compared by pairwise alignment, and must fall under a
 defined percent identity threshold to be considered "unique". Some genes (such as the core assembly machinery) will
-be highly similar, however the genes responsible for the antigenic diversity are expected to be more variable, and
-will either be unique or fall under the defined threshold. These thresholds vary across species, and are currently
-set as the following:
+be highly similar, however the genes responsible for the polysaccharide structural diversity are expected to be more variable. The specific identity thresholds vary across species. The thresholds corresponding to the databases distributed with Kaptive are as follows:
 
 ========================= ===================
 Species                   Pairwise protein identity threshold
@@ -28,7 +26,7 @@ Format
 Genbank file
 -------------
 
-Kaptive stores databases in Genbank format consisting of **unique** loci as a single records with the following
+Kaptive stores databases in Genbank format consisting of **unique** loci each with a single record with the following
 requirements:
 
 
@@ -45,8 +43,8 @@ requirements:
 * Any locus gene should be annotated as ``CDS`` features. All ``CDS`` features will be used and any other type of
   feature will be ignored.
 
-* If the gene has a name, it should be specified in a ``gene`` qualifier. This is not required, but if absent the gene
-  will only be named using its numbered position in the locus.
+* If the gene has a name, it should be specified in a ``gene`` qualifier. This is not required for Kaptive to run, but if absent the gene
+  will only be named using its numbered position in the locus and it will not be checked for any specific sequence variations relevant to :ref:`phenotype prediction <Phenotype-logic>`.
 
 Example piece of input Genbank file::
 
@@ -58,25 +56,22 @@ Example piece of input Genbank file::
     CDS             1..897
                     /gene="galF"
 
+.. _Phenotype-logic:
+
 Phenotype logic
 ----------------
-Phenotype logic (previously called "special logic") is a set of rules that Kaptive uses to predict the phenotype
+Phenotype logic (previously called "special logic") is a set of rules that Kaptive uses to predict the polysaccharide phenotype
 based on the genes it finds. This was initially implemented for the *Klebsiella pneumoniae* O locus, whereby additional
 genes outside of the locus are used to predict the O antigen (sub)type. This logic was extended to the *A. baumannii*
 K locus in Kaptive v2.0.2.
 
-In Kaptive 3, we thought about how we could extend this beyond antigen (sub)type and use it to implement based on
-what we know about the presence or absence of specific genes in in the locus and the impact on the phenotype. For
-example, in the *Klebsiella pneumoniae* K locus, we know that a truncation of the core initiating glycosyltransferase
-(*wcaJ*) results in a capsule-null phenotype.
+In Kaptive 3, we thought about how we could extend this given what we know about truncations or other sequence variations of specific genes in the locus and the impact on the phenotype. For example, in the *Klebsiella pneumoniae* K locus, we know that a truncation of the core initiating glycosyltransferase (*wcaJ*) results in a capsule-null phenotype.
 
-To implement this, we have kept the same format as before, but with some improvements. As before,
-logic file is given the same name as the respective database, but with the extension ``.logic``.
-Each line consists of three tab-separated columns and represents a phenotype rule:
+The relevant sequence variations are detailed in the database logic files, each lablled with the same file prefix as its resppective locus database, and marked with the extension ``.logic``. Each line consists of three tab-separated columns and represents a phenotype rule:
 
 #. **loci** - the loci the rule applies to (or *ALL* if the rule applies to all loci in the database)
 #. **genes** - the genes (and optional state) the rule applies to (or *ALL* if the rule applies to all genes in the locus)
-#. **phenotype** - the resulting phenotype that appears in the `Type` column of the Kaptive tabular output
+#. **phenotype** - the resulting phenotype that appears in the `Type` column of the Kaptive tabular output, replacing the default phenotype i.e. the one specified in the locus genbank source identifier in the matching locus databse.
 
 Let's look at an example of a logic file for the *Klebsiella pneumoniae* K locus:
 
@@ -90,7 +85,7 @@ KL22	  KL22_17,truncated	 K37
 In the first line, you can see that if *wcaJ* is truncated in any locus (selected with *ALL*), the phenotype will be
 predicted as "Capsule null". Here, any gene with the name *wcaJ* will be considered, and the state of the gene is
 specified as *truncated*. In the last line, you can see that if *KL22_17* (acetyl-transferase) is truncated in locus
-KL22, the phenotype is the predicted as "K37", the non-acetylated version of the K22 antigen.
+KL22, the phenotype is predicted as "K37", the non-acetylated version of the K22 capsule.
 
 .. note::
  The gene name and state are delimited by a comma.
@@ -98,7 +93,7 @@ KL22, the phenotype is the predicted as "K37", the non-acetylated version of the
 .. note::
  The default phenotype is the "type" label in the Genbank record (e.g. K1).
 
-This look at an example that uses extra genes:
+This look at an example that uses extra genes outside of the locus (from the *K. pneumonaie* O locus database):
 
 ======================= ============ ===================
 loci                    genes        phenotype
@@ -107,8 +102,8 @@ O1/O2v1;O1/O2v2;O1/O2v3	wbbY	     O1a
 O1/O2v1;O1/O2v2;O1/O2v3	wbbY;wbbZ	 O1ab
 ======================= ============ ===================
 
-Here, the first line states that if *wbbY* is present in any of the O1/O2v1, O1/O2v2, or O1/O2v3 loci, the phenotype
-will be predicted as "O1a". The second line states that if **both** *wbbY* and *wbbZ* are present in any of the
+Here, the first line states that if *wbbY* is present in a genome carrying any of the O1/O2v1, O1/O2v2, or O1/O2v3 loci, the phenotype
+will be predicted as "O1a". The second line states that if **both** *wbbY* and *wbbZ* are present in a genome carrying any of the 
 same loci, the phenotype will instead be predicted as "O1ab".
 
 .. note::
