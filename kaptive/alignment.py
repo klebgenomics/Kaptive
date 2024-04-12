@@ -33,6 +33,10 @@ class AlignmentError(Exception):
 
 
 class Alignment:
+    """
+    Class to store alignment information from PAF, SAM or BLAST tabular (--outfmt 6 / m8) output.
+    It is purposely designed to be flexible and can be used with any of the three formats.
+    """
     def __init__(
             self, query_name: str | None = None, query_length: int | None = 0, query_start: int | None = 0,
             query_end: int | None = 0, strand: str | None = None, target_name: str | None = None,
@@ -65,6 +69,10 @@ class Alignment:
 
     @classmethod
     def from_paf_line(cls, line: str | bytes, parse_cigar: bool = False, **kwargs):
+        """
+        Parse a line from a PAF file and return an Alignment object.
+        Optionally parse the cigar string into a Cigar object (stored in tags).
+        """
         if not (line := line.decode().strip() if isinstance(line, bytes) else line.strip()):
             raise AlignmentError("Empty line")
         if len(line := line.split('\t')) < 12:
@@ -97,7 +105,7 @@ class Alignment:
             mapping_quality=int(line[4]), base_quality=[(x, ord(y) - 33) for x, y in zip(line[9], line[10])],
             tags={'cg': line[5], 'rnext': line[6], 'pnext': line[7], 'tlen': int(line[8])}, **kwargs
         )
-        self.flag |= {k: bool(int(v)) for k, v in zip(_BITWISE_FLAGS, reversed(format(int(line[1]), '012b')))}
+        self.flag.update({k: bool(int(v)) for k, v in zip(_BITWISE_FLAGS, reversed(format(int(line[1]), '012b')))})
         self.strand = '-' if self.flag['is_reverse'] else '+'  # Set strand
         for tag in line[11:]:  # Parse tags
             x, y, z = tag.split(":", 2)
@@ -157,10 +165,13 @@ class Alignment:
 
 class Cigar:
     def __init__(self, cigar: str | None = None):
-        """Simple class to parse and store cigar strings
-        :param cigar: Cigar string"""
-        self._cigar = cigar or ''
-        self._operations = []  # list[(op: str, num_bases: int)] Populated when cigar has been iterated over once.
+        """
+        Class to parse and store cigar strings.
+        The actual string can be accessed via the __str__ method.
+        The operations are stored as a list of tuples in the form (operation, num_bases) and can be accessed via __iter__.
+        """
+        self._cigar = cigar or ''  # type: str
+        self._operations = []  # type: list[tuple[str, int]]
         [setattr(self, i, 0) for i in ('M', 'N', 'ql', 'tl', 'mm', 'clip_left', 'clip_right', 'I', 'D')]
         self.ext_cigar = False
         if len(self._cigar) > 0:

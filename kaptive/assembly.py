@@ -42,8 +42,8 @@ class Assembly:
 
     @classmethod
     def from_path(cls, path: Path, **kwargs) -> Assembly:
-        self = cls(path=path, name=path.name.strip('.gz').rsplit('.', 1)[0])
-        self.contigs |= {n: Contig(self, n, d, Seq(s)) for n, d, s in parse_fasta(path, **kwargs)}
+        self = cls(path=path, name=path.name.strip('.gz').rsplit('.', 1)[0],
+                   contigs={n: Contig(n, d, Seq(s)) for n, d, s in parse_fasta(path, **kwargs)})
         if not self.contigs:
             raise AssemblyError(f"No contigs found in {path}")
         return self
@@ -74,9 +74,8 @@ class Contig(object):
     This class describes a contig in an assembly: the name, length, and sequence.
     """
 
-    def __init__(self, assembly: Assembly | None = None, name: str | None = None, description: str | None = None,
+    def __init__(self, name: str | None = None, description: str | None = None,
                  sequence: Seq | None = Seq('')):
-        self.assembly = assembly
         self.name = name or ''
         self.description = description or ''
         self.sequence = sequence
@@ -119,10 +118,9 @@ def score_stats(scores: list[tuple[Locus, float]]) -> list[tuple[Locus, float, f
 def typing_pipeline(
         assembly: Path | Assembly, db: Database | Path, threads: int | None = 1, min_cov: float | None = 0.5,
         score_metric: str | None = 'AS', weight_metric: str | None = 'prop_genes_found',
-        max_other_genes: float | None = 1, percent_expected_genes: float | None = 50,
-        locus_identity: float | None = 90, max_locus_pieces: float | None = 1,
-        allow_below_threshold: bool | None = False,
-        debug: bool | None = False, verbose: bool | None = False) -> TypingResult | None:
+        max_other_genes: float | None = 1, percent_expected_genes: float | None = 50, locus_identity: float | None = 90,
+        max_locus_pieces: float | None = 1, allow_below_threshold: bool | None = False, debug: bool | None = False,
+        verbose: bool | None = False) -> TypingResult | None:
     if isinstance(db, Path):
         try:
             db = Database.from_genbank(db)
@@ -174,10 +172,13 @@ def typing_pipeline(
     best_match, score, zscore = scores[score_metric][weight_metric][0]  # Get best match, score, and zscore
     # Create a TypingResult object to store the results
     result = TypingResult(
-        assembly.name, db, best_match, score, zscore, scores=scores, gene_threshold=db.gene_threshold,
-        max_other_genes=max_other_genes, percent_expected_genes=percent_expected_genes, locus_identity=locus_identity,
-        max_locus_pieces=max_locus_pieces, allow_below_threshold=allow_below_threshold, min_cov=min_cov,
-        score_metric=score_metric, weight_metric=weight_metric
+        assembly.name, db, best_match, score, zscore, scores=scores,
+        confidence_args={
+            'max_other_genes': max_other_genes, 'percent_expected_genes': percent_expected_genes,
+            'locus_identity': locus_identity, 'max_locus_pieces': max_locus_pieces,
+            'allow_below_threshold': allow_below_threshold, 'gene_threshold': db.gene_threshold
+        },
+        scoring_args={'min_cov': min_cov, 'score_metric': score_metric, 'weight_metric': weight_metric}
     )
     with Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE) as proc:  # Align the best match locus to the assembly
         locus_alignments = [Alignment.from_paf_line(

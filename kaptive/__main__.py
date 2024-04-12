@@ -104,18 +104,12 @@ def assembly_subparser(subparsers):
                       help='Minimum gene %%coverage to be used for scoring (default: %(default)s)')
 
     opts = assembly_parser.add_argument_group(bold('Confidence options'), "")
-    # opts.add_argument("--min-zscore", type=float, metavar='', default=3.0,
-    #                   help="Minimum zscore for confidence (default: %(default)s)")
     opts.add_argument("--gene-threshold", type=float, metavar='',
                       help="Species-level locus gene identity threshold (default: database specific)")
     opts.add_argument("--max-other-genes", type=int, metavar='', default=1,
                       help="Typeable if <= other genes (default: %(default)s)")
     opts.add_argument("--percent-expected-genes", type=float, metavar='', default=50,
                       help="Typeable if >= %% expected genes (default: %(default)s)")
-    opts.add_argument("--locus-identity", type=float, metavar='', default=90,
-                      help="Typeable if >= locus identity (default: %(default)s)")
-    opts.add_argument("--max-locus-pieces", type=int, metavar='', default=1,
-                      help="Typeable if <= locus pieces (default: %(default)s)")
     opts.add_argument("--allow-below-threshold", action='store_true', help="Typeable if any genes are below threshold")
 
     opts = assembly_parser.add_argument_group(bold('Database options'), "")

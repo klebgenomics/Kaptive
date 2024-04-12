@@ -56,6 +56,8 @@ pieces (in cases of poor assembly and/or a novel locus). The file is named using
 The default is to write this file to the current directory with the name: ``{assembly}_kaptive_results.fna``,
 however the output directory can be specified after the flag.
 
+.. _JSON:
+
 JSON
 ==============
 The ``--json`` flag produces a JSON file of the results which allows Kaptive to reconstruct the ``TypingResult`` objects
@@ -65,12 +67,12 @@ representing the results for a single assembly.
 The default is to write this file to: ``kaptive_results.json``, however the path can be specified after the flag.
 If the file already exists, Kaptive will append to it (not overwrite it).
 
-.. _Diagram:
+.. _Plot:
 
-Diagram
+Plot
 ==============
 Kaptive can now produce a visual representation of the locus match in the assembly. This is done using the
-``--draw`` flag, which produces a diagram in the format specified by the ``--draw-fmt`` flag (default: png).
+``--plot`` flag, which produces a plot in the format specified by the ``--plot-fmt`` flag (default: png).
 
 The default is to write this file to the current directory with the name: ``{assembly}_kaptive_results.{fmt}``,
 however the output directory can be specified after the flag.

@@ -26,8 +26,6 @@ from kaptive.log import warning
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _PROTEIN_ALIGNER = PairwiseAligner(scoring='blastp', mode='local')
-_ARGS = ['min_cov', 'score_metric', 'weight_metric', 'max_other_genes', 'percent_expected_genes',
-         'locus_identity', 'max_locus_pieces', 'allow_below_threshold', 'gene_threshold']
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -43,11 +41,8 @@ class TypingResult:
             expected_genes_outside_locus: list[GeneResult] | None = None, missing_genes: list[str] | None = None,
             unexpected_genes_inside_locus: list[GeneResult] | None = None,
             unexpected_genes_outside_locus: list[GeneResult] | None = None, extra_genes: list[GeneResult] | None = None,
-            scores: dict[str, dict[str, list[float]]] | None = None, min_cov: float | None = 0,
-            score_metric: str | None = None, weight_metric: str | None = None, locus_identity: float | None = 0,
-            max_other_genes: int | None = 0, percent_expected_genes: float | None = 0, gene_threshold: float | None = 0,
-            max_locus_pieces: int | None = 0, allow_below_threshold: bool | None = False
-    ):
+            scores: dict[str, dict[str, list[float]]] | None = None, scoring_args: dict | None = None,
+            confidence_args: dict | None = None):
         self.sample_name = sample_name or ""
         self.db = db
         self.best_match = best_match
@@ -62,15 +57,8 @@ class TypingResult:
         self.extra_genes = extra_genes or []  # in db.extra_genes, ALWAYS outside locus (gene_result.piece == None)
         # self.is_elements = is_elements or []  # in db.is_elements, ALWAYS inside locus (gene_result.piece != None)
         self.scores = scores or {}
-        self.min_cov = min_cov
-        self.score_metric = score_metric or ""
-        self.weight_metric = weight_metric or ""
-        self.max_other_genes = max_other_genes
-        self.percent_expected_genes = percent_expected_genes
-        self.locus_identity = locus_identity
-        self.max_locus_pieces = max_locus_pieces
-        self.allow_below_threshold = allow_below_threshold
-        self.gene_threshold = gene_threshold
+        self.scoring_args = scoring_args or {}
+        self.confidence_args = confidence_args or {}
 
     def __len__(self):
         return sum(len(i) for i in self.pieces) if self.pieces else 0
@@ -104,7 +92,6 @@ class TypingResult:
     def phenotype(self) -> str:
         gene_phenotypes = set()  # Init set to store gene phenotypes to be used as a key in the phenotypes dict
         for gene in self:
-            gene.get_phenotype()  # Because neighbouring genes need to be calculated first to test for truncation
             if gene.gene_type in {'expected_genes', 'extra_genes'}:  # The reported phenotype only considers expected
                 gene_phenotypes.add((gene.gene.name, gene.phenotype))  # or extra genes
         # NOTE: The best_match.phenotypes MUST be sorted from largest to smallest gene set to make sure any sets with
@@ -121,28 +108,22 @@ class TypingResult:
         problems += '+' if self.unexpected_genes_inside_locus else ''
         problems += '*' if any(
             i.percent_coverage >= 90 and i.below_threshold for i in self.expected_genes_inside_locus) else ''
+        problems += '!' if any(i.phenotype == "truncated" for i in self) else ''
         return problems
 
     @cached_property  # Cache the confidence so it is only calculated once
     def confidence(self) -> str:
         percent_expected_genes = len(self.expected_genes_inside_locus) / len(self.best_match.genes) * 100
         other_genes = len([i for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"])
-        if not self.allow_below_threshold and "*" in self.problems:
+        if not self.confidence_args['allow_below_threshold'] and "*" in self.problems:
             return "Untypeable"
-        if len(self.pieces) == 1 and \
-                not self.missing_genes and \
-                not other_genes and self.percent_identity >= 90:
-            return "Good"
-        if len(self.pieces) <= self.max_locus_pieces and \
-                other_genes <= self.max_other_genes and \
-                percent_expected_genes >= self.percent_expected_genes and \
-                self.percent_identity >= self.locus_identity:
-            return "Good"
-        if len(self.pieces) <= self.max_locus_pieces and \
-                other_genes <= self.max_other_genes and \
-                percent_expected_genes >= self.percent_expected_genes and \
-                self.percent_identity < self.locus_identity:
-            return "Low"
+        if len(self.pieces) == 1:  # If there is only one piece
+            if not self.missing_genes and not other_genes:
+                return "Typeable"
+        else:  # If there are multiple pieces
+            if other_genes <= self.confidence_args['max_other_genes'] and \
+                    percent_expected_genes >= self.confidence_args['percent_expected_genes']:
+                return "Typeable"
         return "Untypeable"
 
     def as_fasta(self) -> str:
@@ -187,10 +168,8 @@ class TypingResult:
                     f"{s}_{w}:{'|'.join(f'{l},{x:.4f},{y:.4f}' for l, x, y in self.scores[s][w][:max_scores])}" for s in
                     self.scores for w in self.scores[s]
                 ),
-                f'min_cov={self.min_cov};gene_threshold={self.gene_threshold};score_metric={self.score_metric};'
-                f'weight_metric={self.weight_metric};max_other_genes={self.max_other_genes};'
-                f'percent_expected_genes={self.percent_expected_genes};locus_identity={self.locus_identity};'
-                f'max_locus_pieces={self.max_locus_pieces};allow_below_threshold={self.allow_below_threshold};'
+                ';'.join(f"{k}={v}" for k, v in self.scoring_args.items()),
+                ';'.join(f"{k}={v}" for k, v in self.confidence_args.items())
             ])
         ) + "\n"
 
@@ -199,12 +178,8 @@ class TypingResult:
         if not (best_match := db.loci.get(d['best_match'])):
             raise TypingResultError(f"Best match {d['best_match']} not found in database")
         self = TypingResult(
-            sample_name=d['sample_name'], db=db, best_match=best_match, score=float(d['score']), zscore=float(d['zscore']),
-            min_cov=float(d['min_cov']), locus_identity=float(d['locus_identity']), max_other_genes=int(d['max_other_genes']),
-            percent_expected_genes=float(d['percent_expected_genes']), gene_threshold=float(d['gene_threshold']),
-            max_locus_pieces=int(d['max_locus_pieces']),
-            allow_below_threshold=True if d['allow_below_threshold'] == 'True' else False,
-            score_metric=d['score_metric'], weight_metric=d['weight_metric'], missing_genes=d['missing_genes'])
+            sample_name=d['sample_name'], db=db, best_match=best_match, score=float(d['score']),
+            zscore=float(d['zscore']), missing_genes=d['missing_genes'])
 
         self.pieces = [LocusPiece.from_dict(i, result=self) for i in d['pieces']]
         pieces, gene_results = {i.__repr__(): i for i in self.pieces}, {}
@@ -227,7 +202,7 @@ class TypingResult:
         return {
             i: str(getattr(self, i)) for i in
             ['score', 'zscore', 'sample_name', 'best_match', 'percent_identity', 'percent_coverage',
-             'confidence', 'phenotype', 'problems'] + _ARGS
+             'confidence', 'phenotype', 'problems']
         } | {
             'pieces': [i.as_dict() for i in self.pieces],
             'expected_genes_inside_locus': [i.as_dict() for i in self.expected_genes_inside_locus],
@@ -338,7 +313,7 @@ class GeneResult:
         self.dna_seq = dna_seq or Seq("")
         self.protein_seq = protein_seq or Seq("")
         self.below_threshold = below_threshold
-        self.phenotype = phenotype or ""
+        self.phenotype = phenotype or "present"
         self.gene_type = gene_type or ""
         self.percent_identity = percent_identity
         self.percent_coverage = percent_coverage
@@ -386,11 +361,11 @@ class GeneResult:
         param frame: 0, 1, or 2, the frame to start translating from.
         param kwargs: Additional keyword arguments to pass to the Bio.Seq.translate method.
         """
-        self.gene.extract_translation(**kwargs)
-        if len(self.dna_seq) == 0:
+        self.gene.extract_translation(**kwargs)  # Extract the translation from the gene if it is not already stored
+        if len(self.dna_seq) == 0:  # If the DNA sequence is empty, raise an error
             raise GeneResultError(f'No DNA sequence for {self.__repr__()}')
         with catch_warnings(record=True) as w:
-            self.protein_seq = self.dna_seq[frame:].translate(**kwargs)
+            self.protein_seq = self.dna_seq[frame:].translate(**kwargs)  # Translate the DNA sequence from the frame
             # for i in w:
             #     warning(f"{i.message}: {self.__repr__()}")
         if len(self.protein_seq) == 0:  # If the protein sequence is still empty, raise a warning
@@ -399,6 +374,8 @@ class GeneResult:
             alignment = max(_PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq), key=lambda x: x.score)
             self.percent_identity = alignment.counts().identities / alignment.length * 100
             self.percent_coverage = (len(self.protein_seq) / len(self.gene.protein_seq)) * 100
+            if not self.partial and self.percent_coverage < 95:  # If the protein sequence less than 95% of reference
+                self.phenotype = "truncated"  # Set the phenotype to truncated
 
     def as_fasta(self) -> str:
         """Returns a fasta-formatted nucleotide sequence with a newline character at the end."""
@@ -415,23 +392,3 @@ class GeneResult:
             return ""
         return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
                 f'{self.protein_seq}\n')
-
-    def get_phenotype(self):
-        """
-        Calculates the phenotype of the gene result, e.g. "present" / "truncated".
-        IS elements will not be tested for presence/truncation but if they are next to
-        any genes that are truncated.
-        """
-        # if self.gene_type == 'is_elements':  # Special phenotype for IS elements
-        #     # Test to see if it interrupts any surrounding genes on a Piece
-        #     if self.neighbour_left and self.neighbour_left.phenotype == "truncated":
-        #         self.phenotype += f"{self.neighbour_left.gene.name}"
-        #     if self.neighbour_right and self.neighbour_right.phenotype == "truncated":
-        #         self.phenotype += ("," if self.phenotype else "") + f"{self.neighbour_right.gene.name}"
-        # else:
-        if not self.partial and (x := len(self.protein_seq)) > 0 and (
-                y := len(
-                    self.gene.protein_seq)) > 0 and x / y < 0.95:  # If the protein sequence less than 95% of the reference
-            self.phenotype = "truncated"
-        if not self.phenotype:
-            self.phenotype = "present"

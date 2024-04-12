@@ -36,7 +36,7 @@ Given a Kaptive database and a bacterial genome assembly, ``kaptive assembly`` w
 * Predicts the corresponding serotype/phenotype of the genome assembly.
 
 .. note::
- As of version 3, Kaptive  no longer supports allelic (*wzi*, *wzc*) typing.
+ As of version 3, Kaptive no longer supports allelic (*wzi*, *wzc*) typing.
 
 
 To perform K-locus typing on a directory of *Klebsiella pneumoniae* assemblies, you would run::
@@ -65,9 +65,9 @@ You may also want to specify the locations and/or filenames of the output files 
                             - Optionally pass output directory (default: cwd)
      -j [], --json []      Output results to JSON lines
                             - Optionally pass file name (default: kaptive_results.json)
-     -p [], --plot []      Output locus diagrams to "{input}_kaptive_results.{fmt}"
+     -p [], --plot []      Output locus plots to "{input}_kaptive_results.{fmt}"
                             - Optionally pass output directory (default: cwd)
-     --plot-fmt png,svg    Format for locus diagrams (default: png)
+     --plot-fmt png,svg    Format for locus plots (default: png)
      --no-header           Suppress header line
      --debug               Append debug columns to table output
 

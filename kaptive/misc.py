@@ -152,3 +152,16 @@ def range_overlap(range1: tuple[int, int], range2: tuple[int, int], skip_sort: b
     overlap_end = min(end1, end2)
     return max(0, overlap_end - overlap_start)
 
+
+def str2val(value: str) -> str | int | float:
+    """
+    Convert a string to an integer or float, falling back to the original string if conversion fails
+    """
+    try:
+        return int(value)
+    except ValueError:
+        try:
+            return float(value)
+        except ValueError:
+            return value
+
