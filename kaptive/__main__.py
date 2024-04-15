@@ -260,60 +260,10 @@ def write_headers(out: io.TextIOWrapper, no_header: bool = False, subparser_name
             out.write('\t'.join(_ASSEMBLY_HEADERS + _ASSEMBLY_EXTRA_HEADERS if debug else _ASSEMBLY_HEADERS) + '\n')
 
 
-def type_sample(sample: Path, args: argparse.Namespace):
-    if (result := typing_pipeline(
-            sample, args.db, args.threads, args.min_cov, args.score_metric, args.weight_metric,
-            args.max_other_genes, args.percent_expected_genes, args.locus_identity, args.max_locus_pieces,
-            args.allow_below_threshold, args.debug, args.verbose
-
-    )):
-        args.out.write(result.as_table(args.debug))  # type: 'TextIOWrapper'
-        if args.fasta:  # Create and write locus pieces to fasta file
-            (args.fasta / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
-        if args.json:  # type: 'TextIOWrapper'
-            args.json.write(dumps(result.as_dict()) + '\n')
-        if args.plot:  # type: 'Path'
-            plot_result(result, args.plot, args.plot_fmt)
-
-
-def convert_results(line, args: argparse.Namespace):
-    if args.regex and not args.regex.search(line):
-        return
-    try:
-        if (d := loads(line)):
-            if args.samples and d['sample_name'] not in args.samples:
-                return
-            if args.loci and d['best_match'] not in args.loci:
-                return
-            result = TypingResult.from_dict(d, args.db)
-            if args.format == 'locus':  # Create and write locus pieces to fasta file
-                if args.outdir:
-                    (args.outdir / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
-                else:
-                    args.out.write(result.as_fasta())
-            elif args.format == 'genes':
-                if args.outdir:
-                    (args.outdir / f'{result.sample_name}_kaptive_results_genes.ffn').write_text(result.as_gene_fasta())
-                else:
-                    args.out.write(result.as_gene_fasta())
-            elif args.format == 'proteins':
-                if args.outdir:
-                    (args.outdir / f'{result.sample_name}_kaptive_results_proteins.faa').write_text(
-                        result.as_protein_fasta())
-                else:
-                    args.out.write(result.as_protein_fasta())
-            elif args.format == 'json':
-                if args.outdir:
-                    (args.outdir / 'kaptive_results.json').write_text(dumps(result.as_dict()))
-                else:
-                    args.out.write(dumps(result.as_dict()) + '\n')
-            elif args.format in ['png', 'svg']:
-                plot_result(result, args.outdir, args.format)
-    except Exception as e:
-        quit_with_error(f"Invalid JSON: {e}\n{line}")
-
-
 def plot_result(result: TypingResult, outdir: Path, fmt: str):
+    """
+    Convienence function to plot a TypingResult and save to file
+    """
     ax = result.as_GraphicRecord().plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
     ax.set_title(  # Add title to figure
         f"{result.sample_name} {result.best_match} ({result.phenotype}) - {result.confidence}")
@@ -325,6 +275,8 @@ def plot_result(result: TypingResult, outdir: Path, fmt: str):
 def main():
     check_python_version()
     args = parse_args(sys.argv[1:])
+
+    # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
         check_programs(['minimap2'], verbose=args.verbose)  # Check for minimap2
         args.db = Database.from_genbank(
@@ -332,8 +284,22 @@ def main():
             load_seq=True, locus_regex=args.locus_regex, type_regex=args.type_regex)
 
         write_headers(args.out, args.no_header, args.subparser_name, args.debug)
-        [type_sample(sample, args) for sample in args.input]
+        for sample in args.input:
+            if (result := typing_pipeline(
+                    sample, args.db, args.threads, args.min_cov, args.score_metric, args.weight_metric,
+                    args.max_other_genes, args.percent_expected_genes, args.allow_below_threshold, args.debug,
+                    args.verbose
 
+            )):
+                args.out.write(result.as_table(args.debug))  # type: 'TextIOWrapper'
+                if args.fasta:  # Create and write locus pieces to fasta file
+                    (args.fasta / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
+                if args.json:  # type: 'TextIOWrapper'
+                    args.json.write(dumps(result.as_dict()) + '\n')
+                if args.plot:  # type: 'Path'
+                    plot_result(result, args.plot, args.plot_fmt)
+
+    # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
         from kaptive.database import parse_database, name_from_record
         if args.format == "genbank":
@@ -363,11 +329,47 @@ def main():
                     (args.outdir / f'{locus.name.replace("/", "_")}.{ext}').write_text(format_func())
                 else:
                     args.out.write(format_func())
-                
+
+    # Convert mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'convert':
         args.db = Database.from_genbank(  # Load database in memory, we don't need to load the full sequences (False)
             args.db, args.filter, False, verbose=args.verbose, locus_regex=args.locus_regex, type_regex=args.type_regex)
         if args.format in ['png', 'svg'] and not args.outdir:  # Check if output directory is required and not set
             args.outdir = Path('.')  # Set output directory to current directory
-        [convert_results(line, args) for line in args.input]
+        for line in args.input:
+            if args.regex and not args.regex.search(line):
+                return
+            try:
+                if (d := loads(line)):
+                    if args.samples and d['sample_name'] not in args.samples:
+                        return
+                    if args.loci and d['best_match'] not in args.loci:
+                        return
+                    result = TypingResult.from_dict(d, args.db)
+                    if args.format == 'locus':  # Create and write locus pieces to fasta file
+                        if args.outdir:
+                            (args.outdir / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
+                        else:
+                            args.out.write(result.as_fasta())
+                    elif args.format == 'genes':
+                        if args.outdir:
+                            (args.outdir / f'{result.sample_name}_kaptive_results_genes.ffn').write_text(
+                                result.as_gene_fasta())
+                        else:
+                            args.out.write(result.as_gene_fasta())
+                    elif args.format == 'proteins':
+                        if args.outdir:
+                            (args.outdir / f'{result.sample_name}_kaptive_results_proteins.faa').write_text(
+                                result.as_protein_fasta())
+                        else:
+                            args.out.write(result.as_protein_fasta())
+                    elif args.format == 'json':
+                        if args.outdir:
+                            (args.outdir / 'kaptive_results.json').write_text(dumps(result.as_dict()))
+                        else:
+                            args.out.write(dumps(result.as_dict()) + '\n')
+                    elif args.format in ['png', 'svg']:
+                        plot_result(result, args.outdir, args.format)
+            except Exception as e:
+                quit_with_error(f"Invalid JSON: {e}\n{line}")
 

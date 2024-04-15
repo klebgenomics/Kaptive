@@ -7,7 +7,7 @@ Quickstart (for the impatient)
 
 To type polysaccharide loci from genome assemblies::
 
-   kaptive assembly <database> <path_to_assemblies> --out <results_table.txt>
+   kaptive assembly <database> <path_to_assemblies> > kaptive_results.tsv
 
 
 This will run ``kaptive assembly`` with the default parameters, and produce a table detailing the best match locus, predicted phenotype, confidence score and detailed typing information for each input genome assembly in the file called results_table.txt (plus other default outputs described below). 
@@ -19,9 +19,10 @@ Detailed usage
 We designed Kaptive 3 to be easier to use on the command-line than previous versions by structuring the program as a
 series of sub-commands that follow the general pattern of ``kaptive <mode> <database> <input>``.
 There are three modes:
-   -  **assembly**: type assemblies
-   -  **extract**: extract features from Kaptive databases in different formats
-   -  **convert**: convert Kaptive results to different formats
+
+* **assembly**: type assemblies
+* **extract**: extract features from Kaptive databases in different formats
+* **convert**: convert Kaptive results to different formats
 
 To see the full list of commands and options, run ``kaptive --help``.
 
@@ -113,7 +114,7 @@ The ``convert`` command allows you to convert the Kaptive results JSON file into
 * :ref:`Locus nucleotide sequence(s) <Fasta>` (fna)
 * Locus gene nucleotide sequences (ffn)
 * Locus gene amino acid sequences (faa)
-* Locus :ref:`diagram <Diagram>`
+* Locus :ref:`plot <Plot>`
 
 This means if you didn't want to or forgot to output these files during the initial run, we've got you covered!
 

@@ -118,8 +118,8 @@ def score_stats(scores: list[tuple[Locus, float]]) -> list[tuple[Locus, float, f
 def typing_pipeline(
         assembly: Path | Assembly, db: Database | Path, threads: int | None = 1, min_cov: float | None = 0.5,
         score_metric: str | None = 'AS', weight_metric: str | None = 'prop_genes_found',
-        max_other_genes: float | None = 1, percent_expected_genes: float | None = 50, locus_identity: float | None = 90,
-        max_locus_pieces: float | None = 1, allow_below_threshold: bool | None = False, debug: bool | None = False,
+        max_other_genes: float | None = 1, percent_expected_genes: float | None = 50,
+        allow_below_threshold: bool | None = False, debug: bool | None = False,
         verbose: bool | None = False) -> TypingResult | None:
     if isinstance(db, Path):
         try:
@@ -175,7 +175,6 @@ def typing_pipeline(
         assembly.name, db, best_match, score, zscore, scores=scores,
         confidence_args={
             'max_other_genes': max_other_genes, 'percent_expected_genes': percent_expected_genes,
-            'locus_identity': locus_identity, 'max_locus_pieces': max_locus_pieces,
             'allow_below_threshold': allow_below_threshold, 'gene_threshold': db.gene_threshold
         },
         scoring_args={'min_cov': min_cov, 'score_metric': score_metric, 'weight_metric': weight_metric}

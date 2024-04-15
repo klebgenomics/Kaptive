@@ -15,17 +15,12 @@ version = '3.0.0'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autosectionlabel']
-autosectionlabel_prefix_document = True
-templates_path = ['_templates']
-
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
 html_theme_options = {
-    "show_toc_level": 2,
+    "show_toc_level": 3,
     "home_page_in_toc": True,
     "navigation_depth": 4
 }

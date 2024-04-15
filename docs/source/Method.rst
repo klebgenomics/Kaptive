@@ -8,43 +8,11 @@ kaptive assembly
 For each input assembly, Kaptive runs the ``kaptive.assembly.typing_pipeline`` which does the following:
 
 #. Aligns locus gene nucleotide sequences to the assembly contig sequences using minimap2.
-#. Identifies the best matching locus type using a novel `scoring algorithm <Scoring-algorithm>`_.
+#. Identifies the best matching locus type using the `Scoring algorithm`_.
 #. Extracts the locus gene sequences from the assembly contig sequences.
 
-Locus reconstruction
----------------------
-After the best matching locus type has been identified, Kaptive will attempt to reconstruct the biosynthetic gene
-cluster from the assembly contig sequences. For each contig where alignments were found, Kaptive will:
 
-#. Sort alignments into whether they belong to the best matching locus (expected) or not (unexpected).
-#. Cull all alignments of unexpected genes that overlap with alignments of expected genes.
-#. Cull all alignments of unexpected genes that overlap with each other.
-#. Create pieces of the locus on the contig by merging together alignment ranges of expected genes that:
-
-   * Are within the distance of the largest locus in the database.
-   * Do not extend beyond the alignment ranges of the last expected gene (prevents *Klebsiella* K-locus matches to the O-locus, which shares gene orthologs).
-#. ```GeneResult``` objects are created from the remaining alignments then evaluated.
-
-Gene evaluation
-^^^^^^^^^^^^^^^^^
-For each ```GeneResult``` object, Kaptive will:
-
-#. Check whether the gene is **partial** by determining if the gene overlaps the start or end of the contig.
-#. Extract the DNA sequence from the assembly contig and translate to amino acid.
-#. Perform pairwise alignment to the reference gene amino acid sequence and calculate percent identity.
-#. Check for **truncation** by determining if the amino acid sequence length is >= 95% of the reference gene protein length.
-#. Determine whether the gene belongs to the biosynthetic gene cluster (**inside locus**) or not (**outside locus**).
-
-.. note::
- Partial genes are *not* considered for truncation. This prevents false positive truncation calls in
- fragmented assemblies which may otherwise have an impact on phenotype prediction.
-
-Phenotype prediction
----------------------
-As of Kaptive 3, we have added the ability to predict the resulting phenotype of the assembly. This is similar
-to how the *Type* was reported in previous versions, but now includes the ability to predict specific phenotypes
-based on known mutations/modifications in a given set of locus genes as defined in the database logic file.
-
+.. _Scoring algorithm:
 Scoring algorithm
 -------------------
 #. For each locus gene, the best alignment is chosen and sorted by locus.
@@ -68,3 +36,38 @@ The weighting can be explicitly set by the flag ``--weight_metric``; the options
 * ``genes_expected`` - number of genes expected in the locus
 * ``genes_found`` - number of genes found in the locus
 * ``prop_genes_found`` - number of genes found divided by number of genes expected (default)
+
+Locus reconstruction
+---------------------
+After the best matching locus type has been identified, Kaptive will attempt to reconstruct the biosynthetic gene
+cluster from the assembly contig sequences. For each contig where alignments were found, Kaptive will:
+
+#. Sort alignments into whether they belong to the best matching locus (expected) or not (unexpected).
+#. Cull all alignments of unexpected genes that overlap with alignments of expected genes.
+#. Cull all alignments of unexpected genes that overlap with each other.
+#. Create pieces of the locus on the contig by merging together alignment ranges of expected genes that:
+
+   * Are within the distance of the largest locus in the database.
+   * Do not extend beyond the alignment ranges of the last expected gene (prevents *Klebsiella* K-locus matches to the O-locus, which shares gene orthologs).
+#. ``GeneResult`` objects are created from the remaining alignments then evaluated.
+
+Gene evaluation
+---------------------
+For each ``GeneResult`` object, Kaptive will:
+
+#. Check whether the gene is **partial** by determining if the gene overlaps the start or end of the contig.
+#. Extract the DNA sequence from the assembly contig and translate to amino acid.
+#. Perform pairwise alignment to the reference gene amino acid sequence and calculate percent identity.
+#. Check for **truncation** by determining if the amino acid sequence length is >= 95% of the reference gene protein length.
+#. Determine whether the gene belongs to the biosynthetic gene cluster (**inside locus**) or not (**outside locus**).
+
+.. note::
+ Partial genes are *not* considered for truncation. This prevents false positive truncation calls in
+ fragmented assemblies which may otherwise have an impact on phenotype prediction.
+
+Phenotype prediction
+---------------------
+As of Kaptive 3, we have added the ability to predict the resulting phenotype of the assembly. This is similar
+to how the *Type* was reported in previous versions, but now includes the ability to predict specific phenotypes
+based on known mutations/modifications in a given set of locus genes as defined in the database logic file.
+
