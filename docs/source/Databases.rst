@@ -2,6 +2,8 @@
 Databases
 ***********
 
+.. _Locus definition:
+
 What is a locus?
 ======================
 A locus in the Kaptive sense refers to a biosynthetic gene cluster that is responsible for the synthesis of a bacterial surface
@@ -44,7 +46,8 @@ requirements:
   feature will be ignored.
 
 * If the gene has a name, it should be specified in a ``gene`` qualifier. This is not required for Kaptive to run, but if absent the gene
-  will only be named using its numbered position in the locus and it will not be checked for any specific sequence variations relevant to :ref:`phenotype prediction <Phenotype-logic>`.
+  will only be named using its numbered position in the locus and it will not be checked for any specific sequence
+  variations relevant to :ref:`phenotype prediction <Phenotype-logic>`.
 
 Example piece of input Genbank file::
 
@@ -65,13 +68,18 @@ based on the genes it finds. This was initially implemented for the *Klebsiella 
 genes outside of the locus are used to predict the O antigen (sub)type. This logic was extended to the *A. baumannii*
 K locus in Kaptive v2.0.2.
 
-In Kaptive 3, we thought about how we could extend this given what we know about truncations or other sequence variations of specific genes in the locus and the impact on the phenotype. For example, in the *Klebsiella pneumoniae* K locus, we know that a truncation of the core initiating glycosyltransferase (*wcaJ*) results in a capsule-null phenotype.
+In Kaptive 3, we thought about how we could extend this given what we know about truncations or other sequence variations
+of specific genes in the locus and the impact on the phenotype. For example, in the *Klebsiella pneumoniae* K locus,
+we know that a truncation of the core initiating glycosyltransferase (*wcaJ*) results in a capsule-null phenotype.
 
-The relevant sequence variations are detailed in the database logic files, each lablled with the same file prefix as its resppective locus database, and marked with the extension ``.logic``. Each line consists of three tab-separated columns and represents a phenotype rule:
+The relevant sequence variations are detailed in the database logic files, each lablled with the same file prefix as its
+resppective locus database, and marked with the extension ``.logic``. Each line consists of three tab-separated columns
+and represents a phenotype rule:
 
 #. **loci** - the loci the rule applies to (or *ALL* if the rule applies to all loci in the database)
 #. **genes** - the genes (and optional state) the rule applies to (or *ALL* if the rule applies to all genes in the locus)
-#. **phenotype** - the resulting phenotype that appears in the `Type` column of the Kaptive tabular output, replacing the default phenotype i.e. the one specified in the locus genbank source identifier in the matching locus databse.
+#. **phenotype** - the resulting phenotype that appears in the `Type` column of the Kaptive tabular output, replacing
+   the default phenotype i.e. the one specified in the locus genbank source identifier in the matching locus database.
 
 Let's look at an example of a logic file for the *Klebsiella pneumoniae* K locus:
 
@@ -111,6 +119,9 @@ same loci, the phenotype will instead be predicted as "O1ab".
 
 .. note::
  Default state is "presence".
+
+This logic is applied during the :ref:`phenotype prediction <Phenotype-prediction>` step of typing and is reported in
+the `Type` column of the Kaptive tabular output.
 
 Databases distributed with Kaptive
 ====================================

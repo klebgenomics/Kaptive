@@ -34,6 +34,14 @@ class TypingResultError(Exception):
 
 
 class TypingResult:
+    """
+    This is a class to store the results of a typing analysis for a single sample. It is designed to be flexible
+    enough to store results from both read and assembly typing, and can be easily reconstructed from JSON to use
+    with the `convert` utility. It should not store any information that is not directly related to the typing
+    such as contig sequences or read alignments.
+    The `scoring_args` and `confidence_args` attributes store args passed to typing pipelines at runtime and are kept
+    for debug reporting, but should not be relied on for reconstruction of this class.
+    """
     def __init__(
             self, sample_name: str | None, db: Database | None, best_match: Locus | None = None,
             score: float | None = 0, zscore: float | None = 0, pieces: list[LocusPiece] | None = None,
@@ -179,7 +187,9 @@ class TypingResult:
             raise TypingResultError(f"Best match {d['best_match']} not found in database")
         self = TypingResult(
             sample_name=d['sample_name'], db=db, best_match=best_match, score=float(d['score']),
-            zscore=float(d['zscore']), missing_genes=d['missing_genes'])
+            zscore=float(d['zscore']), scoring_args=d['scoring_args'], confidence_args=d['confidence_args'],
+            missing_genes=d['missing_genes']
+        )
 
         self.pieces = [LocusPiece.from_dict(i, result=self) for i in d['pieces']]
         pieces, gene_results = {i.__repr__(): i for i in self.pieces}, {}
@@ -200,11 +210,11 @@ class TypingResult:
 
     def as_dict(self) -> dict:
         return {
-            i: str(getattr(self, i)) for i in
-            ['score', 'zscore', 'sample_name', 'best_match', 'percent_identity', 'percent_coverage',
-             'confidence', 'phenotype', 'problems']
-        } | {
-            'pieces': [i.as_dict() for i in self.pieces],
+            'sample_name': self.sample_name, 'best_match': self.best_match.name, 'score': str(self.score),
+            'zscore': str(self.zscore), 'confidence': self.confidence, 'phenotype': self.phenotype,
+            'problems': self.problems, 'percent_identity': str(self.percent_identity),
+            'percent_coverage': str(self.percent_coverage), 'scoring_args': self.scoring_args,
+            'confidence_args': self.confidence_args, 'scores': self.scores, 'pieces': [i.as_dict() for i in self.pieces],
             'expected_genes_inside_locus': [i.as_dict() for i in self.expected_genes_inside_locus],
             'expected_genes_outside_locus': [i.as_dict() for i in self.expected_genes_outside_locus],
             'unexpected_genes_inside_locus': [i.as_dict() for i in self.unexpected_genes_inside_locus],

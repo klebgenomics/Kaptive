@@ -467,7 +467,9 @@ def get_database(argument: str) -> Path:
     """
     if (db_path := Path(argument)).is_file():
         return db_path
-    if not (dbs_in_package := list(expected_path := (Path(__file__).parent.parent / "reference_database").glob('*.gbk'))):
+
+    expected_path = (Path(__file__).parent.parent / "reference_database")
+    if not (dbs_in_package := list(expected_path.glob('*.gbk'))):
         quit_with_error(f'No databases found in expected path: {expected_path}')
 
     for db in dbs_in_package:

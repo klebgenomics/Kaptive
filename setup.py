@@ -12,9 +12,7 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-from setuptools import setup, find_packages
-from distutils.util import convert_path
-
+from setuptools import setup
 with open('README.md', 'rb') as readme:
     long_description = readme.read()
 if not isinstance(long_description, str):
@@ -22,9 +20,9 @@ if not isinstance(long_description, str):
 
 # Get the version from kaptive.__version__.py.
 __version__ = '0.0.0'
-ver_path = convert_path('kaptive/version.py')
-with open(ver_path) as ver_file:
+with open('kaptive/version.py') as ver_file:
     exec(ver_file.read())
+print(__version__)
 
 setup(
     name='kaptive',
@@ -35,14 +33,10 @@ setup(
     author='Tom Stanton',
     author_email='tomdstanton@gmail.com',
     license='GPLv3',
-    install_requires=['biopython'],
-    zip_safe=False,
-    packages=find_packages(),
-    package_data={'kaptive': ['reference_database/*', 'extras/*']},
+    install_requires=['biopython', 'dna_features_viewer'],
+    packages=['kaptive'],
+    package_data={'kaptive': ['../reference_database/*']},
+    include_package_data=True,
     package_dir={'kaptive': 'kaptive'},
-    entry_points={
-        'console_scripts': [
-            'kaptive = kaptive.__main__:main',
-        ]
-    }
+    entry_points={'console_scripts': ['kaptive = kaptive.__main__:main']}
 )

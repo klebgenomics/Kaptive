@@ -4,15 +4,15 @@ Method
 **************************************
 
 kaptive assembly
-========
+=================
 For each input assembly, Kaptive runs the ``kaptive.assembly.typing_pipeline`` which does the following:
 
 #. Aligns locus gene nucleotide sequences to the assembly contig sequences using minimap2.
-#. Identifies the best matching locus type using the `Scoring algorithm`_.
+#. Identifies the best matching locus type using the `Scoring-algorithm`_.
 #. Extracts the locus gene sequences from the assembly contig sequences.
 
+.. _Scoring-algorithm:
 
-.. _Scoring algorithm:
 Scoring algorithm
 -------------------
 #. For each locus gene, the best alignment is chosen and sorted by locus.
@@ -37,6 +37,8 @@ The weighting can be explicitly set by the flag ``--weight_metric``; the options
 * ``genes_found`` - number of genes found in the locus
 * ``prop_genes_found`` - number of genes found divided by number of genes expected (default)
 
+.. _Locus-reconstruction:
+
 Locus reconstruction
 ---------------------
 After the best matching locus type has been identified, Kaptive will attempt to reconstruct the biosynthetic gene
@@ -51,6 +53,8 @@ cluster from the assembly contig sequences. For each contig where alignments wer
    * Do not extend beyond the alignment ranges of the last expected gene (prevents *Klebsiella* K-locus matches to the O-locus, which shares gene orthologs).
 #. ``GeneResult`` objects are created from the remaining alignments then evaluated.
 
+.. _Gene-evaluation:
+
 Gene evaluation
 ---------------------
 For each ``GeneResult`` object, Kaptive will:
@@ -64,6 +68,8 @@ For each ``GeneResult`` object, Kaptive will:
 .. note::
  Partial genes are *not* considered for truncation. This prevents false positive truncation calls in
  fragmented assemblies which may otherwise have an impact on phenotype prediction.
+
+.. _Phenotype-prediction:
 
 Phenotype prediction
 ---------------------

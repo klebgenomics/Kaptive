@@ -38,7 +38,8 @@ _ASSEMBLY_HEADERS = [
     'Expected genes outside locus, details', 'Other genes outside locus', 'Other genes outside locus, details',
     'Truncated genes, details'
 ]
-_ASSEMBLY_EXTRA_HEADERS = ['Extra genes', 'Pieces, details', 'Score', 'Zscore', 'All scores', 'Args']
+_ASSEMBLY_EXTRA_HEADERS = ['Extra genes', 'Pieces, details', 'Score', 'Zscore', 'All scores', 'Scoring args',
+                           'Confidence args']
 _URL = 'https://kaptive.readthedocs.io/en/latest/'
 
 
@@ -46,7 +47,8 @@ _URL = 'https://kaptive.readthedocs.io/en/latest/'
 def parse_args(a):
     parser = argparse.ArgumentParser(
         description=get_logo('In silico serotyping'), usage="%(prog)s <command>", add_help=False,
-        prog="kaptive", formatter_class=argparse.RawDescriptionHelpFormatter, epilog=f"%(prog)s version {__version__}")
+        prog="kaptive", formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f'For more help, visit: {bold(_URL)}')
 
     subparsers = parser.add_subparsers(title=bold('Command'), dest='subparser_name', metavar="")
     assembly_subparser(subparsers)
