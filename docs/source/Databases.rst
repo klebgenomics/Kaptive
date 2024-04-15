@@ -303,6 +303,7 @@ Database versions:
   Sorbello, B. et al. Identification of further variation at the lipooligosaccharide outer core locus in
   *Acinetobacter baumannii* genomes and extension of the OCL reference sequence database for Kaptive. *In prep*.
 
+.. _Database keywords:
 
 Database keywords
 ------------------

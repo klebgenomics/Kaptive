@@ -23,6 +23,7 @@ from dna_features_viewer import GraphicFeature, GraphicRecord
 
 from kaptive.database import Database, Locus, Gene
 from kaptive.log import warning
+from kaptive.misc import str2val
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _PROTEIN_ALIGNER = PairwiseAligner(scoring='blastp', mode='local')
@@ -42,6 +43,7 @@ class TypingResult:
     The `scoring_args` and `confidence_args` attributes store args passed to typing pipelines at runtime and are kept
     for debug reporting, but should not be relied on for reconstruction of this class.
     """
+
     def __init__(
             self, sample_name: str | None, db: Database | None, best_match: Locus | None = None,
             score: float | None = 0, zscore: float | None = 0, pieces: list[LocusPiece] | None = None,
@@ -67,6 +69,9 @@ class TypingResult:
         self.scores = scores or {}
         self.scoring_args = scoring_args or {}
         self.confidence_args = confidence_args or {}
+
+    def __repr__(self):
+        return f"{self.sample_name} {self.best_match.name}"
 
     def __len__(self):
         return sum(len(i) for i in self.pieces) if self.pieces else 0
@@ -152,7 +157,7 @@ class TypingResult:
             features.extend(piece.as_GraphicFeatures(start))
             start += len(piece)
         return GraphicRecord(sequence_length=self.__len__(), first_index=0, features=features,
-                             sequence=[p.sequence for p in self.pieces])
+                             feature_level_height=1.5, sequence=[p.sequence for p in self.pieces])
 
     def as_table(self, debug: bool = False, max_scores: int = 2) -> str:
         return '\t'.join(
@@ -187,15 +192,14 @@ class TypingResult:
             raise TypingResultError(f"Best match {d['best_match']} not found in database")
         self = TypingResult(
             sample_name=d['sample_name'], db=db, best_match=best_match, score=float(d['score']),
-            zscore=float(d['zscore']), scoring_args=d['scoring_args'], confidence_args=d['confidence_args'],
-            missing_genes=d['missing_genes']
+            zscore=float(d['zscore']), scoring_args={k: str2val(v) for k, v in d['scoring_args'].items()},
+            confidence_args={k: str2val(v) for k, v in d['confidence_args'].items()}, missing_genes=d['missing_genes']
         )
 
         self.pieces = [LocusPiece.from_dict(i, result=self) for i in d['pieces']]
         pieces, gene_results = {i.__repr__(): i for i in self.pieces}, {}
         for gene_type in ['expected_genes_inside_locus', 'unexpected_genes_inside_locus',
-                          'expected_genes_outside_locus',
-                          'unexpected_genes_outside_locus', 'extra_genes']:
+                          'expected_genes_outside_locus', 'unexpected_genes_outside_locus', 'extra_genes']:
             for gene_result in d[gene_type]:
                 gene_result = GeneResult.from_dict(gene_result, result=self)
                 gene_result.piece = pieces.get(gene_result.piece.__repr__()) if gene_result.piece else None
@@ -208,13 +212,14 @@ class TypingResult:
             self.add_gene_result(gene_result)
         return self
 
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, str | list[dict[str, str] | None] | dict[str, dict[str, list[float]]]]:
         return {
             'sample_name': self.sample_name, 'best_match': self.best_match.name, 'score': str(self.score),
             'zscore': str(self.zscore), 'confidence': self.confidence, 'phenotype': self.phenotype,
-            'problems': self.problems, 'percent_identity': str(self.percent_identity),
-            'percent_coverage': str(self.percent_coverage), 'scoring_args': self.scoring_args,
-            'confidence_args': self.confidence_args, 'scores': self.scores, 'pieces': [i.as_dict() for i in self.pieces],
+            'problems': self.problems, 'scoring_args': {k: str(v) for k, v in self.scoring_args.items()},
+            'confidence_args': {k: str(v) for k, v in self.confidence_args.items()},
+            'percent_identity': str(self.percent_identity), 'percent_coverage': str(self.percent_coverage),
+            'pieces': [i.as_dict() for i in self.pieces],
             'expected_genes_inside_locus': [i.as_dict() for i in self.expected_genes_inside_locus],
             'expected_genes_outside_locus': [i.as_dict() for i in self.expected_genes_outside_locus],
             'unexpected_genes_inside_locus': [i.as_dict() for i in self.unexpected_genes_inside_locus],
@@ -260,7 +265,7 @@ class LocusPiece:
         return cls(id=d['id'], start=int(d['start']), end=int(d['end']), strand=d['strand'],
                    sequence=Seq(d['sequence']), **kwargs)
 
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, str]:
         return {
             'id': self.id, 'start': str(self.start), 'end': str(self.end), 'strand': self.strand,
             'sequence': str(self.sequence)
@@ -277,22 +282,10 @@ class LocusPiece:
         getattr(self, gene_result.gene_type).append(gene_result)
 
     def as_GraphicFeatures(self, relative_start: int = 0) -> Generator[GraphicFeature, None, None]:
-        start, end = relative_start, relative_start + len(self)
-        yield GraphicFeature(start=start, end=end, strand=1, thickness=20, color='tab:blue', label=str(self))
+        yield GraphicFeature(start=relative_start, end=relative_start + len(self), strand=1, thickness=30,
+                             color='#762a83', label=str(self), linewidth=0)
         for gene in self:  # Get relative gene start within piece
-            gene_start = start + (gene.start - self.start) if gene.strand == "+" else end - (gene.end - self.start)
-            gene_end = start + (gene.end - self.start) if gene.strand == "+" else end - (gene.start - self.start)
-            if self.strand == "+":
-                strand = gene.gene.strand if gene.strand == gene.gene.strand else gene.strand
-            else:
-                strand = gene.gene.strand if gene.strand != gene.gene.strand else gene.strand
-            yield GraphicFeature(
-                start=gene_start, end=gene_end,
-                strand=0 if gene.phenotype == "truncated" or gene.partial else 1 if strand == "+" else -1,
-                color=("green" if gene.gene_type == 'expected_genes' else "orange", gene.percent_identity / 100),
-                linecolor='red' if gene.below_threshold else "yellow" if gene.phenotype == "truncated" else 'black',
-                legend_text=gene.gene_type, label=str(gene)
-            )
+            yield gene.as_GraphicFeature(relative_start=gene.start - self.start + relative_start)
 
 
 class GeneResultError(Exception):
@@ -353,7 +346,7 @@ class GeneResult:
             **kwargs
         )
 
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, str]:
         return {
             'id': self.id, 'start': str(self.start), 'end': str(self.end), 'strand': self.strand,
             'dna_seq': str(self.dna_seq), 'protein_seq': str(self.protein_seq), 'partial': str(self.partial),
@@ -363,6 +356,17 @@ class GeneResult:
             'neighbour_left': self.neighbour_left.__repr__() if self.neighbour_left else '',
             'neighbour_right': self.neighbour_right.__repr__() if self.neighbour_right else '',
         }
+
+    def as_GraphicFeature(self, relative_start: int = 0) -> GraphicFeature:
+        # Only flip the gene feature if deviates from the expected strand
+        strand = self.gene.strand if self.strand == self.gene.strand else self.strand
+        return GraphicFeature(
+            start=relative_start, end=relative_start + len(self), legend_text=self.gene_type, label=str(self),
+            strand=0 if self.phenotype == "truncated" or self.partial else 1 if strand == "+" else -1,
+            thickness=40, linewidth=3,
+            color=('#762a83' if self.gene_type == 'expected_genes' else "orange", self.percent_identity / 100),
+            linecolor='red' if self.below_threshold else "yellow" if self.phenotype == "truncated" else 'black'
+        )
 
     def extract_translation(self, frame: int = 0, **kwargs):
         """

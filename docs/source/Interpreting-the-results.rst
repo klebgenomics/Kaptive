@@ -20,58 +20,35 @@ Confidence score
 Kaptive will indicate the best matching locus and its confidence in the locus match.
 
 
-Good confidence loci  
+Typeable loci
 ---------------------
 
-The locus was found in a single piece in the query assembly with:
+The locus was found in a single piece in the query assembly with no genes below the minimum translated identity
+according to the :ref:`locus thresholds <Locus definition>` and:
 
-* no missing genes (as determined by at least 50% nucletide mapping coverage)  
-* no unexpected genes (genes from other loci) inside the locus region of the assembly  
-* no genes below the minimum translated identity threshold (82.5% for *K. pneumoniae*, 85% for *A. baumanii*)  
-* at least 90% overall nucletide identity.  
+* no missing genes (as determined by at least 50% nucleotide mapping coverage)
+* no unexpected genes (genes from other loci) inside the locus region of the assembly
 
-OR
+**OR**
 
-The locus was found in more than one piece in the query assembly with:
+The locus was found in more than one piece in the query assembly with no genes below the minimum translated identity
+according to the :ref:`locus thresholds <Locus definition>` and:
 
 * no more than 1 missing gene  
-* no more than 1 unespected gene (genes from other loci) inside the locus region of the assembly  
-* no genes below the minimum translated identity threshold  
-* at least 90% overall nucletide identity.
+* no more than 1 unexpected gene (genes from other loci) inside the locus region of the assembly
 
 These criteria were designed in consideration of the locus definition rules (i.e. that each locus represents a unique set of genes defined at a givin minimum translated identity threshold) and following systematic analysis of Kaptive outputs for draft genome assemblies compared against manually confirmed loci determined from matched completed genomes.
 
 We allow some flexibility with regards to missing genes or additional genes found within the locus when this region of the query assembly is fragmented, because it can be difficult to distinguish genuine from spurious matches for fragmented genes. Fragmentation is common among *K. pneumoanie* K-loci, particularly when the genomes were sequenced using the Illumina technology with the Illumina XT library prep (see :ref:`FAQs<fragmented-Klebs-faq>` for more details).  
 
 
-Low confidence loci
------------------------
-
-The locus was found in a single piece in the query assembly with: 
-
-* no missing genes (as determined by at least 50% nucletide mapping coverage)  
-* no unexpected genes (genes from other loci) inside the locus region of the assembly  
-* no genes below the minimum translated identity threshold (82.5% for *K. pneumoniae*, 85% for *A. baumanii*)  
-* less than 90% overall nucletide identity.  
-
-OR
-
-The locus was found in more than one piece in the query assembly with:
-
-* no more than 1 missing gene  
-* no more than 1 unespected gene (genes from other loci) inside the locus region of the assembly  
-* no genes below the minimum translated identity threshold  
-* less than 90% overall nucletide identity.  
-
-These criteria are essentially the same as those for ``good`` matches, with exception that overall nucleotide identity is below 90%. This reflects our observations from systematic testing where correctly identified loci generally share >90% identity with the reference locus, while novel loci generally had lower identity. However, based on the locus definition rules (where minimum gene identities are set at 82-85%), it is technically possible for an assembly to carry a locus matching the reference with <90% nucleotide identity. 
-
-**We therefore recommend that users investigate low confidence hits** through inspection of the rest of the Kaptive output and/or investiogations with other tools. For well characterised loci such as the *K. pneumoniae* K/O loci and *A. baumanii* K/OC loci, we expect only a minority of genomes to return a ``low`` confidence match.
 
 
 Untypeable loci
 -----------------------
 
-These are loci that do not meet the above criteria. **We recommend that users do not accept these results** unless they are able to perform manual exploration of the data.
+These are loci that do not meet the above criteria. **We recommend that users do not accept these results** unless
+they are able to perform manual exploration of the data.
 
 
 Problems

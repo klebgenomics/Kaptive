@@ -48,14 +48,9 @@ Here we have told Kaptive to perform typing of assemblies with ``assembly`` and 
 ``kpsc_k`` to specify the *Klebsiella pneumoniae* K-locus database. All other parameters are set to the default.
 
 
-Database keywords are a handy short-cut for using the databases distributed with Kaptive and located in the ``reference_databases`` directory.
+Database keywords are a handy short-cut for using the databases distributed with Kaptive and located in
+the ``reference_databases`` directory. For available database keywords, see :ref:`Database keywords`.
 
-Available keywords are as follows:
-
-* ``kpsc_k`` - *Klebsiella pneumoniae* Species Complex K-loci (encode the capsular polysaccharide)
-* ``kpsc_o`` - *Klebsiella pneumoniae* Species Complex O-loci (encode the outer lipopolysaccharide, O-antigen)
-* ``ab_k`` - *Acinetobacter baumanii* K-loci (encode the capsular polysaccharide)
-* ``ab_oc`` - *Acinetobacter baumanii* OC-loci (encode the outer lipopolysaccharide, OC-antigen)
 
 Alternatively, you can specify the full path to your own database.
 
@@ -92,10 +87,9 @@ Scoring options::
 Confidence options::
 
      --gene-threshold      Minimum translated gene identity required for expected genes (default: database specific)
-     --allow-below-threshold     Ignore minimum gene identiy threshold
-     --percent-expected-genes     Minimum perecentage of expected genes required to consider a locus typeable (applies to fragmented loci only, default: 50)
+     --allow-below-threshold     Ignore minimum gene identity threshold
+     --percent-expected-genes     Minimum percentage of expected genes required to consider a locus typeable (applies to fragmented loci only, default: 50)
      --max-other-genes     Maximum number of other genes in locus permitted for typeable loci (applies to fragmented loci only, default: 1)
-     --locus-identity      Minimum overall locus identity required for 'good' confidence locus matches (default: 90)
 
 
 Database options::

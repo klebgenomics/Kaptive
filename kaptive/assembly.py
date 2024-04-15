@@ -237,7 +237,7 @@ def typing_pipeline(
         # FINALISE CONTIG ---------------------------------------------------------------------------------------------
         for piece in pieces:  # Add sequences to pieces and add them to the result
             piece.strand = "+" if max(i.strand == i.gene.strand for i in piece.expected_genes) else "-"
-            piece.dna_seq = contig.sequence[piece.start:piece.end] if piece.strand == "+" else \
+            piece.sequence = contig.sequence[piece.start:piece.end] if piece.strand == "+" else \
                 contig.sequence[piece.start:piece.end].reverse_complement()
             result.pieces.append(piece)  # Add the piece to the result
     # FINALISE RESULT -------------------------------------------------------------------------------------------------
