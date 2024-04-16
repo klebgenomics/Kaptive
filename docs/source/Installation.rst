@@ -25,4 +25,3 @@ With pip::
 With conda::
 
    conda install -c bioconda kaptive
-

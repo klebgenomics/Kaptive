@@ -1,4 +1,3 @@
-
 **************************************
 Interpreting the results
 **************************************
@@ -73,4 +72,3 @@ Many users will not want or need to look beyond the columns described above. How
 
 
 See the `tutorials <https://klebnet.org/training/>`_ for our tips on investigating loci in more detail outside of Kaptive.
-

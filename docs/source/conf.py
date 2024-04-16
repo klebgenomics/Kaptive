@@ -12,6 +12,7 @@ author = 'Tom Stanton'
 release = '3.0.0'
 version = '3.0.0'
 
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -23,10 +24,8 @@ html_theme_options = {
     "show_toc_level": 3,
     "home_page_in_toc": True,
     "navigation_depth": 4
+
 }
 html_static_path = ['_static']
 html_logo = 'https://github.com/klebgenomics/Kaptive/blob/master/extras/kaptive_logo.png?raw=true'
 html_favicon = 'https://github.com/klebgenomics/Kaptive-Web/blob/master/static/images/favicon.png?raw=true'
-
-# -- Options for PDF output --------------------------------------------------
-pdf_documents = [('index', u'Kaptive', u'Kaptive', u'Tom Stanton, Ryan Wick, Kathryn Holt, Kelly Wyres'),]
