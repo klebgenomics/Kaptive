@@ -16,8 +16,13 @@ Kaptive requires the following software and libraries to be installed and availa
 Download and install Kaptive
 =============================
 
-.. code-block:: bash
+With pip::
 
    git clone https://github.com/klebgenomics/Kaptive.git
    pip install Kaptive/
+
+
+With conda::
+
+   conda install -c bioconda kaptive
 

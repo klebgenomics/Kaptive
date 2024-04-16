@@ -302,7 +302,7 @@ Database versions:
   Sorbello, B. et al. Identification of further variation at the lipooligosaccharide outer core locus in
   *Acinetobacter baumannii* genomes and extension of the OCL reference sequence database for Kaptive. *In prep*.
 
-.. _Database keywords:
+.. _Database-keywords:
 
 Database keywords
 ------------------
@@ -327,21 +327,70 @@ Database                                                      Keywords
 *Acinetobacter baumannii* OC locus primary reference database - ab_o
 ============================================================= ===================
 
+.. _kaptive-extract:
+
 Extract
 ====================================
 Kaptive 3.0.0 and above include a new command-line option ``--extract`` that allows you to extract features
-from a Kaptive database in a number of desired formats.
-This is useful for performing investigations on your own samples after a Kaptive typing run.
+from a Kaptive database in the following formats:
 
-.. _database_options:
+* **loci**: Locus nucleotide sequences in fasta (fna) format.
+* **genes**: Gene nucleotide sequences in fasta (fna) format.
+* **proteins**: Protein sequences in fasta (faa) format.
+* **genbank**: Genbank format (same as input but optionally filtered).
 
-Database-specific options
---------------------------
-All Kaptive modes that accept a database as input have the following options when parsing the database:
+Simple usage is as follows::
 
-* ``--locus-regex`` - Pattern to match locus names in db source note (default: ``'(?<=locus:)\w+|(?<=locus: ).*'``)
-* ``--type-regex`` - Pattern to match locus types in db source note (default: ``'(?<=type:)\w+|(?<=type: ).*'``)
-* ``--filter`` - Pattern to select loci to include in the database (default: all loci)
+    kaptive extract <db> <format> [options]
 
-These options are useful for customising the database to your needs, for example, to include only a subset of loci or
-to change the way locus names and types are parsed from the source note.
+For example, If I wanted to extract the gene nucleotide sequences from the *Klebsiella pneumoniae* K locus primary
+reference database in fasta format, I would run::
+
+    kaptive extract kp_k loci > k_loci.fna
+
+If I wanted to extract all protein sequences from KL1 and KL2, I would run::
+
+    kaptive extract kp_k proteins --filter "^KL(1|2)$" > KL1_KL2_proteins.faa
+
+If I wanted to do the same but output each locus to a separate file, I would run::
+
+    kaptive extract kp_k proteins --filter "^KL(1|2)$" -d KL1_KL2_proteins
+
+Which would create two files: ``KL1.faa`` and ``KL2.faa``.
+
+Inputs::
+
+  db path/keyword  Kaptive database path or keyword
+  format           Format to extract database
+                    - loci: Loci (fasta nucleotide)
+                    - genes: Genes (fasta nucleotide)
+                    - proteins: Proteins (fasta amino acid)
+                    - genbank: Genbank format
+
+.. note::
+  Combine with ``--filter`` to select loci
+
+Output options::
+
+  -o , --out       Output file to write/append loci to (default: stdout)
+  -d , --outdir    Output directory for converted results
+                    - Note: This forces the output to be written to files (instead of stdout)
+                            and one file will be written per locus.
+
+.. _Database-options:
+
+Database options::
+
+  --locus-regex    Python regular-expression to match locus names in db source note
+  --type-regex     Python regular-expression to match locus types in db source note
+  --filter         Python regular-expression to select loci to include in the database
+
+.. note::
+ These options are useful for customising the database to your needs, for example, to include only a subset of loci or
+ to change the way locus names and types are parsed from the source note.
+
+Other options::
+
+  -V, --verbose    Print debug messages to stderr
+  -v , --version   Show version number and exit
+  -h , --help      Show this help message and exit

@@ -43,36 +43,53 @@ This allows you to run Kaptive in parallel on many assemblies, all outputting to
 
 To disable the tabular output, simply redirect the output to ``/dev/null``.
 
-
-
 .. _Fasta:
 
 Fasta
 ==============
-The ``--fasta`` flag produces a fasta file of the region(s) of the assembly which correspond to the best
+The ``-f/--fasta`` flag produces a fasta file of the region(s) of the assembly which correspond to the best
 locus match. This may be a single piece (in cases of a good assembly and a strong match) or it may be in multiple
 pieces (in cases of poor assembly and/or a novel locus). The file is named using the output prefix and the assembly name.
 
 The default is to write this file to the current directory with the name: ``{assembly}_kaptive_results.fna``,
-however the output directory can be specified after the flag.
+however the output directory can be specified after the flag, for example::
+
+        kaptive -a assembly.fasta --fasta my_kaptive_fasta/
 
 .. _JSON:
 
 JSON
 ==============
-The ``--json`` flag produces a JSON file of the results which allows Kaptive to reconstruct the ``TypingResult`` objects
-after a run. Unlike previous version (2 and below), this is a JSON lines file, where each line is a JSON object
-representing the results for a single assembly.
+The ``-j/--json`` flag produces a JSON file of the results which allows Kaptive to reconstruct
+the ``TypingResult`` objects after a run which can be used with :ref:`kaptive-convert`.
+Unlike previous version (2 and below), this is a JSON lines file, where each line is a JSON object
+representing the results for a single assembly. If the file already exists, Kaptive will append to it (not overwrite it).
 
-The default is to write this file to: ``kaptive_results.json``, however the path can be specified after the flag.
-If the file already exists, Kaptive will append to it (not overwrite it).
+The default is to write this file to: ``kaptive_results.json``, however the path can be specified after the flag,
+for example::
+
+        kaptive -a assembly.fasta --json my_kaptive_results.json
+
 
 .. _Plot:
 
 Plot
 ==============
 Kaptive can now produce a visual representation of the locus match in the assembly. This is done using the
-``--plot`` flag, which produces a plot in the format specified by the ``--plot-fmt`` flag (default: png).
-
+``-p/--plot`` flag, which produces a plot in the format specified by the ``--plot-fmt`` flag (default: png).
 The default is to write this file to the current directory with the name: ``{assembly}_kaptive_results.{fmt}``,
-however the output directory can be specified after the flag.
+however the output directory can be specified after the flag, for example::
+
+        kaptive -a assembly.fasta --plot my_kaptive_plots/
+
+.. image:: example_plot.png
+   :width: 1000
+   :align: center
+
+The plot is a visual representation of the locus genes and the corresponding assembly contig pieces.
+
+* The gene transparencies are based on the protein percent identity.
+* The contig transparencies are based on the final percent identity.
+* Unexpected genes are shown in orange.
+* Genes are blunt and outlined in yellow if they are truncated.
+* Genes are outlined in red if they are below the gene identity threshold.

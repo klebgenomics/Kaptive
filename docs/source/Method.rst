@@ -40,17 +40,11 @@ The weighting can be explicitly set by the flag ``--weight_metric``; the options
 
 Locus reconstruction
 ---------------------
-After the best matching locus type has been identified, Kaptive will attempt to reconstruct the biosynthetic gene
-cluster from the assembly contig sequences. For each contig where alignments were found, Kaptive will:
+After the best matching locus type has been identified, Kaptive will:
 
-#. Sort alignments into whether they belong to the best matching locus (expected) or not (unexpected).
-#. Cull all alignments of unexpected genes that overlap with alignments of expected genes.
-#. Cull all alignments of unexpected genes that overlap with each other.
-#. Create pieces of the locus on the contig by merging together alignment ranges of expected genes that:
-
-   * Are within the distance of the largest locus in the database.
-   * Do not extend beyond the alignment ranges of the last expected gene (prevents *Klebsiella* K locus matches to the O locus, which shares gene orthologs).
-#. ``GeneResult`` objects are created from the remaining alignments then evaluated.
+#. Align the best matching locus nucleotide sequence to the assembly contig sequences using minimap2.
+#. Create pieces of the locus on the contig by merging together ranges of the alignments that are within the distance
+   of the largest locus in the database.
 
 .. _Gene-evaluation:
 

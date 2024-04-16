@@ -124,7 +124,7 @@ def assembly_subparser(subparsers):
     # opts.add_argument('-@', '--mp', const=8, nargs='?', type=int, metavar='#',
     #                   help="Process multiple samples in parallel, optionally pass max workers (default: %(const)s)")
     opts.add_argument('-t', '--threads', type=check_cpus, default=check_cpus(None), metavar='',
-                      help="Number of threads for alignment (default: %(default)s)")
+                      help="Number of threads for alignment (default: maximum available CPUs)")
 
 
 # def reads_subparser(subparsers):
@@ -154,17 +154,17 @@ def extract_subparser(subparsers):
         help='Extract entries from a Kaptive database', usage="kaptive extract <db> <format> [options]")
     opts = extract_parser.add_argument_group(bold('Inputs'), "\n - Note: combine with --filter to select loci")
     opts.add_argument('db', type=get_database, metavar='db path/keyword', help='Kaptive database path or keyword')
-    opts.add_argument('format', choices=['loci', 'genes', 'proteins', 'genbank', 'gff'], metavar='format',
+    opts.add_argument('format', choices=['loci', 'genes', 'proteins', 'genbank'], metavar='format',
                       help='Format to extract database\n - loci: Loci (fasta nucleotide)\n'
                            ' - genes: Genes (fasta nucleotide)\n - proteins: Proteins (fasta amino acid)\n'
-                           ' - genbank: Genbank format\n - gff: GFF in NCBI format')
+                           ' - genbank: Genbank format')
     opts = extract_parser.add_argument_group(bold('Output options'), "")
     opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
-                      help='Output file (default: stdout)')
+                      help='Output file to write/append loci to (default: stdout)')
     opts.add_argument('-d', '--outdir', metavar='', type=check_dir,
                       help='Output directory for converted results\n'
-                           ' - Note: This forces the output to be written to files\n'
-                           '         If one file will be written per locus'
+                           ' - Note: This forces the output to be written to files (instead of stdout)\n'
+                           '         and one file will be written per locus.'
                       )
     opts = extract_parser.add_argument_group(bold('Database options'), "")
     db_opts(opts)
@@ -182,20 +182,21 @@ def convert_subparser(subparsers):
         # "\n - Note: If you used --is-seqs during the run, make sure to provide the same fasta file here"
     )
     opts.add_argument('db', type=get_database, metavar='db path/keyword', help='Kaptive database path or keyword')
-    opts.add_argument('input', help='Kaptive JSON file or - for stdin', type=argparse.FileType('rt'), metavar='json')
+    opts.add_argument('input', help='Kaptive JSON lines file or - for stdin', type=argparse.FileType('rt'),
+                      metavar='json')
     opts.add_argument('format', metavar='format',
-                      choices=['json', 'tsv', 'locus', 'genes', 'proteins', 'png', 'svg'],
+                      choices=['json', 'tsv', 'loci', 'genes', 'proteins', 'png', 'svg'],
                       help='Output format\n'
-                           ' - json: JSON format (same as input but optionally filtered)\n'
+                           ' - json: JSON lines format (same as input but optionally filtered)\n'
                            ' - tsv: Tab-separated values (results table)\n'
-                           ' - locus: Locus nucleotide sequence in fasta format\n'
+                           ' - loci: Locus nucleotide sequence in fasta format\n'
                            ' - proteins: Locus proteins in fasta format\n - genes: Locus genes in fasta format\n'
                            ' - png: Locus plot in PNG format\n - svg: Locus plot in SVG format'
                       )
     opts = convert_parser.add_argument_group(bold('Filter options'),
                                              "\n - Note: filters take precedence in descending order")
     opts.add_argument('-r', '--regex', metavar='', type=re.compile,
-                      help='Regex to filter the results')
+                      help='Python regular-expression to select JSON lines (default: All)')
     opts.add_argument('-l', '--loci', metavar='', nargs='+',
                       help='Space-separated list to filter locus names (default: All)')
     opts.add_argument('-s', '--samples', metavar='', nargs='+',
@@ -203,7 +204,7 @@ def convert_subparser(subparsers):
 
     opts = convert_parser.add_argument_group(bold('Output options'), "")
     opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
-                      help='Output file (default: stdout)\n'
+                      help='Output file to write/append results to (default: stdout)\n'
                            ' - Note: Only for text formats, figures will be written to files')
     opts.add_argument('-d', '--outdir', metavar='', type=check_dir,
                       help='Output directory for converted results\n'
@@ -218,27 +219,27 @@ def convert_subparser(subparsers):
 
 def db_opts(opts: argparse.ArgumentParser):
     opts.add_argument('--locus-regex', type=re.compile, metavar='',
-                      help=f'Pattern to match locus names in db source note')
+                      help=f'Python regular-expression to match locus names in db source note')
     opts.add_argument('--type-regex', type=re.compile, metavar='',
-                      help=f'Pattern to match locus types in db source note')
+                      help=f'Python regular-expression to match locus types in db source note')
     opts.add_argument('--filter', type=re.compile, metavar='',
-                      help='Pattern to select loci to include in the database')
+                      help='Python regular-expression to select loci to include in the database')
 
 
 def output_opts(opts: argparse.ArgumentParser):
-    opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
-                      help='Output file (default: stdout)')
-    opts.add_argument('-f', '--fasta', metavar='', nargs='?', default=None, const='.', type=check_dir,
-                      help='Output locus sequence to "{input}_kaptive_results.fna"\n'
-                           ' - Optionally pass output directory (default: cwd)')
-    opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const='kaptive_results.json',
+    opts.add_argument('-o', '--out', metavar='file', default=sys.stdout, type=argparse.FileType('at'),
+                      help='Output file to write/append tabular results to (default: stdout)')
+    opts.add_argument('-f', '--fasta', metavar='dir', nargs='?', default=None, const='.', type=check_dir,
+                      help='Turn on fasta output, defaulting "{input}_kaptive_results.fna"\n'
+                           ' - Optionally choose the output directory (default: cwd)')
+    opts.add_argument('-j', '--json', metavar='file', nargs='?', default=None, const='kaptive_results.json',
                       type=argparse.FileType('at'),
-                      help='Output results to JSON lines\n'
-                           ' - Optionally pass file name (default: %(const)s)')
-    opts.add_argument('-p', '--plot', metavar='', nargs='?', default=None, const='.', type=check_dir,
-                      help='Output locus plots to "{input}_kaptive_results.{fmt}"\n'
-                           ' - Optionally pass output directory (default: cwd)')
-    opts.add_argument('--plot-fmt', default='png', metavar='png,svg',
+                      help='Turn on JSON lines output\n'
+                           ' - Optionally choose file (can be existing) (default: %(const)s)')
+    opts.add_argument('-p', '--plot', metavar='dir', nargs='?', default=None, const='.', type=check_dir,
+                      help='Turn on plot output, defaulting to "{input}_kaptive_results.{fmt}"\n'
+                           ' - Optionally choose the output directory (default: cwd)')
+    opts.add_argument('--plot-fmt', default='png', metavar='png,svg', choices=['png', 'svg'],
                       help='Format for locus plots (default: %(default)s)')
     # opts.add_argument('--bokeh', action='store_true', help='Plot locus figures using bokeh')
     opts.add_argument('--no-header', action='store_true', help='Suppress header line')
@@ -266,7 +267,7 @@ def plot_result(result: TypingResult, outdir: Path, fmt: str):
     """
     Convienence function to plot a TypingResult and save to file
     """
-    ax = result.as_GraphicRecord().plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
+    ax = result.as_graphic_record().plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
     ax.set_title(  # Add title to figure
         f"{result.sample_name} {result.best_match} ({result.phenotype}) - {result.confidence}")
     ax.figure.savefig(outdir / f'{result.sample_name}_kaptive_results.{fmt}', bbox_inches='tight')
@@ -323,11 +324,9 @@ def main():
                     format_func, ext = locus.as_gene_fasta, 'ffn'
                 elif args.format == 'proteins':
                     format_func, ext = locus.as_protein_fasta, 'faa'
-                elif args.format == 'gff':
-                    format_func, ext = locus.as_gff_string, 'gff'
                 else:
                     quit_with_error(f"Invalid format: {args.format}")
-                if args.outdir:  # Output se
+                if args.outdir:  # Perform a replacement "/" with "_" here as some O-loci names have '/'
                     (args.outdir / f'{locus.name.replace("/", "_")}.{ext}').write_text(format_func())
                 else:
                     args.out.write(format_func())
@@ -348,20 +347,20 @@ def main():
                     if args.loci and d['best_match'] not in args.loci:
                         return
                     result = TypingResult.from_dict(d, args.db)
-                    if args.format == 'locus':  # Create and write locus pieces to fasta file
+                    if args.format == 'loci':  # Create and write locus pieces to fasta file
                         if args.outdir:
                             (args.outdir / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
                         else:
                             args.out.write(result.as_fasta())
                     elif args.format == 'genes':
                         if args.outdir:
-                            (args.outdir / f'{result.sample_name}_kaptive_results_genes.ffn').write_text(
+                            (args.outdir / f'{result.sample_name}_kaptive_results.ffn').write_text(
                                 result.as_gene_fasta())
                         else:
                             args.out.write(result.as_gene_fasta())
                     elif args.format == 'proteins':
                         if args.outdir:
-                            (args.outdir / f'{result.sample_name}_kaptive_results_proteins.faa').write_text(
+                            (args.outdir / f'{result.sample_name}_kaptive_results.faa').write_text(
                                 result.as_protein_fasta())
                         else:
                             args.out.write(result.as_protein_fasta())

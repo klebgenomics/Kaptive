@@ -14,7 +14,7 @@ The four most important columns in the Kaptive :ref:`tabular <Tabular>` output:
   The ``Match confidence`` relates to the locus match, and is not a direct indication of confidence in the ``Best match type``.  
 
 
-.. Confidence-score:
+.. _Confidence-score:
 
 Confidence score  
 =================

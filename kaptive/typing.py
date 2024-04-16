@@ -69,6 +69,12 @@ class TypingResult:
         self.scores = scores or {}
         self.scoring_args = scoring_args or {}
         self.confidence_args = confidence_args or {}
+        # Below are cached properties that are calculated once if these are set to None
+        self._percent_identity = None
+        self._percent_coverage = None
+        self._phenotype = None
+        self._problems = None
+        self._confidence = None
 
     def __repr__(self):
         return f"{self.sample_name} {self.best_match.name}"
@@ -94,15 +100,21 @@ class TypingResult:
 
     @cached_property  # Cache the percent identity so it is only calculated once
     def percent_identity(self) -> float:
+        if self._percent_identity is not None:
+            return self._percent_identity
         return (sum(i.percent_identity for i in x) / len(x)) if (x := self.expected_genes_inside_locus) else 0
 
     @cached_property  # Cache the percent coverage so it is only calculated once
     def percent_coverage(self) -> float:
+        if self._percent_coverage is not None:
+            return self._percent_coverage
         return sum(len(i) for i in x) / sum(len(i) for i in self.best_match.genes.values()) * 100 \
             if (x := self.expected_genes_inside_locus) else 0
 
     @cached_property  # Cache the phenotype so it is only calculated once
     def phenotype(self) -> str:
+        if self._phenotype is not None:
+            return self._phenotype
         gene_phenotypes = set()  # Init set to store gene phenotypes to be used as a key in the phenotypes dict
         for gene in self:
             if gene.gene_type in {'expected_genes', 'extra_genes'}:  # The reported phenotype only considers expected
@@ -116,6 +128,8 @@ class TypingResult:
 
     @cached_property
     def problems(self) -> str:
+        if self._problems is not None:
+            return self._problems
         problems = f'?{x}' if (x := len(self.pieces)) > 1 else ''
         problems += '-' if self.missing_genes else ''
         problems += '+' if self.unexpected_genes_inside_locus else ''
@@ -126,6 +140,8 @@ class TypingResult:
 
     @cached_property  # Cache the confidence so it is only calculated once
     def confidence(self) -> str:
+        if self._confidence is not None:
+            return self._confidence
         percent_expected_genes = len(self.expected_genes_inside_locus) / len(self.best_match.genes) * 100
         other_genes = len([i for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"])
         if not self.confidence_args['allow_below_threshold'] and "*" in self.problems:
@@ -151,7 +167,7 @@ class TypingResult:
         """Returns a fasta-formatted protein sequence of the locus genes with a newline character at the end."""
         return "".join(i.as_protein_fasta() for i in self)
 
-    def as_GraphicRecord(self) -> GraphicRecord:
+    def as_graphic_record(self) -> GraphicRecord:
         features, start = [], 0
         for piece in self.pieces:
             features.extend(piece.as_GraphicFeatures(start))
@@ -195,17 +211,22 @@ class TypingResult:
             zscore=float(d['zscore']), scoring_args={k: str2val(v) for k, v in d['scoring_args'].items()},
             confidence_args={k: str2val(v) for k, v in d['confidence_args'].items()}, missing_genes=d['missing_genes']
         )
-
+        # Set the cached properties
+        self._percent_identity = float(d['percent_identity'])
+        self._percent_coverage = float(d['percent_coverage'])
+        self._phenotype = d['phenotype']
+        self._problems = d['problems']
+        self._confidence = d['confidence']
+        # Add the pieces and create the gene results
         self.pieces = [LocusPiece.from_dict(i, result=self) for i in d['pieces']]
-        pieces, gene_results = {i.__repr__(): i for i in self.pieces}, {}
-        for gene_type in ['expected_genes_inside_locus', 'unexpected_genes_inside_locus',
-                          'expected_genes_outside_locus', 'unexpected_genes_outside_locus', 'extra_genes']:
-            for gene_result in d[gene_type]:
-                gene_result = GeneResult.from_dict(gene_result, result=self)
-                gene_result.piece = pieces.get(gene_result.piece.__repr__()) if gene_result.piece else None
-                gene_result.gene = db.genes.get(gene_result.gene)
-                gene_results[gene_result.__repr__()] = gene_result
-
+        pieces = {i.__repr__(): i for i in self.pieces}
+        gene_results = {
+            (x := GeneResult.from_dict(
+                r, result=self, piece=pieces.get(r['piece']), gene=db.genes.get(r['gene']))
+             ).__repr__(): x for r in chain(d['expected_genes_inside_locus'], d['unexpected_genes_inside_locus'],
+                                            d['expected_genes_outside_locus'], d['unexpected_genes_outside_locus'],
+                                            d['extra_genes'])}
+        # Add gene result neighbours and add to the typing result
         for gene_result in gene_results.values():
             gene_result.neighbour_left = gene_results.get(gene_result.neighbour_left.__repr__())
             gene_result.neighbour_right = gene_results.get(gene_result.neighbour_right.__repr__())
@@ -340,10 +361,7 @@ class GeneResult:
             id=d['id'], start=int(d['start']), end=int(d['end']), strand=d['strand'], dna_seq=Seq(d['dna_seq']),
             protein_seq=Seq(d['protein_seq']), below_threshold=True if d['below_threshold'] == 'True' else False,
             phenotype=d['phenotype'], gene_type=d['gene_type'], partial=True if d['partial'] == 'True' else False,
-            percent_identity=float(d['percent_identity']), percent_coverage=float(d['percent_coverage']),
-            # The string attributes below are placeholders for the actual objects, they will be set later
-            piece=d['piece'], neighbour_left=d['neighbour_left'], neighbour_right=d['neighbour_right'], gene=d['gene'],
-            **kwargs
+            percent_identity=float(d['percent_identity']), percent_coverage=float(d['percent_coverage']), **kwargs
         )
 
     def as_dict(self) -> dict[str, str]:
