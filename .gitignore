@@ -32,8 +32,11 @@ setuptools*.zip
 # PyCharm
 .idea/
 
-# Testing Folder
-testing/
+# Test Folder
+test/
+
+# Experimental modules
+kaptive/build.py
 
 # Script Folder
 scripts/
