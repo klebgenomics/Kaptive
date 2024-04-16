@@ -1,41 +1,27 @@
-====================================
+**************************************
 Installation
-====================================
+**************************************
 
-Kaptive should work on both Python 2 and 3, but we run/test it on Python 3 and recommend you do the same.
+Dependencies
+=============
 
-Clone and run
-=================
+Kaptive requires the following software and libraries to be installed and available in your path:
 
-Kaptive is a single Python script, so you can simply clone (or download) from GitHub and run it. Kaptive depends on
-`Biopython <http://biopython.org/wiki/Main_Page>`_, so make sure it's installed (either ``pip3 install biopython`` or
-read detailed instructions `here <http://biopython.org/DIST/docs/install/Installation.html>`_.
+* `Python <https://python.org/>`_ >=3.9
+* `Biopython <https://biopython.org/>`_ >=1.83
+* `minimap2 <https://lh3.github.io/minimap2/>`_.
+* `DNA Features Viewer <https://edinburgh-genome-foundry.github.io/DnaFeaturesViewer/>`_
 
-.. code-block:: bash
 
- git clone https://github.com/klebgenomics/Kaptive.git
- Kaptive/kaptive.py -h
+Download and install Kaptive
+=============================
 
-Install with pip
-====================
+With pip::
 
-Alternatively, you can install Kaptive using `pip <https://pip.pypa.io/en/stable/>`_.
-This will take care of the Biopython requirement (if necessary) and put the ``kaptive.py`` script in your PATH for easy
-access. Pip installing will *not* provide the reference databases, so you'll need to download them separately from
-`here <https://github.com/katholt/Kaptive/tree/master/reference_database>`_.
+   git clone https://github.com/klebgenomics/Kaptive.git
+   pip install Kaptive/
 
-.. code-block:: bash
 
- pip install kaptive
- kaptive.py -h
+With conda::
 
-Other dependencies
-======================
-
-Regardless of how you download/install Kaptive, it requires that `BLAST+ <http://www.ncbi.nlm.nih.gov/books/NBK279690/>`_
-is available on the command line (specifically the commands ``makeblastdb``, ``blastn`` and ``tblastn``).
-BLAST+ can usually be easily installed using a package manager such as `Homebrew <http://brew.sh/>`_ (on Mac) or
-`apt-get <https://help.ubuntu.com/community/AptGet/Howto>`_ (on Ubuntu and related Linux distributions). Some later
-versions of BLAST+ have been associated with sporadic crashes when running tblastn with multiple threads; to avoid this
-problem we recommend running Kaptive with BLAST+ v 2.3.0 or using the ``--threads 1`` option (see below for full command
-argument details).
+   conda install -c bioconda kaptive

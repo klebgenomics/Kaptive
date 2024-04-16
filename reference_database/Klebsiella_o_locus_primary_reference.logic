@@ -1,27 +1,8 @@
-locus	extra_loci	type
-O1/O2v1	None	O2a
-O1/O2v2	None	O2afg
-O1/O2v3	None	O2a
-O8	None	O2a
-O1/O2v1	wbbY	O1a
-O1/O2v2	wbbY	O1a
-O1/O2v3	wbbY	O1a
+loci	genes	phenotype
+O1/O2v1;O1/O2v2;O1/O2v3	wbbY	O1a
+O1/O2v1;O1/O2v2;O1/O2v3	wbbY;wbbZ	O1ab
 O8	wbbY	O8
-O1/O2v1	wbmVW	O2ac
-O1/O2v2	wbmVW	O2ac
-O1/O2v3	wbmVW	O2ac
-O8	wbmVW	O2ac
-O1/O2v1	gmlABD	O2aeh
-O1/O2v2	gmlABD	O2aeh
-O1/O2v3	gmlABD	O2aeh
-O8	gmlABD	O2aeh
-O1/O2v1	wbbY,wbmVW	O1a (O2ac)
-O1/O2v2	wbbY,wbmVW	O1a (O2ac)
-O1/O2v3	wbbY,wbmVW	O1a (O2ac)
-O8	wbbY,wbmVW	O1a (O2ac)
-O1/O2v1	wbbY,wbbZ	O1ab
-O1/O2v2	wbbY,wbbZ	O1ab
-O1/O2v3	wbbY,wbbZ	O1ab
-O1/O2v1	wbbY,wbbZ,wbmVW	O1ab (O2ac)
-O1/O2v2	wbbY,wbbZ,wbmVW	O1ab (O2ac)
-O1/O2v3	wbbY,wbbZ,wbmVW	O1ab (O2ac)
+O1/O2v1;O1/O2v2;O1/O2v3;O8	wbmV;wbmW	O2ac
+O1/O2v1;O1/O2v2;O1/O2v3;O8	gmlA;gmlB;gmlD	O2aeh
+O1/O2v1;O1/O2v2;O1/O2v3;O8	wbbY;wbmV;wbmW	O1a (O2ac)
+O1/O2v1;O1/O2v2;O1/O2v3;O8	wbbY;wbbZ;wbmV;wbmW	O1ab (O2ac)

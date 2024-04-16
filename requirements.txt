@@ -1,0 +1,4 @@
+python>=3.9
+setuptools
+biopython>=1.83
+dna_features_viewer~=3.1.0
