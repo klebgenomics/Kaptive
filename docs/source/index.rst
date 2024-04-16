@@ -39,12 +39,12 @@ Introducing Kaptive 3
 
 About
 ==========
-Kaptive is a system for *in silico* serotyping of bacterial genomes consisting of two main components:
+Kaptive is a system for surface polysaccharide typing from bacterial genome sequences. It consists of two main components:
 
 #. Curated reference databases of surface polysaccharide gene clusters (loci).
 #. A command-line interface (CLI) with three modes:
 
-   -  **assembly**: *in silico* serotyping of assemblies
+   -  **assembly**: surface polysaccharide typing from assemblies
    -  **extract**: extract features from Kaptive databases in different formats
    -  **convert**: convert Kaptive results to different formats
 

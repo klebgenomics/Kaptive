@@ -18,7 +18,6 @@ Scoring algorithm
 #. For each locus gene, the best alignment is chosen and sorted by locus.
 #. For each locus, a chosen alignment metric is summed across genes and weighted to generate a score.
 #. The locus with the highest score is chosen as the best match.
-#. The standard deviation is calculated across scores to generate accompanying Z-scores.
 
 The alignment metric can be explicitly set by the flag ``--alignment_metric``; the options are any attribute
 of the ``kaptive.alignment.Alignment`` object, such as:
@@ -50,7 +49,7 @@ cluster from the assembly contig sequences. For each contig where alignments wer
 #. Create pieces of the locus on the contig by merging together alignment ranges of expected genes that:
 
    * Are within the distance of the largest locus in the database.
-   * Do not extend beyond the alignment ranges of the last expected gene (prevents *Klebsiella* K-locus matches to the O-locus, which shares gene orthologs).
+   * Do not extend beyond the alignment ranges of the last expected gene (prevents *Klebsiella* K locus matches to the O locus, which shares gene orthologs).
 #. ``GeneResult`` objects are created from the remaining alignments then evaluated.
 
 .. _Gene-evaluation:
@@ -62,7 +61,7 @@ For each ``GeneResult`` object, Kaptive will:
 #. Check whether the gene is **partial** by determining if the gene overlaps the start or end of the contig.
 #. Extract the DNA sequence from the assembly contig and translate to amino acid.
 #. Perform pairwise alignment to the reference gene amino acid sequence and calculate percent identity.
-#. Check for **truncation** by determining if the amino acid sequence length is >= 95% of the reference gene protein length.
+#. Check for **truncation** by determining if the amino acid sequence length is <95% of the reference gene protein length.
 #. Determine whether the gene belongs to the biosynthetic gene cluster (**inside locus**) or not (**outside locus**).
 
 .. note::
@@ -75,5 +74,5 @@ Phenotype prediction
 ---------------------
 As of Kaptive 3, we have added the ability to predict the resulting phenotype of the assembly. This is similar
 to how the *Type* was reported in previous versions, but now includes the ability to predict specific phenotypes
-based on known mutations/modifications in a given set of locus genes as defined in the database logic file.
+based on known mutations/modifications in a given set of locus genes as defined in the database :ref:`logic file<Phenotype-logic>`.
 

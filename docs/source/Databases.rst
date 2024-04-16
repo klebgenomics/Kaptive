@@ -12,7 +12,7 @@ Each locus in the Kaptive databases has been defined based on a unique set of ge
 encodes a unique polysaccharide structure. In many cases, these unique structures will result in unique immunological serotypes.
 
 The gene translations (protein sequences) from each locus are compared by pairwise alignment, and must fall under a
-defined percent identity threshold to be considered "unique". Some genes (such as the core assembly machinery) will
+defined percent identity threshold to be considered 'unique'. Some genes (such as the core assembly machinery) will
 be highly similar, however the genes responsible for the polysaccharide structural diversity are expected to be more variable. The specific identity thresholds vary across species. The thresholds corresponding to the databases distributed with Kaptive are as follows:
 
 ========================= ===================
@@ -81,7 +81,7 @@ and represents a phenotype rule:
 #. **phenotype** - the resulting phenotype that appears in the `Type` column of the Kaptive tabular output, replacing
    the default phenotype i.e. the one specified in the locus genbank source identifier in the matching locus database.
 
-Let's look at an example of a logic file for the *Klebsiella pneumoniae* K locus:
+Let's look at an example of a logic file for the *K. pneumoniae* K locus:
 
 ========= ================== ===================
 loci      genes              phenotype
@@ -91,9 +91,9 @@ KL22	  KL22_17,truncated	 K37
 ========= ================== ===================
 
 In the first line, you can see that if *wcaJ* is truncated in any locus (selected with *ALL*), the phenotype will be
-predicted as "Capsule null". Here, any gene with the name *wcaJ* will be considered, and the state of the gene is
+predicted as 'Capsule null'. Here, any gene with the name *wcaJ* will be considered, and the state of the gene is
 specified as *truncated*. In the last line, you can see that if *KL22_17* (acetyl-transferase) is truncated in locus
-KL22, the phenotype is predicted as "K37", the non-acetylated version of the K22 capsule.
+KL22, the phenotype is predicted as 'K37', the non-acetylated version of the K22 capsule.
 
 .. note::
  The gene name and state are delimited by a comma.
@@ -101,7 +101,7 @@ KL22, the phenotype is predicted as "K37", the non-acetylated version of the K22
 .. note::
  The default phenotype is the "type" label in the Genbank record (e.g. K1).
 
-This look at an example that uses extra genes outside of the locus (from the *K. pneumonaie* O locus database):
+Let's look at an example that uses extra genes outside of the locus (from the *K. pneumoniae* O locus database):
 
 ======================= ============ ===================
 loci                    genes        phenotype
@@ -111,14 +111,14 @@ O1/O2v1;O1/O2v2;O1/O2v3	wbbY;wbbZ	 O1ab
 ======================= ============ ===================
 
 Here, the first line states that if *wbbY* is present in a genome carrying any of the O1/O2v1, O1/O2v2, or O1/O2v3 loci, the phenotype
-will be predicted as "O1a". The second line states that if **both** *wbbY* and *wbbZ* are present in a genome carrying any of the 
-same loci, the phenotype will instead be predicted as "O1ab".
+will be predicted as 'O1a'. The second line states that if **both** *wbbY* and *wbbZ* are present in a genome carrying any of the 
+same loci, the phenotype will instead be predicted as 'O1ab'.
 
 .. note::
  Each specific locus and gene is delimited by a semicolon.
 
 .. note::
- Default state is "presence".
+ Default state is 'presence'.
 
 This logic is applied during the :ref:`phenotype prediction <Phenotype-prediction>` step of typing and is reported in
 the `Type` column of the Kaptive tabular output.
@@ -177,8 +177,7 @@ We recommend screening your data with the primary reference database first to fi
 have poor matches or are particularly interested in detecting variant loci you should try the variant database.
 
 .. warning::
- If you use the variant database please inspect your results carefully and decide for yourself what
- constitutes a confident match! Kaptive is not optimised for accurate variant detection.
+ We do not currently recommend using the variant database with Kaptive 3. It is included in the repository for completeness. 
 
 Database versions:
 

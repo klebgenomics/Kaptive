@@ -10,7 +10,7 @@ To type polysaccharide loci from genome assemblies::
    kaptive assembly <database> <path_to_assemblies> > kaptive_results.tsv
 
 
-This will run ``kaptive assembly`` with the default parameters, and produce a table detailing the best match locus, predicted phenotype, confidence score and detailed typing information for each input genome assembly in the file called results_table.txt (plus other default outputs described below). 
+This will run ``kaptive assembly`` with the default parameters, and produce a table detailing the best match locus, predicted phenotype, confidence score and detailed typing information for each input genome assembly in the file called results_table.txt. 
 
 
 Detailed usage
@@ -40,12 +40,12 @@ Given a Kaptive database and a bacterial genome assembly, ``kaptive assembly`` w
  As of version 3, Kaptive no longer supports allelic (*wzi*, *wzc*) typing.
 
 
-To perform K-locus typing on a directory of *Klebsiella pneumoniae* assemblies, you would run::
+To perform K locus typing on a directory of *Klebsiella pneumoniae* assemblies, you would run::
 
     kaptive assembly kpsc_k assemblies/*.fasta
 
 Here we have told Kaptive to perform typing of assemblies with ``assembly`` and used the database keyword
-``kpsc_k`` to specify the *Klebsiella pneumoniae* K-locus database. All other parameters are set to the default.
+``kpsc_k`` to specify the *Klebsiella pneumoniae* K locus database. All other parameters are set to the default.
 
 
 Database keywords are a handy short-cut for using the databases distributed with Kaptive and located in
@@ -70,7 +70,7 @@ You may also want to specify the locations and/or filenames of the output files 
 
 Advanced options
 ^^^^^^^^^^^^^^^^^^
-Advanced users may wish to customise Kaptive's scoring options (for picking the best match locus), confidence options (for marking matches as 'untypeable', 'good' or 'low' confindence) or database parsing options. We recommend keeping the default options for standard typing using the *Klebsiella* and/or *A. baumanii* databases distributed with Kaptive.
+Advanced users may wish to customise Kaptive's scoring options (for picking the best match locus), confidence options (for marking matches as 'typeable' or 'untypeable') or database parsing options. We recommend keeping the default options for standard typing using the *Klebsiella* and/or *A. baumanii* databases distributed with Kaptive.
 
 
 Scoring options::
