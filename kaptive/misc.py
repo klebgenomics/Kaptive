@@ -88,6 +88,15 @@ def check_python_version(major: int = 3, minor: int = 8):
         quit_with_error(f'Python version {major}.{minor} or greater required')
 
 
+def check_biopython_version(major: int = 1, minor: int = 79):
+    try:
+        from Bio import __version__ as biopython_version
+    except ImportError:
+        quit_with_error('BioPython is required')
+    if (major_version := int(biopython_version.split('.')[0])) < major or (minor_version := int(biopython_version.split('.')[1])) < minor:
+        quit_with_error(f'Biopython version {major}.{minor} or greater required, got {major_version}.{minor_version}')
+
+
 def parse_fasta(fasta: Path, skip_plasmids: bool = False, verbose: bool = False) -> Generator[tuple[str, str, str], None, None]:
     log(f'Parsing {fasta.name}', verbose)
     with open(fasta, 'rb') as f:  # Read the first two bytes to determine the compression format

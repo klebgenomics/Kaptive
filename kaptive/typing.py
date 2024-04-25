@@ -130,7 +130,7 @@ class TypingResult:
     def problems(self) -> str:
         if self._problems is not None:
             return self._problems
-        problems = f'?{x}' if (x := len(self.pieces)) > 1 else ''
+        problems = f'?{x}' if (x := len(self.pieces)) != 1 else ''
         problems += '-' if self.missing_genes else ''
         problems += '+' if self.unexpected_genes_inside_locus else ''
         problems += '*' if any(

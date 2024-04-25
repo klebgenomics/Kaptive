@@ -26,7 +26,8 @@ from Bio import SeqIO
 
 from kaptive.version import __version__
 from kaptive.log import bold, quit_with_error
-from kaptive.misc import check_python_version, check_programs, get_logo, check_cpus, check_dir, check_file
+from kaptive.misc import (check_python_version, check_biopython_version, check_programs, get_logo, check_cpus,
+                          check_dir, check_file)
 from kaptive.database import Database, get_database
 from kaptive.assembly import typing_pipeline, TypingResult
 
@@ -276,7 +277,8 @@ def plot_result(result: TypingResult, outdir: Path, fmt: str):
 
 # Main -----------------------------------------------------------------------------------------------------------------
 def main():
-    check_python_version()
+    check_python_version(3, 9)
+    check_biopython_version(1, 83)
     args = parse_args(sys.argv[1:])
 
     # Assembly mode ----------------------------------------------------------------------------------------------------
