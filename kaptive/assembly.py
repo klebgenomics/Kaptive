@@ -236,6 +236,8 @@ def typing_pipeline(
             previous_result = gene_result  # Set the previous result to the current result
         # FINALISE CONTIG ---------------------------------------------------------------------------------------------
         for piece in pieces:  # Add sequences to pieces and add them to the result
+            if not piece.expected_genes: # If the piece has no expected genes, skip it
+                continue
             piece.strand = "+" if max(i.strand == i.gene.strand for i in piece.expected_genes) else "-"
             piece.sequence = contig.sequence[piece.start:piece.end] if piece.strand == "+" else \
                 contig.sequence[piece.start:piece.end].reverse_complement()

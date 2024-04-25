@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kaptive"
+authors = [
+    {name="Tom Stanton", email="tomdstanton@gmail.com" },
+]
+description = "In silico serotyping"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.9"
+dependencies = ["biopython", "dna_features_viewer"]
+keywords = ["bioinformatics", "serotyping", "microbiology"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+]
+dynamic = ["version"]
+
+[project.scripts]
+kaptive = "kaptive.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["kaptive"]
+exclude = ["test", 'development']
+
+[tool.setuptools.package-data]
+kaptive = ['../reference_database/*']
+
+[tool.setuptools.dynamic]
+version = {attr = "kaptive.version.__version__"}

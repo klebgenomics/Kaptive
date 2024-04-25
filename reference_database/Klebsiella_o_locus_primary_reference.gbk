@@ -48,7 +48,7 @@ FEATURES             Location/Qualifiers
                      RDWLYVEDHARALYKVATEGKSGETYNIGGHNERKNIDVVRTICTILDKVVAQKPGNIT
                      HFADLITFVTDRPGHDLRYAIDATKIQHDLGWVPQETFESGIEKTVHWYLNNQTWWQRV
                      LDGSYAGERLGLNN"
-                     /locus_tag="OL101_01_rfbB"
+                     /locus_tag="OL13_01_rfbB"
      gene            1092..1961
                      /gene="rfbA"
      CDS             1092..1961
@@ -67,7 +67,7 @@ FEATURES             Location/Qualifiers
                      PKSDWAVTGLYFYDNNVVEMAKDVKPSERGELEITTLNQMYLEQGDLHVELLGRGFAWL
                      DTGTHDSLMDASQFIHTIEKRQGMKVACLEEIAYRNQWLSAEGVAAQAERLKKTEYGAY
                      LKRLLNER"
-                     /locus_tag="OL101_02_rfbA"
+                     /locus_tag="OL13_02_rfbA"
      gene            1993..2883
                      /gene="rfbD"
      CDS             1993..2883
@@ -86,7 +86,7 @@ FEATURES             Location/Qualifiers
                      KTMLRLAGEKETLTIIDDQHGAPTGAELLADCTATAIRETLRNPALAGTYHLVASGETS
                      WCDYARYVFEVARAHGAELAIQEVKGIPTTAYPTPAKRPLNSRLSNEKFQQAFGVTLPD
                      WRQGVARVVTEVLGK"
-                     /locus_tag="OL101_03_rfbD"
+                     /locus_tag="OL13_03_rfbD"
      gene            2898..3452
                      /gene="rfbC"
      CDS             2898..3452
@@ -103,7 +103,7 @@ FEATURES             Location/Qualifiers
                      VQDNHSQSQKGVLRGLHYQLDPHAQGKLVRCVEGEVFDVAVDIRRSSSTFGKWVGAVLS
                      AENKRQLWIPEGFAHGFMALSDTVQFVYKATNYYAPQSERSIIWNDPEIGIDWPALNDC
                      ALSLSEKDLQAHTLATAEVYA"
-                     /locus_tag="OL101_04_rfbC"
+                     /locus_tag="OL13_04_rfbC"
      gene            3539..4369
                      /gene="wbbL"
      CDS             3539..4369
@@ -121,7 +121,7 @@ FEATURES             Location/Qualifiers
                      LVSFAWVNEYNFVSPQIIYKNGERQYSCRLLPTPSNLFLRRFLPTTAIKYDATYELKDA
                      EYDKVFSPPSVSGCFMLLTNVLLQKLNGFDERYFMYLEDVDLCRRALQLTKIYYCPETT
                      IVHVFNKGSYKSKLLLWYHVRSAITYFNKWGWFFDKKRYAYNESALRNIPRKLS"
-                     /locus_tag="OL101_05_wbbL"
+                     /locus_tag="OL13_05_wbbL"
      gene            4398..5231
                      /gene="wzm"
      CDS             4398..5231
@@ -138,7 +138,7 @@ FEATURES             Location/Qualifiers
                      QIILNNTNYVKKVIFPLETLSVISLVAALFHTTISLLVLLTAFVIFNGFIHWTIIFIPL
                      VFLPLVIFSLGLSWILASLGVFLRDVSQTTVIITTVLMFLSPVFFPISALPEKYHIWIM
                      LNPVTFIIEQARTVLIWGGLPNFMGILLYTVGASIVAWLGFVFFQKTRKGFADVL"
-                     /locus_tag="OL101_06_wzm"
+                     /locus_tag="OL13_06_wzm"
      gene            5221..6552
                      /gene="wzt"
      CDS             5221..6552
@@ -159,7 +159,7 @@ FEATURES             Location/Qualifiers
                      AIQNTQTNSEVDEKRFGSGRAIIEDFSIMKADGTPLSEKPLVKPNEEIYFSFKLNSSEN
                      INDVVLGVSLSRTQGGDIWGDNNIFAGHKIDLAPGLRKLKYKVKLPINTGDYLVHCGLA
                      CFNNGEREELDQRRPIAKVKFWSSRELGGVIHSPVNVIEGDELS"
-                     /locus_tag="OL101_07_wzt"
+                     /locus_tag="OL13_07_wzt"
      gene            6549..10115
                      /gene="wbbB"
      CDS             6549..10115
@@ -192,7 +192,7 @@ FEATURES             Location/Qualifiers
                      RIINWDISFQRMSELWRQAIADFDGFFQQQSVDPMPDVSSETRVDHFYRDYYIRDSWWR
                      ESELGRIDFKTLIDSFYSSDNITIVEEKISQPQGRKEKLLAILWMLRQNPALSWVTKLI
                      PYRLQRYVKRQLSRRALHEIVR"
-                     /locus_tag="OL101_08_wbbB"
+                     /locus_tag="OL13_08_wbbB"
      gene            complement(10274..12064)
                      /gene="glycosylhydrolase"
      CDS             complement(10274..12064)
@@ -215,7 +215,7 @@ FEATURES             Location/Qualifiers
                      GRERTFSHQIAPMFNADWNEEKIAAEDSLKKNNHYNIGLNTYGSAFYGDYLFNWLKTSG
                      IERYGIPEVHPMVENEEVIYDALEHHHNNGAIFISPYYLEIKPDSFGVDKEHEKFSINE
                      NNTNYYSSSFYHALKKIMKE"
-                     /locus_tag="OL101_09_glycosylhydrolase"
+                     /locus_tag="OL13_09_glycosylhydrolase"
 ORIGIN
         1 atgaagattc ttgtcaccgg gggtgcaggc tttatcggtt ctgccgtggt tcgtcatatc
        61 attgaaaata ccctggacga agtccgtgtg atggactgcc tgacctacgc cggcaacctt
