@@ -220,12 +220,16 @@ class TypingResult:
         # Add the pieces and create the gene results
         self.pieces = [LocusPiece.from_dict(i, result=self) for i in d['pieces']]
         pieces = {i.__repr__(): i for i in self.pieces}
-        gene_results = {
-            (x := GeneResult.from_dict(
-                r, result=self, piece=pieces.get(r['piece']), gene=db.genes.get(r['gene']))
-             ).__repr__(): x for r in chain(d['expected_genes_inside_locus'], d['unexpected_genes_inside_locus'],
-                                            d['expected_genes_outside_locus'], d['unexpected_genes_outside_locus'],
-                                            d['extra_genes'])}
+        gene_results = {}
+        # This was previously a dict comp, but we need to check the gene is in the database, see #31
+        for r in chain(d['expected_genes_inside_locus'], d['unexpected_genes_inside_locus'],
+                       d['expected_genes_outside_locus'], d['unexpected_genes_outside_locus'],
+                       d['extra_genes']):
+            if not (gene := db.genes.get(r['gene'])) and not (gene := db.extra_genes.get(r['gene'])):
+                raise TypingResultError(f"Gene {r['gene']} not found in database")
+            x = GeneResult.from_dict(r, result=self, piece=pieces.get(r['piece']), gene=gene)
+            gene_results[x.__repr__()] = x
+
         # Add gene result neighbours and add to the typing result
         for gene_result in gene_results.values():
             gene_result.neighbour_left = gene_results.get(gene_result.neighbour_left.__repr__())
@@ -259,7 +263,7 @@ class LocusPiece:
                  expected_genes: list[GeneResult] | None = None, unexpected_genes: list[GeneResult] | None = None,
                  # is_elements: list[GeneResult] | None = None
                  ):
-        self.id = id or ""
+        self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
         self.result = result
         self.start = start
         self.end = end
@@ -318,15 +322,15 @@ class GeneResult:
     Class to store alignment results for a single gene in a locus for either a ReadResult or a AssemblyResult.
     """
 
-    def __init__(self, id: str | None = None, gene: Gene | None = None, result: TypingResult | None = None,
+    def __init__(self, id: str, gene: Gene, result: TypingResult | None = None,
                  piece: LocusPiece | None = None, start: int | None = 0, end: int | None = 0, strand: str | None = None,
                  neighbour_left: GeneResult | None = None, neighbour_right: GeneResult | None = None,
-                 dna_seq: Seq | None = None, protein_seq: Seq | None = None, below_threshold: bool | None = False,
-                 phenotype: str | None = None, gene_type: str | None = None, partial: bool | None = False,
+                 dna_seq: Seq | None = Seq(""), protein_seq: Seq | None = Seq(""), below_threshold: bool | None = False,
+                 phenotype: str | None = "present", gene_type: str | None = None, partial: bool | None = False,
                  percent_identity: float | None = 0, percent_coverage: float | None = 0):
-        self.id = id or ''  # Refers to contig name for assembly typing
+        self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
         self.gene = gene
-        self.result = result
+        self.result = result  # TODO: replace with sample_name (only TypingResult attribute used, needed for fa headers)
         self.start = start
         self.end = end
         self.strand = strand
@@ -334,10 +338,10 @@ class GeneResult:
         self.piece = piece  # inside locus if not None
         self.neighbour_left = neighbour_left  # neighbour to the left of the gene
         self.neighbour_right = neighbour_right  # neighbour to the right of the gene
-        self.dna_seq = dna_seq or Seq("")
-        self.protein_seq = protein_seq or Seq("")
+        self.dna_seq = dna_seq
+        self.protein_seq = protein_seq
         self.below_threshold = below_threshold
-        self.phenotype = phenotype or "present"
+        self.phenotype = phenotype
         self.gene_type = gene_type or ""
         self.percent_identity = percent_identity
         self.percent_coverage = percent_coverage
