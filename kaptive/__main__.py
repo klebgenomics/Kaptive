@@ -215,6 +215,8 @@ def convert_subparser(subparsers):
     opts = convert_parser.add_argument_group(bold('Database options'), "")
     db_opts(opts)
     opts = convert_parser.add_argument_group(bold('Other options'), "")
+    opts.add_argument('--no-header', action='store_true', help='Suppress header line')
+    opts.add_argument('--debug', action='store_true', help='Append debug columns to table output')
     other_opts(opts)
 
 
@@ -253,21 +255,16 @@ def other_opts(opts: argparse.ArgumentParser):
     opts.add_argument('-h', '--help', help='Show this help message and exit', metavar='')
 
 
-def write_headers(out: io.TextIOWrapper, no_header: bool = False, subparser_name: str = '', debug: bool = False):
-    """
-    Write headers to output file if not already written
-    """
+def write_headers(out: io.TextIOWrapper, no_header: bool = False, debug: bool = False):
+    """Write headers to output file if not already written"""
     if out.name != '<stdout>' and out.tell() != 0:  # If file is path and not already written to
         no_header = True  # Headers already written, useful for running on HPC
     if not no_header:
-        if subparser_name == 'assembly':
-            out.write('\t'.join(_ASSEMBLY_HEADERS + _ASSEMBLY_EXTRA_HEADERS if debug else _ASSEMBLY_HEADERS) + '\n')
+        out.write('\t'.join(_ASSEMBLY_HEADERS + _ASSEMBLY_EXTRA_HEADERS if debug else _ASSEMBLY_HEADERS) + '\n')
 
 
 def plot_result(result: TypingResult, outdir: Path, fmt: str):
-    """
-    Convienence function to plot a TypingResult and save to file
-    """
+    """Convenience function to plot a TypingResult and save to file"""
     ax = result.as_graphic_record().plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
     ax.set_title(  # Add title to figure
         f"{result.sample_name} {result.best_match} ({result.phenotype}) - {result.confidence}")
@@ -288,7 +285,7 @@ def main():
             path=args.db, gene_threshold=args.gene_threshold, locus_filter=args.filter, verbose=args.verbose,
             load_seq=True, locus_regex=args.locus_regex, type_regex=args.type_regex)
 
-        write_headers(args.out, args.no_header, args.subparser_name, args.debug)
+        write_headers(args.out, args.no_header, args.debug)
         for sample in args.input:
             if (result := typing_pipeline(
                     sample, args.db, args.threads, args.min_cov, args.score_metric, args.weight_metric,
@@ -339,40 +336,47 @@ def main():
             args.db, args.filter, False, verbose=args.verbose, locus_regex=args.locus_regex, type_regex=args.type_regex)
         if args.format in ['png', 'svg'] and not args.outdir:  # Check if output directory is required and not set
             args.outdir = Path('.')  # Set output directory to current directory
+        if args.format == "tsv":
+            write_headers(args.out, args.no_header, args.debug)
         for line in args.input:
             if args.regex and not args.regex.search(line):
-                return
+                continue
             try:
-                if (d := loads(line)):
-                    if args.samples and d['sample_name'] not in args.samples:
-                        return
-                    if args.loci and d['best_match'] not in args.loci:
-                        return
-                    result = TypingResult.from_dict(d, args.db)
-                    if args.format == 'loci':  # Create and write locus pieces to fasta file
-                        if args.outdir:
-                            (args.outdir / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
-                        else:
-                            args.out.write(result.as_fasta())
-                    elif args.format == 'genes':
-                        if args.outdir:
-                            (args.outdir / f'{result.sample_name}_kaptive_results.ffn').write_text(
-                                result.as_gene_fasta())
-                        else:
-                            args.out.write(result.as_gene_fasta())
-                    elif args.format == 'proteins':
-                        if args.outdir:
-                            (args.outdir / f'{result.sample_name}_kaptive_results.faa').write_text(
-                                result.as_protein_fasta())
-                        else:
-                            args.out.write(result.as_protein_fasta())
-                    elif args.format == 'json':
-                        if args.outdir:
-                            (args.outdir / 'kaptive_results.json').write_text(dumps(result.as_dict()))
-                        else:
-                            args.out.write(dumps(result.as_dict()) + '\n')
-                    elif args.format in ['png', 'svg']:
-                        plot_result(result, args.outdir, args.format)
+                d = loads(line)
             except Exception as e:
-                quit_with_error(f"Invalid JSON: {e}\n{line}")
+                quit_with_error(f"Error parsing JSON line: {e}\n{line}")
 
+            if args.samples and d['sample_name'] not in args.samples:
+                continue
+            if args.loci and d['best_match'] not in args.loci:
+                continue
+            try:
+                result = TypingResult.from_dict(d, args.db)
+            except Exception as e:
+                quit_with_error(f"Error converting JSON line to TypingResult: {e}\n{line}")
+            if args.format == 'tsv':
+                args.out.write(result.as_table(args.debug))
+            elif args.format == 'loci':  # Create and write locus pieces to fasta file
+                if args.outdir:
+                    (args.outdir / f'{result.sample_name}_kaptive_results.fna').write_text(result.as_fasta())
+                else:
+                    args.out.write(result.as_fasta())
+            elif args.format == 'genes':
+                if args.outdir:
+                    (args.outdir / f'{result.sample_name}_kaptive_results.ffn').write_text(
+                        result.as_gene_fasta())
+                else:
+                    args.out.write(result.as_gene_fasta())
+            elif args.format == 'proteins':
+                if args.outdir:
+                    (args.outdir / f'{result.sample_name}_kaptive_results.faa').write_text(
+                        result.as_protein_fasta())
+                else:
+                    args.out.write(result.as_protein_fasta())
+            elif args.format == 'json':
+                if args.outdir:
+                    (args.outdir / 'kaptive_results.json').write_text(dumps(result.as_dict()))
+                else:
+                    args.out.write(dumps(result.as_dict()) + '\n')
+            elif args.format in ['png', 'svg']:
+                plot_result(result, args.outdir, args.format)
