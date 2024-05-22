@@ -16,7 +16,6 @@ If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 from pathlib import Path
-from statistics import stdev, mean
 from itertools import groupby, chain
 from subprocess import Popen, PIPE
 
@@ -88,36 +87,8 @@ class Contig(object):
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
-def get_scores(results: list[tuple[Locus: list[Alignment]]], score: str, weight: str,
-               reverse_sort: bool = True) -> list[tuple[Locus, float]]:
-    if weight == 'none':
-        results = [(l, sum(getattr(x, score) for x in r)) for l, r in results]
-    elif weight == "locus_length":
-        results = [(l, sum(getattr(x, score) for x in r) / len(l)) for l, r in results]
-    elif weight == "genes_expected":
-        results = [(l, sum(getattr(x, score) for x in r) / len(l.genes)) for l, r in results]
-    elif weight == "genes_found":
-        results = [(l, sum(getattr(x, score) for x in r) / len(r)) for l, r in results]
-    elif weight == "prop_genes_found":
-        results = [(l, sum(getattr(x, score) for x in r) * (len(r) / len(l.genes))) for l, r in results]
-    else:
-        quit_with_error(f"Invalid weight {weight}")
-    return sorted(results, key=lambda x: x[1], reverse=reverse_sort)
-
-
-def score_stats(scores: list[tuple[Locus, float]]) -> list[tuple[Locus, float, float]]:
-    """Returns locus, score and zscore"""
-    _scores = {i[1] for i in scores}  # Get unique scores
-    if len(_scores) == 1:
-        return [(scores[0][0], scores[0][1], 0)]  # If only one score, return it with a zscore of 0
-    m, sd = mean(_scores), stdev(_scores)  # Calculate mean and standard deviation
-    return [(scores[0][0], scores[0][1], 0)] if sd == 0 else [  # If standard deviation is 0, return zscore of 0
-        (scores[i][0], scores[i][1], (scores[i][1] - m) / sd) for i in range(len(scores))]
-
-
 def typing_pipeline(
-        assembly: Path | Assembly, db: Database | Path, threads: int | None = 1, min_cov: float | None = 0.5,
-        score_metric: str | None = 'AS', weight_metric: str | None = 'prop_genes_found',
+        assembly: Path | Assembly, db: Database | Path, threads: int | None = None, min_cov: float | None = 0.5,
         max_other_genes: float | None = 1, percent_expected_genes: float | None = 50,
         allow_below_threshold: bool | None = False, debug: bool | None = False,
         verbose: bool | None = False) -> TypingResult | None:
