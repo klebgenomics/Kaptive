@@ -11,10 +11,10 @@ details. You should have received a copy of the GNU General Public License along
 If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
-
 from typing import Iterable, Generator
-
+from itertools import groupby
 from kaptive.misc import range_overlap
+from kaptive.log import warning
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -27,44 +27,41 @@ class Alignment:
     Class to store alignment information from PAF, SAM or BLAST tabular (--outfmt 6 / m8) output.
     It is purposely designed to be flexible and can be used with any of the three formats.
     """
+
     def __init__(
-            self, query_name: str | None = None, query_length: int | None = 0, query_start: int | None = 0,
-            query_end: int | None = 0, strand: str | None = None, target_name: str | None = None,
-            target_length: int | None = 0, target_start: int | None = 0, target_end: int | None = 0,
-            matching_bases: int | None = 0, num_bases: int | None = 0, mapping_quality: int | None = 0,
+            self, q: str | None = None, q_len: int | None = 0, q_st: int | None = 0,
+            q_en: int | None = 0, strand: str | None = None, ctg: str | None = None,
+            ctg_len: int | None = 0, r_st: int | None = 0, r_en: int | None = 0,
+            mlen: int | None = 0, blen: int | None = 0, mapq: int | None = 0,
             tags: dict | None = None):
-        self.query_name = query_name or ''  # Query sequence name
-        self.query_length = query_length  # Query sequence length
-        self.query_start = query_start  # Query start coordinate (0-based)
-        self.query_end = query_end  # Query end coordinate (0-based)
+        self.q = q or ''  # Query sequence name
+        self.q_len = q_len  # Query sequence length
+        self.q_st = q_st  # Query start coordinate (0-based)
+        self.q_en = q_en  # Query end coordinate (0-based)
         self.strand = strand or 'unknown'  # ‘+’ if query/target on the same strand; ‘-’ if opposite
-        self.target_name = target_name or ''  # Target sequence name
-        self.target_length = target_length  # Target sequence length
-        self.target_start = target_start  # Target start coordinate on the original strand (0-based)
-        self.target_end = target_end  # Target end coordinate on the original strand (0-based)
-        self.matching_bases = matching_bases  # Number of matching bases in the alignment
-        self.num_bases = num_bases  # Number bases, including gaps, in the alignment
-        self.mapping_quality = mapping_quality  # Mapping quality (0-255 with 255 for missing)
+        self.ctg = ctg or ''  # Target sequence name
+        self.ctg_len = ctg_len  # Target sequence length
+        self.r_st = r_st  # Target start coordinate on the original strand (0-based)
+        self.r_en = r_en  # Target end coordinate on the original strand (0-based)
+        self.mlen = mlen  # Number of matching bases in the alignment
+        self.blen = blen  # Number bases, including gaps, in the alignment
+        self.mapq = mapq  # Mapping quality (0-255 with 255 for missing)
         self.tags = tags or {}  # {tag: value} pairs
 
-
     @classmethod
-    def from_paf_line(cls, line: str | bytes):
+    def from_paf_line(cls, line: str):
         """
-        Parse a line from a PAF file and return an Alignment object.
-        Optionally parse the cigar string into a Cigar object (stored in tags).
+        Parse a line in PAF format and return an Alignment object.
         """
-        if not (line := line.decode().strip() if isinstance(line, bytes) else line.strip()):
-            raise AlignmentError("Empty line")
         if len(line := line.split('\t')) < 12:
             raise AlignmentError(f"Line has < 12 columns: {line}")
-        self = cls(  # Parse standard fields
-            query_name=line[0], query_length=int(line[1]), query_start=int(line[2]), query_end=int(line[3]),
-            strand=line[4], target_name=line[5], target_length=int(line[6]), target_start=int(line[7]),
-            target_end=int(line[8]), matching_bases=int(line[9]), num_bases=int(line[10]),
-            mapping_quality=int(line[11]))
-        self.tags = {x: int(z) if y == "i" else float(z) if y == "f" else z for tag in line[12:] for x, y, z in tag.split(":", 2)}
-        return self
+        return cls(  # Parse standard fields
+            q=line[0], q_len=int(line[1]), q_st=int(line[2]), q_en=int(line[3]), strand=line[4], ctg=line[5],
+            ctg_len=int(line[6]), r_st=int(line[7]), r_en=int(line[8]), mlen=int(line[9]), blen=int(line[10]),
+            mapq=int(line[11]),
+            tags={x: int(z) if y == "i" else float(z) if y == "f" else z for tag in line[12:] for x, y, z in
+                  tag.split(":", 2)}
+        )
 
     def __repr__(self):
         return (f'{self.query_name}:{self.query_start}-{self.query_end} '
@@ -83,34 +80,39 @@ class Alignment:
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def cull_conflicting_alignments(
-        a: Alignment, alignments: Iterable[Alignment], overlap_fraction: float = 0.1) -> Generator[Alignment, None, None]:
-    """
-    Returns a generator of alignments that do not conflict with the alignment_to_keep.
-    param a: Alignment object to keep
-    param alignments: Iterable of Alignment objects
-    return: Generator of Alignment objects that don't conflict with a
-    """
-    for x in alignments:
-        if not x.target_name == a.target_name and range_overlap(
-                (x.target_start, x.target_end),(a.target_start, a.target_end), skip_sort=True) / x.num_bases > overlap_fraction:
-            yield x
+def iter_alns(data: str | bytes) -> Generator[Alignment, None, None]:
+    """Iterate over alignments in a chunk of data"""
+    # It's probably better to decode the data here rather than in the Alignment class
+    if not data:
+        return None
+    for line in data.splitlines() if isinstance(data, str) else data.decode().splitlines():
+        try:
+            yield Alignment.from_paf_line(line)
+        except AlignmentError:
+            warning(f"Skipping invalid alignment line: {line}")
+            continue
 
 
-def cull_all_conflicting_alignments(alignments: Iterable[Alignment], sort_by: str = 'matching_bases',
-                                    sort_large_to_small: bool = True) -> list[Alignment]:
-    """
-    Returns a list of alignments that do not conflict with each other.
-    param alignments: Iterable of Alignment objects
-    param sort_by: Attribute of Alignment to sort by
-    param sort_large_to_small: Whether to sort by the attribute from large to small or small to large
-    return: List of Alignment objects
-    """
+def group_alns(alignments: Iterable[Alignment] | str | bytes, key: str = 'q') -> Generator[tuple[str, Generator[Alignment]]]:
+    """Group alignments by a key"""
+    if isinstance(alignments, (str, bytes)):
+        alignments = iter_alns(alignments)
+    yield from groupby(sorted(alignments, key=lambda x: getattr(x, key)), key=lambda x: getattr(x, key))
+
+
+def cull_conflicting_alignments(keep: Alignment, alignments: Iterable[Alignment],
+                                overlap_fraction: float = 0.1) -> Generator[Alignment]:
+    """Yield alignments that do not conflict with keep alignment"""
+    for a in alignments:
+        if (a.ctg != keep.ctg or  # Different contig
+                range_overlap((a.r_st, a.r_en), (keep.r_st, keep.r_en), skip_sort=True) / a.blen < overlap_fraction):
+            yield a
+
+
+def cull_all_conflicting_alignments(alignments: list[Alignment]) -> list[Alignment]:
     kept_alignments = []
-    sorted_alignments = sorted(list(alignments), key=lambda x: getattr(x, sort_by), reverse=sort_large_to_small)
-    # There must be a more efficient implementation of this
+    sorted_alignments = sorted(list(alignments), key=lambda x: x[1].mlen, reverse=True)
     while sorted_alignments:
         kept_alignments.append(sorted_alignments.pop(0))
         sorted_alignments = list(cull_conflicting_alignments(kept_alignments[-1], sorted_alignments))
     return kept_alignments
-
