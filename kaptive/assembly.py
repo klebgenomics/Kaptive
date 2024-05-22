@@ -23,12 +23,13 @@ from typing import TextIO, Pattern, Generator
 from re import compile
 
 from Bio.Seq import Seq
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 import numpy as np
 
 from kaptive.typing import TypingResult, LocusPiece, GeneResult
 from kaptive.database import Database, load_database
 from kaptive.alignment import Alignment, iter_alns, group_alns, cull, cull_all
-from kaptive.misc import parse_fasta, merge_ranges, range_overlap, check_cpus
+from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus
 from kaptive.log import warning, log
 
 
@@ -91,7 +92,8 @@ def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
     """Parse an assembly file and return an Assembly object"""
     if _ASSEMBLY_FASTA_REGEX.search(file.name):
         try:
-            return Assembly(file,  contigs={n: Contig(n, d, Seq(s)) for n, d, s in parse_fasta(file, verbose=verbose)})
+            log(f"Parsing {file.name} as FASTA", verbose=verbose)
+            return parse_fasta(file)
         except Exception as e:
             warning(f"Error parsing {file.name}: {e}")
     # elif _ASSEMBLY_GRAPH_REGEX.search(file.name):
@@ -100,6 +102,12 @@ def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
     else:
         warning(f"Unknown assembly format for {file.name}")
     return None  # Return none so the pipeline can skip this assembly
+
+
+def parse_fasta(file: Path) -> Assembly:
+    with opener(file, mode='rt') as f:
+        return Assembly(file, contigs={n: Contig((n := h.split(' ', 1)[0]), h.split(' ', 1)[1] if ' ' in h else '',
+                                                 Seq(s)) for h, s in SimpleFastaParser(f)})
 
 
 # class GFAError(Exception):
@@ -131,7 +139,6 @@ def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
 #         from_dict[to_ctg.name] = to_ctg
 #         to_dict[from_ctg.name] = from_ctg
 #     return assembly
-
 
 
 def parse_result(line: str, db: Database, regex: Pattern | None = None, samples: set[str] | None = None,
@@ -184,6 +191,15 @@ def typing_pipeline(
         return None
 
     # ALIGN GENES AND CALCULATE BEST MATCH -----------------------------------------------------------------------------
+    threads = args.threads
+    verbose = args.verbose
+    min_cov = args.min_cov
+    max_other_genes = args.max_other_genes
+    percent_expected_genes = args.percent_expected_genes
+    allow_below_threshold = args.allow_below_threshold
+    db = args.db
+    assembly = parse_assembly(args.input[0])
+
     scores, idx = np.array(np.zeros(len(db))), {g: i for i, g in enumerate(db.loci.values())}
     genes_found, genes_expected = np.array(np.zeros(len(db))), np.array([len(l.genes) for l in db.loci.values()])
     alignments = []

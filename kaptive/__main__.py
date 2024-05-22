@@ -227,7 +227,7 @@ def main():
     check_biopython_version(1, 83)
     args = parse_args(sys.argv[1:])
 
-    # args = parse_args(['assembly', 'ab_k', '/Users/tsta0015/MyDrive/PostDoc/kaptive_project/test_data/abau/PWtest/assemblies/GCA_006492515.1_ASM649251v1_genomic.fna'])
+    args = parse_args(['assembly', 'kpsc_k', 'test/data/NK_H8_045_hybrid.fasta'])
 
     # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
