@@ -100,8 +100,8 @@ def group_alns(alignments: Iterable[Alignment] | str | bytes, key: str = 'q') ->
     yield from groupby(sorted(alignments, key=lambda x: getattr(x, key)), key=lambda x: getattr(x, key))
 
 
-def cull_conflicting_alignments(keep: Alignment, alignments: Iterable[Alignment],
-                                overlap_fraction: float = 0.1) -> Generator[Alignment]:
+def cull(keep: Alignment, alignments: Iterable[Alignment],
+         overlap_fraction: float = 0.1) -> Generator[Alignment]:
     """Yield alignments that do not conflict with keep alignment"""
     for a in alignments:
         if (a.ctg != keep.ctg or  # Different contig
@@ -109,10 +109,10 @@ def cull_conflicting_alignments(keep: Alignment, alignments: Iterable[Alignment]
             yield a
 
 
-def cull_all_conflicting_alignments(alignments: list[Alignment]) -> list[Alignment]:
+def cull_all(alignments: list[Alignment]) -> list[Alignment]:
     kept_alignments = []
     sorted_alignments = sorted(list(alignments), key=lambda x: x[1].mlen, reverse=True)
     while sorted_alignments:
         kept_alignments.append(sorted_alignments.pop(0))
-        sorted_alignments = list(cull_conflicting_alignments(kept_alignments[-1], sorted_alignments))
+        sorted_alignments = list(cull(kept_alignments[-1], sorted_alignments))
     return kept_alignments

@@ -20,15 +20,21 @@ from itertools import chain
 from json import loads
 from subprocess import Popen, PIPE
 from typing import TextIO, Pattern, Generator
+from re import compile
 
 from Bio.Seq import Seq
 import numpy as np
 
 from kaptive.typing import TypingResult, LocusPiece, GeneResult
 from kaptive.database import Database, load_database
-from kaptive.alignment import Alignment, iter_alns, group_alns, cull_conflicting_alignments, cull_all_conflicting_alignments
+from kaptive.alignment import Alignment, iter_alns, group_alns, cull, cull_all
 from kaptive.misc import parse_fasta, merge_ranges, range_overlap, check_cpus
 from kaptive.log import warning, log
+
+
+# Constants -----------------------------------------------------------------------------------------------------------
+_ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
+_ASSEMBLY_GRAPH_REGEX = compile(r'\.(gfa)(\.gz)?$')
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -39,16 +45,8 @@ class AssemblyError(Exception):
 class Assembly:
     def __init__(self, path: Path | None = None, name: str | None = None, contigs: dict[str: Contig] | None = None):
         self.path = path or Path()
-        self.name = name or ''
+        self.name = name or path.name.strip('.gz').rsplit('.', 1)[0] if path else ''
         self.contigs = contigs or {}
-
-    @classmethod
-    def from_path(cls, path: Path, **kwargs) -> Assembly:
-        self = cls(path=path, name=path.name.strip('.gz').rsplit('.', 1)[0],
-                   contigs={n: Contig(n, d, Seq(s)) for n, d, s in parse_fasta(path, **kwargs)})
-        if not self.contigs:
-            raise AssemblyError(f"No contigs found in {path}")
-        return self
 
     def __repr__(self):
         return self.name
@@ -73,10 +71,13 @@ class Contig(object):
     This class describes a contig in an assembly: the name, length, and sequence.
     """
 
-    def __init__(self, name: str | None = None, desc: str | None = None, seq: Seq | None = Seq('')):
+    def __init__(self, name: str | None = None, desc: str | None = None, seq: Seq | None = Seq(''),
+                 neighbours_L: dict[str: Contig] | None = None, neighbours_R: dict[str: Contig] | None = None):
         self.name = name or ''
         self.desc = desc or ''
         self.seq = seq
+        self.neighbours_L = neighbours_L or {}  # For assembly graphs
+        self.neighbours_R = neighbours_R or {}  # For assembly graphs
 
     def __repr__(self):
         return self.name
@@ -86,6 +87,53 @@ class Contig(object):
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
+def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
+    """Parse an assembly file and return an Assembly object"""
+    if _ASSEMBLY_FASTA_REGEX.search(file.name):
+        try:
+            return Assembly(file,  contigs={n: Contig(n, d, Seq(s)) for n, d, s in parse_fasta(file, verbose=verbose)})
+        except Exception as e:
+            warning(f"Error parsing {file.name}: {e}")
+    # elif _ASSEMBLY_GRAPH_REGEX.search(file.name):
+    #     log(f"Parsing {file.name} as GFA", verbose=verbose)
+    #     return parse_gfa(file, **kwargs)
+    else:
+        warning(f"Unknown assembly format for {file.name}")
+    return None  # Return none so the pipeline can skip this assembly
+
+
+# class GFAError(Exception):
+#     pass
+#
+#
+# def parse_gfa(file: Path, **kwargs) -> Assembly:
+#     """Parse a GFA file and return an Assembly object"""
+#     links = []  # Store links as we need to ensure all ctgs are added first
+#     with opener(file) as f, NamedTemporaryFile(mode='wt') as tmp:
+#         for line in f:
+#             if (parts := line.strip().split('\t')):  # See https://github.com/GFA-spec/GFA-spec for GFA format spec
+#                 if parts[0] == 'S':
+#                     tmp.write(f">{parts[1]}\n{parts[2]}\n")
+#                 elif parts[0] == 'L':
+#                     links.append((parts[1], parts[2], parts[3], parts[4]))
+#         # tmp.flush()
+#         try:
+#             assembly = Assembly(file, aligner=mp.Aligner(tmp.name, **kwargs))
+#         except Exception as e:
+#             raise GFAError(f"Error parsing {file}: {e}")
+#     for fr, to, from_orient, to_orient in links:
+#         try:
+#             from_ctg, to_ctg = assembly.contigs[fr], assembly.contigs[to]
+#         except KeyError as e:
+#             raise GFAError(f"Cannot link {fr} -> {to} in {file}: {e}")
+#         from_dict = from_ctg.neighbours_R if from_orient == '+' else from_ctg.neighbours_L
+#         to_dict = to_ctg.neighbours_L if to_orient == '+' else to_ctg.neighbours_R
+#         from_dict[to_ctg.name] = to_ctg
+#         to_dict[from_ctg.name] = from_ctg
+#     return assembly
+
+
+
 def parse_result(line: str, db: Database, regex: Pattern | None = None, samples: set[str] | None = None,
                  loci: set[str] | None = None) -> TypingResult | None:
     if regex and not regex.search(line):
@@ -130,13 +178,9 @@ def typing_pipeline(
 
     # CHECK ARGS -------------------------------------------------------------------------------------------------------
     threads = check_cpus(threads) if not threads else threads  # Get the number of threads if 0
-    if not isinstance(db, Database):  # If the database is a path, parse it
-        try:
-            db = load_database(db, verbose=verbose)
-        except Exception as e:
-            warning(f'Error parsing {db}: {e}')
-            return None
-    if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose, n_threads=threads)):
+    if not isinstance(db, Database) and not (db := load_database(db, verbose=verbose)):
+        return None
+    if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
         return None
 
     # ALIGN GENES AND CALCULATE BEST MATCH -----------------------------------------------------------------------------
@@ -173,9 +217,9 @@ def typing_pipeline(
     # CULL ALIGNMENTS --------------------------------------------------------------------------------------------------
     expected, other = [], []
     [expected.append(a) if a.q in best_match.genes else other.append(a) for a in alignments]
-    other = cull_all_conflicting_alignments(other)  # Remove conflicting other alignments
+    other = cull_all(other)  # Remove conflicting other alignments
     for i in expected:  # Remove other alignments overlapping best match gene alignments
-        other = list(cull_conflicting_alignments(i, other))
+        other = list(cull(i, other))
 
     # GET GENE RESULTS -------------------------------------------------------------------------------------------------
     previous_result, piece = None, None  # For determining neighbouring genes
