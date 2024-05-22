@@ -72,15 +72,26 @@ def check_cpus(cpus: int | str | None) -> int:
     return min(cpus, os.cpu_count())
 
 
-def check_dir(path: str, parents: bool = True, exist_ok: bool = True) -> Path:
+def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool = True) -> Path | TextIO:
     """
-    Check if a directory exists, and create it if not
+    Check if the user wants to create/append a file or directory.
+    If it looks like/is already a file (has an extension), return the file object.
+    If it looks like/is already a directory, return the directory path.
     """
-    try:
-        (path := Path(path)).mkdir(parents=parents, exist_ok=exist_ok)
-        return path
-    except Exception as e:
-        quit_with_error(f"Could not create directory {path}: {e}")
+    # This may also be sys.stdout
+    if path == '-':
+        return sys.stdout
+    if (path := Path(path)).suffix:
+        try:
+            return path.open(mode)
+        except Exception as e:
+            quit_with_error(f'Could not open {path}: {e}')
+    if not path.exists():
+        try:
+            path.mkdir(parents=parents, exist_ok=exist_ok)
+        except Exception as e:
+            quit_with_error(f'Could not create {path}: {e}')
+    return path
 
 
 def check_python_version(major: int = 3, minor: int = 8):
