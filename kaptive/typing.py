@@ -12,10 +12,11 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-from functools import cached_property
-from typing import Generator
+from pathlib import Path
 from itertools import chain
 from warnings import catch_warnings
+from json import dumps
+from typing import TextIO
 
 from Bio.Seq import Seq
 from Bio.Align import PairwiseAligner
@@ -23,7 +24,6 @@ from dna_features_viewer import GraphicFeature, GraphicRecord
 
 from kaptive.database import Database, Locus, Gene
 from kaptive.log import warning
-from kaptive.misc import str2val
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _PROTEIN_ALIGNER = PairwiseAligner(scoring='blastp', mode='local')
@@ -40,23 +40,19 @@ class TypingResult:
     enough to store results from both read and assembly typing, and can be easily reconstructed from JSON to use
     with the `convert` utility. It should not store any information that is not directly related to the typing
     such as contig sequences or read alignments.
-    The `scoring_args` and `confidence_args` attributes store args passed to typing pipelines at runtime and are kept
-    for debug reporting, but should not be relied on for reconstruction of this class.
     """
 
     def __init__(
             self, sample_name: str | None, db: Database | None, best_match: Locus | None = None,
-            score: float | None = 0, zscore: float | None = 0, pieces: list[LocusPiece] | None = None,
+            zscore: float | None = 0, pieces: list[LocusPiece] | None = None,
             expected_genes_inside_locus: list[GeneResult] | None = None,
             expected_genes_outside_locus: list[GeneResult] | None = None, missing_genes: list[str] | None = None,
             unexpected_genes_inside_locus: list[GeneResult] | None = None,
-            unexpected_genes_outside_locus: list[GeneResult] | None = None, extra_genes: list[GeneResult] | None = None,
-            scores: dict[str, dict[str, list[float]]] | None = None, scoring_args: dict | None = None,
-            confidence_args: dict | None = None):
+            unexpected_genes_outside_locus: list[GeneResult] | None = None,
+            extra_genes: list[GeneResult] | None = None):
         self.sample_name = sample_name or ""
         self.db = db
         self.best_match = best_match
-        self.score = score
         self.zscore = zscore
         self.pieces = pieces or []  # Pieces of locus reconstructed from alignments
         self.expected_genes_inside_locus = expected_genes_inside_locus or []  # Genes from best_match
@@ -66,10 +62,7 @@ class TypingResult:
         self.unexpected_genes_outside_locus = unexpected_genes_outside_locus or []  # Genes from other loci
         self.extra_genes = extra_genes or []  # in db.extra_genes, ALWAYS outside locus (gene_result.piece == None)
         # self.is_elements = is_elements or []  # in db.is_elements, ALWAYS inside locus (gene_result.piece != None)
-        self.scores = scores or {}
-        self.scoring_args = scoring_args or {}
-        self.confidence_args = confidence_args or {}
-        # Below are cached properties that are calculated once if these are set to None
+        # Properties to cache the values, these are protected to prevent accidental modification
         self._percent_identity = None
         self._percent_coverage = None
         self._phenotype = None
@@ -83,10 +76,9 @@ class TypingResult:
         return sum(len(i) for i in self.pieces) if self.pieces else 0
 
     def __iter__(self):
-        return chain(self.expected_genes_inside_locus, self.unexpected_genes_inside_locus,
-                     self.expected_genes_outside_locus, self.unexpected_genes_outside_locus, self.extra_genes,
-                     # self.is_elements
-                     )
+        return chain(
+            self.expected_genes_inside_locus, self.unexpected_genes_inside_locus,
+            self.expected_genes_outside_locus, self.unexpected_genes_outside_locus, self.extra_genes)
 
     def add_gene_result(self, gene_result: GeneResult):
         if gene_result.neighbour_left:  # If gene_result.neighbour_left is not None, the gene is not the first gene
@@ -98,119 +90,68 @@ class TypingResult:
             gene_type = f"{gene_result.gene_type}{'_outside_locus' if gene_result.gene_type.startswith(('expected', 'unexpected')) else ''}"
         getattr(self, gene_type).append(gene_result)  # Add gene result to the appropriate list
 
-    @cached_property  # Cache the percent identity so it is only calculated once
+    @property
     def percent_identity(self) -> float:
-        if self._percent_identity is not None:
-            return self._percent_identity
-        return (sum(i.percent_identity for i in x) / len(x)) if (x := self.expected_genes_inside_locus) else 0
+        if self._percent_identity is None:
+            self._percent_identity = (sum(i.percent_identity for i in x) / len(x)) if (
+                x := self.expected_genes_inside_locus) else 0
+        return self._percent_identity
 
-    @cached_property  # Cache the percent coverage so it is only calculated once
+    @property
     def percent_coverage(self) -> float:
-        if self._percent_coverage is not None:
-            return self._percent_coverage
-        return sum(len(i) for i in x) / sum(len(i) for i in self.best_match.genes.values()) * 100 \
-            if (x := self.expected_genes_inside_locus) else 0
+        if self._percent_coverage is None:
+            self._percent_coverage = sum(len(i) for i in x) / sum(len(i) for i in self.best_match.genes.values()) * 100 \
+                if (x := self.expected_genes_inside_locus) else 0
+        return self._percent_coverage
 
-    @cached_property  # Cache the phenotype so it is only calculated once
+    @property
     def phenotype(self) -> str:
-        if self._phenotype is not None:
-            return self._phenotype
-        gene_phenotypes = set()  # Init set to store gene phenotypes to be used as a key in the phenotypes dict
-        for gene in self:
-            if gene.gene_type in {'expected_genes', 'extra_genes'}:  # The reported phenotype only considers expected
-                gene_phenotypes.add((gene.gene.name, gene.phenotype))  # or extra genes
-        # NOTE: The best_match.phenotypes MUST be sorted from largest to smallest gene set to make sure any sets with
-        # extra genes are tested first.
-        for gene_set, phenotype in self.best_match.phenotypes:  # Get the phenotype from the phenotypes dict
-            if len(gene_set) == len(gene_phenotypes.intersection(gene_set)):
-                return phenotype
-        return self.best_match.type_label  # If no phenotype is found, return the type label
+        if self._phenotype is None:
+            gene_phenotypes = set()  # Init set to store gene phenotypes to be used as a key in the phenotypes dict
+            for gene in self:
+                if gene.gene_type in {'expected_genes', 'extra_genes'}:  # The reported phenotype only considers these
+                    gene_phenotypes.add((gene.gene.name, gene.phenotype))  # or extra genes
+            # NOTE: The best_match.phenotypes MUST be sorted from largest to smallest gene set to make sure any sets with
+            # extra genes are tested first.
+            self._phenotype = next(
+                (p for gs, p in self.best_match.phenotypes if len(gs) == len(gene_phenotypes.intersection(gs))),
+                self.best_match.type_label)  # If no phenotype is found, return the type label
+        return self._phenotype
 
-    @cached_property
+    @property
     def problems(self) -> str:
-        if self._problems is not None:
-            return self._problems
-        problems = f'?{x}' if (x := len(self.pieces)) != 1 else ''
-        problems += '-' if self.missing_genes else ''
-        problems += '+' if self.unexpected_genes_inside_locus else ''
-        problems += '*' if any(
-            i.percent_coverage >= 90 and i.below_threshold for i in self.expected_genes_inside_locus) else ''
-        problems += '!' if any(i.phenotype == "truncated" for i in self) else ''
-        return problems
+        if self._problems is None:
+            self._problems = f'?{x}' if (x := len(self.pieces)) != 1 else ''
+            self._problems += '-' if self.missing_genes else ''
+            self._problems += '+' if self.unexpected_genes_inside_locus else ''
+            self._problems += '*' if any(
+                i.percent_coverage >= 90 and i.below_threshold for i in self.expected_genes_inside_locus) else ''
+            self._problems += '!' if any(i.phenotype == "truncated" for i in self) else ''
+        return self._problems
 
-    @cached_property  # Cache the confidence so it is only calculated once
+    @property
     def confidence(self) -> str:
-        if self._confidence is not None:
-            return self._confidence
-        percent_expected_genes = len(self.expected_genes_inside_locus) / len(self.best_match.genes) * 100
+        return self._confidence if self._confidence is not None else "Not calculated"
+
+    def get_confidence(self, allow_below_threshold: bool, max_other_genes: int, percent_expected_genes: float):
+        p = len(self.expected_genes_inside_locus) / len(self.best_match.genes) * 100
         other_genes = len([i for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"])
-        if not self.confidence_args['allow_below_threshold'] and "*" in self.problems:
-            return "Untypeable"
-        if len(self.pieces) == 1:  # If there is only one piece
-            if not self.missing_genes and not other_genes:
-                return "Typeable"
-        else:  # If there are multiple pieces
-            if other_genes <= self.confidence_args['max_other_genes'] and \
-                    percent_expected_genes >= self.confidence_args['percent_expected_genes']:
-                return "Typeable"
-        return "Untypeable"
-
-    def as_fasta(self) -> str:
-        """Returns a fasta-formatted nucleotide sequence of the locus with a newline character at the end."""
-        return "".join(i.as_fasta() for i in self.pieces)
-
-    def as_gene_fasta(self) -> str:
-        """Returns a fasta-formatted nucleotide sequence of the locus genes with a newline character at the end."""
-        return "".join(i.as_fasta() for i in self)
-
-    def as_protein_fasta(self) -> str:
-        """Returns a fasta-formatted protein sequence of the locus genes with a newline character at the end."""
-        return "".join(i.as_protein_fasta() for i in self)
-
-    def as_graphic_record(self) -> GraphicRecord:
-        features, start = [], 0
-        for piece in self.pieces:
-            features.extend(piece.as_GraphicFeatures(start))
-            start += len(piece)
-        return GraphicRecord(sequence_length=self.__len__(), first_index=0, features=features,
-                             feature_level_height=1.5, sequence=[p.sequence for p in self.pieces])
-
-    def as_table(self, debug: bool = False, max_scores: int = 2) -> str:
-        return '\t'.join(
-            [
-                self.sample_name, self.best_match.name, self.phenotype, self.confidence, self.problems,
-                f"{self.percent_identity:.2f}%", f"{self.percent_coverage:.2f}%",
-                f"{self.__len__() - len(self.best_match)} bp" if len(self.pieces) == 1 else 'n/a',
-                f"{(x := len({i.gene.gene_name for i in self.expected_genes_inside_locus}))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
-                ';'.join(str(i) for i in x) if (x := self.expected_genes_inside_locus) else '',
-                ';'.join(self.missing_genes), f"{len(x := self.unexpected_genes_inside_locus)}",
-                ';'.join(str(i) for i in x) if x else '',
-                f"{len(x := self.expected_genes_outside_locus)} / {(y := len(self.best_match.genes))} ({100 * len(x) / y:.2f}%)",
-                ';'.join(str(i) for i in x) if x else '',
-                f"{len(x := self.unexpected_genes_outside_locus + self.extra_genes)}",
-                ';'.join(str(i) for i in x) if x else '',
-                ';'.join(str(i) for i in filter(lambda x: x.phenotype == "truncated", self)),
-            ] + ([] if not debug else [  # Add debug columns if debug is True
-                ';'.join([str(i) for i in self.extra_genes]), ';'.join(i.__repr__() for i in self.pieces),
-                f"{self.score:.1f}", f"{self.zscore:.1f}",
-                ';'.join(
-                    f"{s}_{w}:{'|'.join(f'{l},{x:.4f},{y:.4f}' for l, x, y in self.scores[s][w][:max_scores])}" for s in
-                    self.scores for w in self.scores[s]
-                ),
-                ';'.join(f"{k}={v}" for k, v in self.scoring_args.items()),
-                ';'.join(f"{k}={v}" for k, v in self.confidence_args.items())
-            ])
-        ) + "\n"
+        if not allow_below_threshold and "*" in self.problems:
+            self._confidence = "Untypeable"
+        else:
+            if len(self.pieces) == 1 and not self.missing_genes and not other_genes:
+                self._confidence = "Typeable"
+            elif other_genes <= max_other_genes and p >= percent_expected_genes:
+                self._confidence = "Typeable"
+            else:
+                self._confidence = "Untypeable"
 
     @classmethod
     def from_dict(cls, d: dict, db: Database) -> TypingResult:
         if not (best_match := db.loci.get(d['best_match'])):
             raise TypingResultError(f"Best match {d['best_match']} not found in database")
-        self = TypingResult(
-            sample_name=d['sample_name'], db=db, best_match=best_match, score=float(d['score']),
-            zscore=float(d['zscore']), scoring_args={k: str2val(v) for k, v in d['scoring_args'].items()},
-            confidence_args={k: str2val(v) for k, v in d['confidence_args'].items()}, missing_genes=d['missing_genes']
-        )
+        self = TypingResult(sample_name=d['sample_name'], db=db, best_match=best_match, zscore=float(d['zscore']),
+                            missing_genes=d['missing_genes'])
         # Set the cached properties
         self._percent_identity = float(d['percent_identity'])
         self._percent_coverage = float(d['percent_coverage'])
@@ -220,8 +161,7 @@ class TypingResult:
         # Add the pieces and create the gene results
         self.pieces = [LocusPiece.from_dict(i, result=self) for i in d['pieces']]
         pieces = {i.__repr__(): i for i in self.pieces}
-        gene_results = {}
-        # This was previously a dict comp, but we need to check the gene is in the database, see #31
+        gene_results = {}  # This was previously a dict comp, but we need to check the gene is in the database, see #31
         for r in chain(d['expected_genes_inside_locus'], d['unexpected_genes_inside_locus'],
                        d['expected_genes_outside_locus'], d['unexpected_genes_outside_locus'],
                        d['extra_genes']):
@@ -237,20 +177,64 @@ class TypingResult:
             self.add_gene_result(gene_result)
         return self
 
-    def as_dict(self) -> dict[str, str | list[dict[str, str] | None] | dict[str, dict[str, list[float]]]]:
-        return {
-            'sample_name': self.sample_name, 'best_match': self.best_match.name, 'score': str(self.score),
-            'zscore': str(self.zscore), 'confidence': self.confidence, 'phenotype': self.phenotype,
-            'problems': self.problems, 'scoring_args': {k: str(v) for k, v in self.scoring_args.items()},
-            'confidence_args': {k: str(v) for k, v in self.confidence_args.items()},
-            'percent_identity': str(self.percent_identity), 'percent_coverage': str(self.percent_coverage),
-            'pieces': [i.as_dict() for i in self.pieces],
-            'expected_genes_inside_locus': [i.as_dict() for i in self.expected_genes_inside_locus],
-            'expected_genes_outside_locus': [i.as_dict() for i in self.expected_genes_outside_locus],
-            'unexpected_genes_inside_locus': [i.as_dict() for i in self.unexpected_genes_inside_locus],
-            'unexpected_genes_outside_locus': [i.as_dict() for i in self.unexpected_genes_outside_locus],
-            'extra_genes': [i.as_dict() for i in self.extra_genes], 'missing_genes': self.missing_genes
-        }
+    def format(self, format_spec) -> str | GraphicRecord | dict:
+        if format_spec == 'tsv':
+            return '\t'.join(
+                [
+                    self.sample_name, self.best_match.name, self.phenotype, self.confidence, self.problems,
+                    f"{self.percent_identity:.2f}%", f"{self.percent_coverage:.2f}%",
+                    f"{self.__len__() - len(self.best_match)} bp" if len(self.pieces) == 1 else 'n/a',
+                    f"{(x := len({i.gene.gene_name for i in self.expected_genes_inside_locus}))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
+                    ';'.join(str(i) for i in x) if (x := self.expected_genes_inside_locus) else '',
+                    ';'.join(self.missing_genes), f"{len(x := self.unexpected_genes_inside_locus)}",
+                    ';'.join(str(i) for i in x) if x else '',
+                    f"{len(x := self.expected_genes_outside_locus)} / {(y := len(self.best_match.genes))} ({100 * len(x) / y:.2f}%)",
+                    ';'.join(str(i) for i in x) if x else '',
+                    f"{len(x := self.unexpected_genes_outside_locus)}",
+                    ';'.join(str(i) for i in x) if x else '',
+                    ';'.join(str(i) for i in filter(lambda z: z.phenotype == "truncated", self)),
+                    ';'.join([str(i) for i in self.extra_genes]),
+                    f"{self.zscore:.1f}"
+                ]
+            ) + "\n"
+        if format_spec == 'fna':  # Return the nucleotide sequence of the locus
+            return "".join([i.format(format_spec) for i in self.pieces])
+        if format_spec in {'faa', 'ffn'}:  # Return the protein or nucleotide sequence of gene results
+            return "".join([i.format(format_spec) for i in self])
+        if format_spec in {'png', 'svg'}:
+            features, start = [], 0
+            for piece in self.pieces if self.pieces[0].strand == "+" else reversed(self.pieces):
+                features.extend(piece.format(format_spec, start))
+                start += len(piece)
+            return GraphicRecord(sequence_length=self.__len__(), first_index=0, features=features,
+                                 feature_level_height=1.5, sequence=[p.sequence for p in self.pieces])
+        if format_spec == 'json':
+            return dumps({
+                             'sample_name': self.sample_name, 'best_match': self.best_match.name,
+                             'zscore': str(self.zscore),
+                             'confidence': self.confidence, 'phenotype': self.phenotype, 'problems': self.problems,
+                             'percent_identity': str(self.percent_identity),
+                             'percent_coverage': str(self.percent_coverage),
+                             'missing_genes': self.missing_genes} | {
+                             attr: [i.format(format_spec) for i in getattr(self, attr)] for attr in {
+                    'pieces', 'expected_genes_inside_locus', 'unexpected_genes_inside_locus',
+                    'expected_genes_outside_locus', 'unexpected_genes_outside_locus', 'extra_genes'}
+                         }) + "\n"
+        raise ValueError(f"Unknown format specifier {format_spec}")
+
+    def write(self, tsv: TextIO | None = None, json: TextIO | None = None, fna: Path | TextIO | None = None,
+              ffn: Path | TextIO | None = None, faa: Path | TextIO | None = None, plot: Path | None = None,
+              plot_fmt: str = 'png'):
+        """Write the typing result to files or file handles."""
+        [fh.write(self.format(fmt)) for fh, fmt in [(tsv, 'tsv'), (json, 'json')] if fh]
+        [(fh / f'{self.sample_name}_kaptive_results.{fmt}').write_text(self.format(fmt)) if isinstance(fh, Path) else
+         fh.write(self.format(fmt)) for fh, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')] if fh]
+        if plot:
+            ax = self.format(plot_fmt).plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
+            ax.set_title(  # Add title to figure
+                f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
+            ax.figure.savefig(plot / f'{self.sample_name}_kaptive_results.{plot_fmt}', bbox_inches='tight')
+            ax.figure.clear()  # Close figure to prevent memory leak
 
 
 class LocusPieceError(Exception):
@@ -261,8 +245,7 @@ class LocusPiece:
     def __init__(self, id: str | None = None, result: TypingResult | None = None, start: int | None = 0,
                  end: int | None = 0, strand: str | None = None, sequence: Seq | None = None,
                  expected_genes: list[GeneResult] | None = None, unexpected_genes: list[GeneResult] | None = None,
-                 # is_elements: list[GeneResult] | None = None
-                 ):
+                 extra_genes: list[GeneResult] | None = None):
         self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
         self.result = result
         self.start = start
@@ -271,13 +254,14 @@ class LocusPiece:
         self.sequence = sequence or Seq("")
         self.expected_genes = expected_genes or []  # Genes from best_match
         self.unexpected_genes = unexpected_genes or []  # Genes that were found from other loci
+        self.extra_genes = extra_genes or []  # Genes that were found outside the locus
         # self.is_elements = is_elements or []  # Specifically db.is_elements
 
     def __len__(self):
         return self.end - self.start
 
     def __iter__(self):
-        return chain(self.expected_genes, self.unexpected_genes)
+        return chain(self.expected_genes, self.unexpected_genes, self.extra_genes)
 
     def __str__(self):
         return self.id
@@ -290,14 +274,17 @@ class LocusPiece:
         return cls(id=d['id'], start=int(d['start']), end=int(d['end']), strand=d['strand'],
                    sequence=Seq(d['sequence']), **kwargs)
 
-    def as_dict(self) -> dict[str, str]:
-        return {
-            'id': self.id, 'start': str(self.start), 'end': str(self.end), 'strand': self.strand,
-            'sequence': str(self.sequence)
-        }
-
-    def as_fasta(self) -> str:
-        return f">{self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n{self.sequence}\n"
+    def format(self, format_spec, relative_start: int = 0) -> str | dict | list[GraphicFeature]:
+        if format_spec == 'fna':
+            return f">{self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n{self.sequence}\n"
+        if format_spec == 'json':
+            return {'id': self.id, 'start': str(self.start), 'end': str(self.end), 'strand': self.strand,
+                    'sequence': str(self.sequence)}
+        if format_spec in {'png', 'svg'}:
+            return [GraphicFeature(start=relative_start, end=relative_start + len(self), strand=1, thickness=30,
+                                   color='#762a83', label=str(self), linewidth=0)] + [
+                gene.format(format_spec, gene.start - self.start + relative_start) for gene in self]
+        raise ValueError(f"Unknown format specifier {format_spec}")
 
     def add_gene_result(self, gene_result: GeneResult):
         if gene_result.start < self.start:  # Update start and end if necessary
@@ -305,12 +292,6 @@ class LocusPiece:
         if gene_result.end > self.end:
             self.end = gene_result.end
         getattr(self, gene_result.gene_type).append(gene_result)
-
-    def as_GraphicFeatures(self, relative_start: int = 0) -> Generator[GraphicFeature, None, None]:
-        yield GraphicFeature(start=relative_start, end=relative_start + len(self), strand=1, thickness=30,
-                             color='#762a83', label=str(self), linewidth=0)
-        for gene in self:  # Get relative gene start within piece
-            yield gene.as_GraphicFeature(relative_start=gene.start - self.start + relative_start)
 
 
 class GeneResultError(Exception):
@@ -368,29 +349,41 @@ class GeneResult:
             percent_identity=float(d['percent_identity']), percent_coverage=float(d['percent_coverage']), **kwargs
         )
 
-    def as_dict(self) -> dict[str, str]:
-        return {
-            'id': self.id, 'start': str(self.start), 'end': str(self.end), 'strand': self.strand,
-            'dna_seq': str(self.dna_seq), 'protein_seq': str(self.protein_seq), 'partial': str(self.partial),
-            'below_threshold': str(self.below_threshold), 'phenotype': self.phenotype, 'gene_type': self.gene_type,
-            'percent_identity': str(self.percent_identity), 'percent_coverage': str(self.percent_coverage),
-            'gene': self.gene.name, 'piece': self.piece.__repr__() if self.piece else '',
-            'neighbour_left': self.neighbour_left.__repr__() if self.neighbour_left else '',
-            'neighbour_right': self.neighbour_right.__repr__() if self.neighbour_right else '',
-        }
+    def format(self, format_spec, relative_start: int = 0) -> str | dict | GraphicFeature:
+        if format_spec == 'ffn':
+            if len(self.dna_seq) == 0:
+                warning(f'No DNA sequence for {self}')
+                return ""
+            return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
+                    f'{self.dna_seq}\n')
+        if format_spec == 'faa':
+            if len(self.protein_seq) == 0:
+                warning(f'No protein sequence for {self.__repr__()}')
+                return ""
+            return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
+                    f'{self.protein_seq}\n')
+        if format_spec == 'json':
+            return {
+                'id': self.id, 'start': str(self.start), 'end': str(self.end), 'strand': self.strand,
+                'dna_seq': str(self.dna_seq), 'protein_seq': str(self.protein_seq), 'partial': str(self.partial),
+                'below_threshold': str(self.below_threshold), 'phenotype': self.phenotype, 'gene_type': self.gene_type,
+                'percent_identity': str(self.percent_identity), 'percent_coverage': str(self.percent_coverage),
+                'gene': self.gene.name, 'piece': self.piece.__repr__() if self.piece else '',
+                'neighbour_left': self.neighbour_left.__repr__() if self.neighbour_left else '',
+                'neighbour_right': self.neighbour_right.__repr__() if self.neighbour_right else '',
+            }
+        if format_spec in {'png', 'svg'}:
+            strand = self.gene.strand if self.strand == self.gene.strand else self.strand
+            return GraphicFeature(
+                start=relative_start, end=relative_start + len(self), legend_text=self.gene_type, label=str(self),
+                strand=0 if self.phenotype == "truncated" or self.partial else 1 if strand == "+" else -1,
+                thickness=40, linewidth=3,
+                color=('#762a83' if self.gene_type == 'expected_genes' else "orange", self.percent_identity / 100),
+                linecolor='red' if self.below_threshold else "yellow" if self.phenotype == "truncated" else 'black'
+            )
+        raise ValueError(f"Unknown format specifier {format_spec}")
 
-    def as_GraphicFeature(self, relative_start: int = 0) -> GraphicFeature:
-        # Only flip the gene feature if deviates from the expected strand
-        strand = self.gene.strand if self.strand == self.gene.strand else self.strand
-        return GraphicFeature(
-            start=relative_start, end=relative_start + len(self), legend_text=self.gene_type, label=str(self),
-            strand=0 if self.phenotype == "truncated" or self.partial else 1 if strand == "+" else -1,
-            thickness=40, linewidth=3,
-            color=('#762a83' if self.gene_type == 'expected_genes' else "orange", self.percent_identity / 100),
-            linecolor='red' if self.below_threshold else "yellow" if self.phenotype == "truncated" else 'black'
-        )
-
-    def extract_translation(self, frame: int = 0, **kwargs):
+    def compare_translation(self, frame: int = 0, **kwargs):
         """
         Extracts the translation from the DNA sequence of the gene result.
         Will also extract the translation from the gene if it is not already stored.
@@ -413,18 +406,3 @@ class GeneResult:
             if not self.partial and self.percent_coverage < 95:  # If the protein sequence less than 95% of reference
                 self.phenotype = "truncated"  # Set the phenotype to truncated
 
-    def as_fasta(self) -> str:
-        """Returns a fasta-formatted nucleotide sequence with a newline character at the end."""
-        if len(self.dna_seq) == 0:
-            warning(f'No DNA sequence for {self}')
-            return ""
-        return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
-                f'{self.dna_seq}\n')
-
-    def as_protein_fasta(self) -> str:
-        """Returns a fasta-formatted protein sequence with a newline character at the end."""
-        if len(self.protein_seq) == 0:
-            warning(f'No protein sequence for {self.__repr__()}')
-            return ""
-        return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
-                f'{self.protein_seq}\n')

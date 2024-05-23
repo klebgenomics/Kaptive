@@ -17,14 +17,13 @@ import sys
 from pathlib import Path
 from gzip import open as gzopen
 from bz2 import open as bzopen
-from typing import Generator
-
-from Bio.SeqIO.FastaIO import SimpleFastaParser
+from typing import Generator, TextIO
 
 from kaptive.log import log, quit_with_error, bold_cyan
 
 # Constants -----------------------------------------------------------------------------------------------------------
-_COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip'}
+_COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
+_READ_N_BYTES = max(len(x) for x in _COMPRESSION_MAGIC)
 _LOGO = r"""  _  __    _    ____ _____ _____     _______ 
  | |/ /   / \  |  _ \_   _|_ _\ \   / / ____|
  | ' /   / _ \ | |_) || |  | | \ \ / /|  _|  
@@ -60,7 +59,7 @@ def check_file(path: str | Path) -> Path:
         return path.absolute()
 
 
-def check_cpus(cpus: int | str | None) -> int:
+def check_cpus(cpus: int | str | None = 0) -> int:
     if not cpus:
         return os.cpu_count()
     try:
@@ -72,15 +71,26 @@ def check_cpus(cpus: int | str | None) -> int:
     return min(cpus, os.cpu_count())
 
 
-def check_dir(path: str, parents: bool = True, exist_ok: bool = True) -> Path:
+def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool = True) -> Path | TextIO:
     """
-    Check if a directory exists, and create it if not
+    Check if the user wants to create/append a file or directory.
+    If it looks like/is already a file (has an extension), return the file object.
+    If it looks like/is already a directory, return the directory path.
     """
-    try:
-        (path := Path(path)).mkdir(parents=parents, exist_ok=exist_ok)
-        return path
-    except Exception as e:
-        quit_with_error(f"Could not create directory {path}: {e}")
+    # This may also be sys.stdout
+    if path == '-':
+        return sys.stdout
+    if (path := Path(path)).suffix:
+        try:
+            return path.open(mode)
+        except Exception as e:
+            quit_with_error(f'Could not open {path}: {e}')
+    if not path.exists():
+        try:
+            path.mkdir(parents=parents, exist_ok=exist_ok)
+        except Exception as e:
+            quit_with_error(f'Could not create {path}: {e}')
+    return path
 
 
 def check_python_version(major: int = 3, minor: int = 8):
@@ -97,27 +107,20 @@ def check_biopython_version(major: int = 1, minor: int = 79):
         quit_with_error(f'Biopython version {major}.{minor} or greater required, got {major_version}.{minor_version}')
 
 
-def parse_fasta(fasta: Path, skip_plasmids: bool = False, verbose: bool = False) -> Generator[tuple[str, str, str], None, None]:
-    log(f'Parsing {fasta.name}', verbose)
-    with open(fasta, 'rb') as f:  # Read the first two bytes to determine the compression format
-        compression = _COMPRESSION_MAGIC.get(f.read(2), 'uncompressed')  # Default to uncompressed
-    if compression == 'uncompressed':
-        opener = open  # Use the built-in open function
+def opener(file: Path | str, check: bool = True, verbose: bool = False, *args, **kwargs):
+    """Opens a file with the appropriate open function based on the compression format of the file"""
+    with open(check_file(file) if check else file, 'rb') as f:
+        file_start = f.read(_READ_N_BYTES)
+    compression = next((comp for magic, comp in _COMPRESSION_MAGIC.items() if file_start.startswith(magic)), 'no')
+    log(f'Opening {file} with {compression} compression, file start: {file_start}', verbose)
+    if compression == 'no':
+        return open(file, *args, **kwargs)  # Use the built-in open function
     elif compression == 'gz':
-        opener = gzopen  # Use the gzip open function
+        return gzopen(file, *args, **kwargs)  # Use the gzip open function
     elif compression == 'bz2':
-        opener = bzopen  # Use the bzip2 open function
+        return bzopen(file, *args, **kwargs)  # Use the bzip2 open function
     else:
         quit_with_error(f'Unsupported compression format: {compression}')
-    try:
-        plasmid_markers = {'plasmid', '__pl'}
-        with opener(fasta, 'rt') as f:
-            for header, sequence in SimpleFastaParser(f):
-                if skip_plasmids and any(i in header for i in plasmid_markers):
-                    continue
-                yield (x := header.split(' ', 1))[0], x[1] if len(x) == 2 else '', sequence
-    except Exception as e:
-        quit_with_error(f'Error reading {fasta}: {e}')
 
 
 def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the logo
