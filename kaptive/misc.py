@@ -22,7 +22,8 @@ from typing import Generator, TextIO
 from kaptive.log import log, quit_with_error, bold_cyan
 
 # Constants -----------------------------------------------------------------------------------------------------------
-_COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip'}
+_COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
+_READ_N_BYTES = max(len(x) for x in _COMPRESSION_MAGIC)
 _LOGO = r"""  _  __    _    ____ _____ _____     _______ 
  | |/ /   / \  |  _ \_   _|_ _\ \   / / ____|
  | ' /   / _ \ | |_) || |  | | \ \ / /|  _|  

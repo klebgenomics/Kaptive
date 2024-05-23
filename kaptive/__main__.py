@@ -21,7 +21,7 @@ import argparse
 from io import TextIOWrapper
 
 from kaptive.version import __version__
-from kaptive.log import bold, quit_with_error
+from kaptive.log import bold, quit_with_error, log
 from kaptive.misc import check_python_version, check_biopython_version, get_logo, check_out, check_file, check_cpus
 
 # Constants -----------------------------------------------------------------------------------------------------------
@@ -92,26 +92,26 @@ def assembly_subparser(subparsers):
     opts.add_argument('input', nargs='+', metavar='fasta', type=check_file, help='Assemblies in fasta format')
     opts = assembly_parser.add_argument_group(bold('Output options'), "")
     # Note these are different to the convert output options as TSV is the main output and fna is the main fasta output
-    opts.add_argument('-o', '--out', metavar='file', default=sys.stdout, type=argparse.FileType('at'),
+    opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
                       help='Output file to write/append tabular results to (default: stdout)')
-    opts.add_argument('-f', '--fasta', metavar='file/dir', nargs='?', default=None, const='.', type=check_out,
-                      help='Turn on fasta output, defaulting "{input}_kaptive_results.fna"\n'
-                           'Optionally choose the output directory (default: cwd)')
-    opts.add_argument('-j', '--json', metavar='file', nargs='?', default=None, const='kaptive_results.json',
+    opts.add_argument('-f', '--fasta', metavar='', nargs='?', default=None, const='.', type=check_out,
+                      help='Turn on fasta output, defaulting "./{assembly}_kaptive_results.fna" per assembly.\n'
+                           'Can optionally specify a directory or file (default: cwd)\n'
+                           'If a file is specified, all locus sequences will be written to that file.')
+    opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const='kaptive_results.json',
                       type=argparse.FileType('at'),
                       help='Turn on JSON lines output\n'
                            'Optionally choose file (can be existing) (default: %(const)s)')
     other_fmt_opts(opts)
     opts = assembly_parser.add_argument_group(bold('Scoring options'), "")
-    # opts.add_argument("--score-metric", type=str, default='AS', metavar='',
-    #                   help="Alignment metric to use for scoring (default: %(default)s)")
-    # opts.add_argument("--weight-metric", type=str, metavar='', default='prop_genes_found',
-    #                   help="Weighting for scoring metric (default: %(default)s)\n"
-    #                        " - none: No weighting\n"
-    #                        " - locus_length: length of the locus\n"
-    #                        " - genes_expected: # of genes expected in the locus\n"
-    #                        " - genes_found: # of genes found in the locus\n"
-    #                        " - prop_genes_found: genes_found / genes_expected")
+    opts.add_argument("--score-metric", metavar='', choices={0, 1}, default=0, type=int,
+                      help="Cumulative alignment metric for scoring each locus (default: %(default)s)\n"
+                           "  0: Matching bases / aligned bases (percent identity)\n"
+                           "  1: Alignment score / aligned bases")
+    opts.add_argument("--weight-metric", metavar='', choices={0, 1, 2, 3, 4}, default=0, type=int,
+                      help="Weighting for each locus score (default: %(default)s)\n"
+                           "  0: Proportion of genes found\n  1: Number of genes expected\n"
+                           "  2: Number of genes found\n  3: Length of the locus\n  4: No weighting")
     opts.add_argument('--min-cov', type=float, required=False, default=50.0, metavar='',
                       help='Minimum gene %%coverage to be used for scoring (default: %(default)s)')
     opts = assembly_parser.add_argument_group(bold('Confidence options'), "")
@@ -119,9 +119,10 @@ def assembly_subparser(subparsers):
                       help="Species-level locus gene identity threshold (default: database specific)")
     opts.add_argument("--max-other-genes", type=int, metavar='', default=1,
                       help="Typeable if <= other genes (default: %(default)s)")
-    opts.add_argument("--percent-expected-genes", type=float, metavar='', default=50,
+    opts.add_argument("--percent-expected", type=float, metavar='', default=50,
                       help="Typeable if >= %% expected genes (default: %(default)s)")
-    opts.add_argument("--allow-below-threshold", action='store_true', help="Typeable if any genes are below threshold")
+    opts.add_argument("--below-threshold", type=bool, default=False, metavar='',
+                      help="Typeable if any genes are below threshold (default: %(default)s)")
     opts = assembly_parser.add_argument_group(bold('Database options'), "")
     db_opts(opts)
     opts.add_argument('--filter', type=re.compile, metavar='',
@@ -144,9 +145,9 @@ def convert_subparser(subparsers):
     opts = convert_parser.add_argument_group(bold('Formats'),
                                              "\nNote, you can select multiple formats to output but Kaptive will \n"
                                              "throw an error if you try to output multiple formats to the same file")
-    opts.add_argument('-t', '--tsv', metavar='file', nargs='?', default=None, const='-', type=check_out,
+    opts.add_argument('-t', '--tsv', metavar='', nargs='?', default=None, const='-', type=check_out,
                       help='Convert to tabular format in file (default: stdout)')
-    opts.add_argument('-j', '--json', metavar='file', nargs='?', default=None, const='-', type=check_out,
+    opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const='-', type=check_out,
                       help='Convert to JSON lines format in file (default: stdout)')
     fmt_opts(opts)
     other_fmt_opts(opts)
@@ -187,23 +188,23 @@ def extract_subparser(subparsers):
 
 def fmt_opts(opts: argparse.ArgumentParser):
     """Format opts shared by convert and extract"""
-    opts.add_argument('--fna', metavar='file/dir', nargs='?', default=None, const='.', type=check_out,
+    opts.add_argument('--fna', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Convert to locus nucleotide sequences in fasta format\n'
                            'Either in a single file/stdout or separate files in a directory (default: cwd)')
-    opts.add_argument('--ffn', metavar='file/dir', nargs='?', default=None, const='.', type=check_out,
+    opts.add_argument('--ffn', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Convert to locus gene nucleotide sequences in fasta format\n'
                            'Either in a single file/stdout or separate files in a directory (default: cwd)')
-    opts.add_argument('--faa', metavar='file/dir', nargs='?', default=None, const='.', type=check_out,
+    opts.add_argument('--faa', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Convert to locus gene protein sequences in fasta format\n'
                            'Either in a single file/stdout or separate files in a directory (default: cwd)')
 
 
 def other_fmt_opts(opts: argparse.ArgumentParser):
     """Format opts shared by convert and assembly"""
-    opts.add_argument('-p', '--plot', metavar='dir', nargs='?', default=None, const='.', type=check_out,
-                      help='Plot results to "{input}_kaptive_results.{fmt}"\n'
+    opts.add_argument('-p', '--plot', metavar='', nargs='?', default=None, const='.', type=check_out,
+                      help='Plot results to "./{assembly}_kaptive_results.{fmt}"\n'
                            'Optionally choose a directory (default: cwd)')
-    opts.add_argument('--plot-fmt', default='png', metavar='png,svg', choices=['png', 'svg'],
+    opts.add_argument('--plot-fmt', default='png', metavar='png/svg', choices={'png', 'svg'},
                       help='Format for locus plots (default: %(default)s)')
     opts.add_argument('--no-header', action='store_true', help='Suppress header line')
 
@@ -227,8 +228,6 @@ def main():
     check_biopython_version(1, 83)
     args = parse_args(sys.argv[1:])
 
-    args = parse_args(['assembly', 'kpsc_k', 'test/data/NK_H8_045_hybrid.fasta'])
-
     # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
         from kaptive.assembly import typing_pipeline, write_headers
@@ -240,9 +239,11 @@ def main():
         write_headers(args.out, args.no_header)
 
         [result.write(args.out, args.json, args.fasta, None, None, args.plot, args.plot_fmt)
-         for sample in args.input if (result := typing_pipeline(sample, args.db, args.threads, args.min_cov,
-                                                                args.max_other_genes, args.percent_expected_genes,
-                                                                args.allow_below_threshold, args.verbose))]
+         for sample in args.input if (result := typing_pipeline(sample, args.db, args.threads, args.score_metric,
+                                                                args.weight_metric, args.min_cov,
+                                                                args.max_other_genes, args.percent_expected,
+                                                                args.below_threshold, args.verbose))]
+        log("Done!", verbose=args.verbose)
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':

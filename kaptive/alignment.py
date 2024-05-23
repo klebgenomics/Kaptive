@@ -55,13 +55,15 @@ class Alignment:
         """
         if len(line := line.split('\t')) < 12:
             raise AlignmentError(f"Line has < 12 columns: {line}")
-        return cls(  # Parse standard fields
-            q=line[0], q_len=int(line[1]), q_st=int(line[2]), q_en=int(line[3]), strand=line[4], ctg=line[5],
-            ctg_len=int(line[6]), r_st=int(line[7]), r_en=int(line[8]), mlen=int(line[9]), blen=int(line[10]),
-            mapq=int(line[11]),
-            tags={x: int(z) if y == "i" else float(z) if y == "f" else z for tag in line[12:] for x, y, z in
-                  tag.split(":", 2)}
-        )
+        try:
+            return Alignment(  # Parse standard fields
+                q=line[0], q_len=int(line[1]), q_st=int(line[2]), q_en=int(line[3]), strand=line[4], ctg=line[5],
+                ctg_len=int(line[6]), r_st=int(line[7]), r_en=int(line[8]), mlen=int(line[9]), blen=int(line[10]),
+                mapq=int(line[11]),
+                tags={(x := t.split(":", 2))[0]: int(x[2]) if x[1] == "i" else float(x[2]) if x[1] == "f" else x[2] for t in line[12:]}
+            )
+        except Exception as e:
+            raise AlignmentError(f"Error parsing PAF line: {line}") from e
 
     def __repr__(self):
         return (f'{self.query_name}:{self.query_start}-{self.query_end} '
@@ -80,12 +82,12 @@ class Alignment:
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def iter_alns(data: str | bytes) -> Generator[Alignment, None, None]:
+def iter_alns(data: str) -> Generator[Alignment, None, None]:
     """Iterate over alignments in a chunk of data"""
     # It's probably better to decode the data here rather than in the Alignment class
     if not data:
         return None
-    for line in data.splitlines() if isinstance(data, str) else data.decode().splitlines():
+    for line in data.splitlines():
         try:
             yield Alignment.from_paf_line(line)
         except AlignmentError:
@@ -93,10 +95,8 @@ def iter_alns(data: str | bytes) -> Generator[Alignment, None, None]:
             continue
 
 
-def group_alns(alignments: Iterable[Alignment] | str | bytes, key: str = 'q') -> Generator[tuple[str, Generator[Alignment]]]:
+def group_alns(alignments: Iterable[Alignment], key: str = 'q') -> Generator[tuple[str, Generator[Alignment]]]:
     """Group alignments by a key"""
-    if isinstance(alignments, (str, bytes)):
-        alignments = iter_alns(alignments)
     yield from groupby(sorted(alignments, key=lambda x: getattr(x, key)), key=lambda x: getattr(x, key))
 
 
@@ -111,7 +111,7 @@ def cull(keep: Alignment, alignments: Iterable[Alignment],
 
 def cull_all(alignments: list[Alignment]) -> list[Alignment]:
     kept_alignments = []
-    sorted_alignments = sorted(list(alignments), key=lambda x: x[1].mlen, reverse=True)
+    sorted_alignments = sorted(list(alignments), key=lambda x: x.mlen, reverse=True)
     while sorted_alignments:
         kept_alignments.append(sorted_alignments.pop(0))
         sorted_alignments = list(cull(kept_alignments[-1], sorted_alignments))

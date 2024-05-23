@@ -76,8 +76,9 @@ class TypingResult:
         return sum(len(i) for i in self.pieces) if self.pieces else 0
 
     def __iter__(self):
-        return chain(self.expected_genes_inside_locus, self.unexpected_genes_inside_locus,
-                     self.expected_genes_outside_locus, self.unexpected_genes_outside_locus, self.extra_genes)
+        return chain(
+            self.expected_genes_inside_locus, self.unexpected_genes_inside_locus,
+            self.expected_genes_outside_locus, self.unexpected_genes_outside_locus, self.extra_genes)
 
     def add_gene_result(self, gene_result: GeneResult):
         if gene_result.neighbour_left:  # If gene_result.neighbour_left is not None, the gene is not the first gene
@@ -202,7 +203,7 @@ class TypingResult:
             return "".join([i.format(format_spec) for i in self])
         if format_spec in {'png', 'svg'}:
             features, start = [], 0
-            for piece in self.pieces:
+            for piece in self.pieces if self.pieces[0].strand == "+" else reversed(self.pieces):
                 features.extend(piece.format(format_spec, start))
                 start += len(piece)
             return GraphicRecord(sequence_length=self.__len__(), first_index=0, features=features,
@@ -220,9 +221,6 @@ class TypingResult:
                     'expected_genes_outside_locus', 'unexpected_genes_outside_locus', 'extra_genes'}
                          }) + "\n"
         raise ValueError(f"Unknown format specifier {format_spec}")
-
-    def __format__(self, format_spec):
-        return self.format(format_spec)
 
     def write(self, tsv: TextIO | None = None, json: TextIO | None = None, fna: Path | TextIO | None = None,
               ffn: Path | TextIO | None = None, faa: Path | TextIO | None = None, plot: Path | None = None,
@@ -263,7 +261,7 @@ class LocusPiece:
         return self.end - self.start
 
     def __iter__(self):
-        return chain(self.expected_genes, self.unexpected_genes)
+        return chain(self.expected_genes, self.unexpected_genes, self.extra_genes)
 
     def __str__(self):
         return self.id
@@ -287,9 +285,6 @@ class LocusPiece:
                                    color='#762a83', label=str(self), linewidth=0)] + [
                 gene.format(format_spec, gene.start - self.start + relative_start) for gene in self]
         raise ValueError(f"Unknown format specifier {format_spec}")
-
-    def __format__(self, format_spec):
-        return self.format(format_spec)
 
     def add_gene_result(self, gene_result: GeneResult):
         if gene_result.start < self.start:  # Update start and end if necessary
@@ -387,9 +382,6 @@ class GeneResult:
                 linecolor='red' if self.below_threshold else "yellow" if self.phenotype == "truncated" else 'black'
             )
         raise ValueError(f"Unknown format specifier {format_spec}")
-
-    def __format__(self, format_spec):
-        return self.format(format_spec)
 
     def compare_translation(self, frame: int = 0, **kwargs):
         """

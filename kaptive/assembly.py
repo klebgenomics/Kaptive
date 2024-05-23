@@ -32,7 +32,6 @@ from kaptive.alignment import Alignment, iter_alns, group_alns, cull, cull_all
 from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus
 from kaptive.log import warning, log
 
-
 # Constants -----------------------------------------------------------------------------------------------------------
 _ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
 _ASSEMBLY_GRAPH_REGEX = compile(r'\.(gfa)(\.gz)?$')
@@ -56,11 +55,12 @@ class Assembly:
         return self.path.stat().st_size
 
     def seq(self, ctg: str, start: int, end: int, strand: str = "+") -> Seq:
-        return self.contigs[ctg].seq[start:end] if strand == "+" else self.contigs[ctg].seq[start:end].reverse_complement()
+        return self.contigs[ctg].seq[start:end] if strand == "+" else self.contigs[ctg].seq[
+                                                                      start:end].reverse_complement()
 
-    def map(self, stdin: str, threads: int,) -> Generator[Alignment, None, None]:
-        return iter_alns(Popen(f"minimap2 -c -t {threads} {self.path} -".split(), stdin=PIPE, stdout=PIPE, stderr=PIPE
-                               ).communicate(stdin.encode())[0])
+    def map(self, stdin: str, threads: int, ) -> Generator[Alignment, None, None]:
+        return iter_alns(Popen(f"minimap2 -c -t {threads} {self.path} -".split(), stdin=PIPE, stdout=PIPE,
+                         stderr=PIPE).communicate(stdin.encode())[0].decode())
 
 
 class ContigError(Exception):
@@ -72,13 +72,12 @@ class Contig(object):
     This class describes a contig in an assembly: the name, length, and sequence.
     """
 
-    def __init__(self, name: str | None = None, desc: str | None = None, seq: Seq | None = Seq(''),
-                 neighbours_L: dict[str: Contig] | None = None, neighbours_R: dict[str: Contig] | None = None):
+    def __init__(self, name: str | None = None, desc: str | None = None, seq: Seq | None = Seq('')):
         self.name = name or ''
         self.desc = desc or ''
         self.seq = seq
-        self.neighbours_L = neighbours_L or {}  # For assembly graphs
-        self.neighbours_R = neighbours_R or {}  # For assembly graphs
+        # self.neighbours_L = neighbours_L or {}  # For assembly graphs
+        # self.neighbours_R = neighbours_R or {}  # For assembly graphs
 
     def __repr__(self):
         return self.name
@@ -93,7 +92,12 @@ def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
     if _ASSEMBLY_FASTA_REGEX.search(file.name):
         try:
             log(f"Parsing {file.name} as FASTA", verbose=verbose)
-            return parse_fasta(file)
+            assembly = Assembly(file)
+            with opener(file, mode='rt') as f:
+                for h, s in SimpleFastaParser(f):
+                    n, d = h.split(' ', 1) if ' ' in h else (h, '')
+                    assembly.contigs[n] = Contig(n, d, Seq(s))
+            return assembly
         except Exception as e:
             warning(f"Error parsing {file.name}: {e}")
     # elif _ASSEMBLY_GRAPH_REGEX.search(file.name):
@@ -102,12 +106,6 @@ def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
     else:
         warning(f"Unknown assembly format for {file.name}")
     return None  # Return none so the pipeline can skip this assembly
-
-
-def parse_fasta(file: Path) -> Assembly:
-    with opener(file, mode='rt') as f:
-        return Assembly(file, contigs={n: Contig((n := h.split(' ', 1)[0]), h.split(' ', 1)[1] if ' ' in h else '',
-                                                 Seq(s)) for h, s in SimpleFastaParser(f)})
 
 
 # class GFAError(Exception):
@@ -180,9 +178,13 @@ def write_headers(tsv: TextIO | None = None, no_header: bool = False):
 
 def typing_pipeline(
         assembly: str | Path | Assembly, db: str | Path | Database, threads: None | int = 0,
-        min_cov: float | None = 0.5, max_other_genes: int | None = 1, percent_expected_genes: float | None = 50,
+        score_metric: int | None = 0, weight_metric: int | None = 0, min_cov: float | None = 0.5,
+        max_other_genes: int | None = 1, percent_expected_genes: float | None = 50,
         allow_below_threshold: bool | None = False, verbose: bool | None = False) -> TypingResult | None:
-
+    """
+    Performs *in silico* serotyping on a bacterial genome assembly using a database of known loci.
+    It can be run as part of batch process (preloaded assembly and database) or as a standalone function.
+    """
     # CHECK ARGS -------------------------------------------------------------------------------------------------------
     threads = check_cpus(threads) if not threads else threads  # Get the number of threads if 0
     if not isinstance(db, Database) and not (db := load_database(db, verbose=verbose)):
@@ -190,36 +192,32 @@ def typing_pipeline(
     if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
         return None
 
-    # ALIGN GENES AND CALCULATE BEST MATCH -----------------------------------------------------------------------------
-    threads = args.threads
-    verbose = args.verbose
-    min_cov = args.min_cov
-    max_other_genes = args.max_other_genes
-    percent_expected_genes = args.percent_expected_genes
-    allow_below_threshold = args.allow_below_threshold
-    db = args.db
-    assembly = parse_assembly(args.input[0])
-
-    scores, idx = np.array(np.zeros(len(db))), {g: i for i, g in enumerate(db.loci.values())}
-    genes_found, genes_expected = np.array(np.zeros(len(db))), np.array([len(l.genes) for l in db.loci.values()])
-    alignments = []
-
-    for _, alns in group_alns(assembly.map(db.format('ffn'), threads)):  # Group alignments by gene (q)
+    # ALIGN GENES ------------------------------------------------------------------------------------------------------
+    scores, genes_found = np.array(np.zeros(len(db))), np.array(np.zeros(len(db)))
+    idx, alignments = {l: i for i, l in enumerate(db.loci)}, []
+    for q, alns in group_alns(assembly.map(db.format('ffn'), threads)):  # Group alignments by query gene (Alignment.q)
+        alignments.extend((alns := list(alns)))
         if (best := max(alns, key=lambda x: x.mlen)).q_len / best.blen * 100 >= min_cov:  # If best has enough coverage
-            scores[(i := idx[best.q.split("_", 1)[0]])] += best.mlen / best.blen  # Add the score to the locus
+            scores[(i := idx[q.split("_", 1)[0]])] += (best.mlen if score_metric == 0 else best.tags['AS']) / best.blen
             genes_found[i] += 1  # Add the gene to the found genes
-            alignments.extend(alns)
 
     if not alignments:
         warning(f'No gene alignments sufficient for typing {assembly}')
         return None
 
-    scores = scores * (genes_found / genes_expected)  # Weight scores by proportion of genes found
-    zscores = (scores - np.mean(scores)) / np.std(scores)  # Calculate z-scores
+    # CALCULATE BEST MATCH ---------------------------------------------------------------------------------------------
+    if weight_metric == 0:  # Proportion of genes found in locus
+        scores = scores * (genes_found / np.array([len(l.genes) for l in db.loci.values()]))
+    elif weight_metric == 1:  # Number of genes expected in locus
+        scores = scores / np.array([len(l.genes) for l in db.loci.values()])
+    elif weight_metric == 2:  # Number of genes found in locus
+        scores = scores / genes_found
+    elif weight_metric == 3:  # Length of locus
+        scores = scores / np.array([len(l) for l in db.loci.values()])
     best_match = list(db.loci.values())[np.argmax(scores)]
 
     # RECONSTRUCT LOCUS ------------------------------------------------------------------------------------------------
-    result = TypingResult(assembly.name, db, best_match, zscores[idx[best_match]])  # Create the result object
+    result = TypingResult(assembly.name, db, best_match, max((scores - np.mean(scores)) / np.std(scores)))
     pieces = {  # Align best match seq to assembly, group alignments by ctg and create pieces
         ctg: [LocusPiece(ctg, result, s, e) for s, e in
               merge_ranges([(a.r_st, a.r_en) for a in alns], len(db.largest_locus))]
@@ -248,15 +246,15 @@ def typing_pipeline(
             gene = db.genes.get(a.q)
             gene_type = "unexpected_genes"
 
-        piece = next(filter(lambda p: range_overlap((p.start, p.end), (a.r_st, a.r_en)) > 0, pieces.get(a.ctg, [])), None)
+        piece = next(filter(lambda p: range_overlap((p.start, p.end), (a.r_st, a.r_en)) > 0, pieces.get(a.ctg, [])),
+                     None)
         # Test if gene is partial (would overlap with ctg edge if alignment carried through the full gene)
-        partial_gene = True if a.r_st <= a.q_st or \
-                               a.r_en <= a.q_en or \
+        partial_gene = True if a.r_st <= a.q_st or a.r_en <= a.q_en or \
                                (a.ctg_len - a.r_en) <= (len(gene) - a.q_en) else False
 
         gene_result = GeneResult(  # Create gene result and add it to the result
             a.ctg, gene, result, piece, a.r_st, a.r_en, a.strand, previous_result,
-            gene_type=gene_type, partial=partial_gene, dna_seq=assembly.seq(a.r_st, a.r_en, a.strand)
+            gene_type=gene_type, partial=partial_gene, dna_seq=assembly.seq(a.ctg, a.r_st, a.r_en, a.strand)
         )
 
         gene_result.compare_translation(  # Extract translation and align to reference

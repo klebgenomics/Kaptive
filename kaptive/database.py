@@ -90,11 +90,8 @@ class Database(object):
     def format(self, format_spec):
         # f"##gff-version 3\n{''.join([i.as_gff_string() for i in self.loci.values()])}"
         if format_spec in {'fna', 'ffn', 'faa'}:
-            return ''.join([format(locus, format_spec) for locus in self])
+            return ''.join([locus.format(format_spec) for locus in self])
         raise ValueError(f'Invalid format specifier: {format_spec}')
-
-    def __format__(self, format_spec):
-        return self.format(format_spec)
 
     def add_locus(self, locus: Locus):
         """
@@ -204,9 +201,6 @@ class Locus(object):
             return ''.join([gene.format(format_spec) for gene in self])
         raise ValueError(f'Invalid format specifier: {format_spec}')
 
-    def __format__(self, format_spec):
-        return self.format(format_spec)
-
     def write(self, fna: Path | TextIO | None = None, ffn: Path | TextIO | None = None, faa: Path | TextIO | None = None):
         """Write the typing result to files or file handles."""
         [(fh / f'{self.name.replace("/", "_")}.{fmt}').write_text(self.format(fmt)) if isinstance(fh, Path) else
@@ -284,9 +278,6 @@ class Gene(object):
                 return ""
             return f'>{self.name}\n{self.protein_seq}\n'
         raise ValueError(f'Invalid format specifier: {format_spec}')
-
-    def __format__(self, format_spec):
-        return self.format(format_spec)
 
     def extra(self) -> bool:
         return self.name.startswith('Extra_genes')
