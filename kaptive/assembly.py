@@ -176,7 +176,7 @@ def write_headers(tsv: TextIO | None = None, no_header: bool = False, scores: bo
                     'Missing expected genes\tOther genes in locus\tOther genes in locus, details\t'
                     'Expected genes outside locus\tExpected genes outside locus, details\t'
                     'Other genes outside locus\tOther genes outside locus, details\t'
-                    'Truncated genes, details\tExtra genes\tZscore\n'
+                    'Truncated genes, details\tExtra genes\n'
                 )
 
 
