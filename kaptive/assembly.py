@@ -25,16 +25,19 @@ from re import compile
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 import numpy as np
+np.seterr(divide='ignore', invalid='ignore')  # Ignore divide by zero and invalid value errors
 
 from kaptive.typing import TypingResult, LocusPiece, GeneResult
 from kaptive.database import Database, load_database
-from kaptive.alignment import Alignment, iter_alns, group_alns, cull, cull_all
-from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus
+from kaptive.alignment import Alignment, iter_alns, group_alns, cull_filtered
+from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus, rtrn, check_file
 from kaptive.log import warning, log
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
-_ASSEMBLY_GRAPH_REGEX = compile(r'\.(gfa)(\.gz)?$')
+
+
+# _ASSEMBLY_GRAPH_REGEX = compile(r'\.(gfa)(\.gz)?$')
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -60,7 +63,7 @@ class Assembly:
 
     def map(self, stdin: str, threads: int, ) -> Generator[Alignment, None, None]:
         return iter_alns(Popen(f"minimap2 -c -t {threads} {self.path} -".split(), stdin=PIPE, stdout=PIPE,
-                         stderr=PIPE).communicate(stdin.encode())[0].decode())
+                               stderr=PIPE).communicate(stdin.encode())[0].decode())
 
 
 class ContigError(Exception):
@@ -87,25 +90,24 @@ class Contig(object):
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
-def parse_assembly(file: Path, verbose: bool = False) -> Assembly | None:
+def parse_assembly(file: Path | str, **kwargs) -> Assembly | None:
     """Parse an assembly file and return an Assembly object"""
+    if not (file := check_file(file, warning)):  # Check the file exists, warn if not (instead of quitting)
+        return None
     if _ASSEMBLY_FASTA_REGEX.search(file.name):
         try:
-            log(f"Parsing {file.name} as FASTA", verbose=verbose)
             assembly = Assembly(file)
             with opener(file, mode='rt') as f:
                 for h, s in SimpleFastaParser(f):
                     n, d = h.split(' ', 1) if ' ' in h else (h, '')
                     assembly.contigs[n] = Contig(n, d, Seq(s))
-            return assembly
+            return rtrn(f"Parsed {assembly} as FASTA", return_obj=assembly, **kwargs)
         except Exception as e:
-            warning(f"Error parsing {file.name}: {e}")
+            return rtrn(f"Error parsing {file.name}\n{e}", warning)
     # elif _ASSEMBLY_GRAPH_REGEX.search(file.name):
     #     log(f"Parsing {file.name} as GFA", verbose=verbose)
     #     return parse_gfa(file, **kwargs)
-    else:
-        warning(f"Unknown assembly format for {file.name}")
-    return None  # Return none so the pipeline can skip this assembly
+    return rtrn(f"Unknown assembly format for {file.name}", warning)
 
 
 # class GFAError(Exception):
@@ -159,28 +161,31 @@ def parse_result(line: str, db: Database, regex: Pattern | None = None, samples:
         return None
 
 
-def write_headers(tsv: TextIO | None = None, no_header: bool = False):
+def write_headers(tsv: TextIO | None = None, no_header: bool = False, scores: bool = False) -> None:
     """Write the headers to a file handle."""
     if tsv:
         if tsv.name != '<stdout>' and tsv.tell() != 0:  # If file is path and not already written to
             no_header = True  # Headers already written, useful for running on HPC
         if not no_header:
-            tsv.write('\t'.join([
-                'Assembly', 'Best match locus', 'Best match type', 'Confidence', 'Problems', 'Identity', 'Coverage',
-                'Length discrepancy', 'Expected genes in locus', 'Expected genes in locus, details',
-                'Missing expected genes',
-                'Other genes in locus', 'Other genes in locus, details', 'Expected genes outside locus',
-                'Expected genes outside locus, details', 'Other genes outside locus',
-                'Other genes outside locus, details',
-                'Truncated genes, details', 'Extra genes', 'Zscore',
-            ]) + '\n')
+            if scores:
+                tsv.write('Assembly\tLocus\tAS\tmlen\tblen\tq_len\tgenes_found\tgenes_expected\n')
+            else:
+                tsv.write(
+                    'Assembly\tBest match locus\tBest match type\tConfidence\tProblems\tIdentity\tCoverage\t'
+                    'Length discrepancy\tExpected genes in locus\tExpected genes in locus, details\t'
+                    'Missing expected genes\tOther genes in locus\tOther genes in locus, details\t'
+                    'Expected genes outside locus\tExpected genes outside locus, details\t'
+                    'Other genes outside locus\tOther genes outside locus, details\t'
+                    'Truncated genes, details\tExtra genes\tZscore\n'
+                )
 
 
 def typing_pipeline(
         assembly: str | Path | Assembly, db: str | Path | Database, threads: None | int = 0,
-        score_metric: int | None = 0, weight_metric: int | None = 0, min_cov: float | None = 0.5,
-        max_other_genes: int | None = 1, percent_expected_genes: float | None = 50,
-        allow_below_threshold: bool | None = False, verbose: bool | None = False) -> TypingResult | None:
+        score_metric: int | None = 0, weight_metric: int | None = 3, fallback_weight: int | None = 5,
+        min_cov: float | None = 50, max_full: int | None = 1, max_other_genes: int | None = 1,
+        percent_expected_genes: float | None = 50, allow_below_threshold: bool | None = False,
+        score_file: TextIO | None = None, verbose: bool | None = False) -> TypingResult | None:
     """
     Performs *in silico* serotyping on a bacterial genome assembly using a database of known loci.
     It can be run as part of batch process (preloaded assembly and database) or as a standalone function.
@@ -192,52 +197,74 @@ def typing_pipeline(
     if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
         return None
 
+    # assembly, db = parse_assembly('test/data/GCA_000584355.1_ASM58435v1_genomic.fna'), load_database('ab_k')
+    # assembly, db = parse_assembly('test/kpsc/2018-01-1001_20.fasta'), load_database('kpsc_k')
+    # threads, score_metric, weight_metric, max_full, min_cov, verbose = check_cpus(), 0, 3, 2, 50, True
+
     # ALIGN GENES ------------------------------------------------------------------------------------------------------
-    scores, genes_found = np.array(np.zeros(len(db))), np.array(np.zeros(len(db)))
-    idx, alignments = {l: i for i, l in enumerate(db.loci)}, []
+    scores = np.zeros((len(db), 6))  # Init scores array with 6 columns
+    idx, alignments = {l: i for i, l in enumerate(db.loci)}, []  # Set up index for loci and list for alignments
     for q, alns in group_alns(assembly.map(db.format('ffn'), threads)):  # Group alignments by query gene (Alignment.q)
-        alignments.extend((alns := list(alns)))
-        if (best := max(alns, key=lambda x: x.mlen)).q_len / best.blen * 100 >= min_cov:  # If best has enough coverage
-            scores[(i := idx[q.split("_", 1)[0]])] += (best.mlen if score_metric == 0 else best.tags['AS']) / best.blen
-            genes_found[i] += 1  # Add the gene to the found genes
+        if q.startswith("Extra"):
+            alignments.append(max(alns, key=lambda x: x.mlen))  # Add the best alignment for extra genes
+        else:
+            alignments += (alns := list(alns))  # Add all alignments to the list
+            # Use the best alignment for each gene for scoring, if the coverage is above the minimum
+            if ((best := max(alns, key=lambda x: x.mlen)).blen / best.q_len) * 100 >= min_cov:
+                scores[idx[q.split("_", 1)[0]]] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
 
-    if not alignments:
-        warning(f'No gene alignments sufficient for typing {assembly}')
-        return None
+    if scores.max() == 0:
+        return rtrn(f'No gene alignments sufficient for typing {assembly}', warning)
 
-    # CALCULATE BEST MATCH ---------------------------------------------------------------------------------------------
-    if weight_metric == 0:  # Proportion of genes found in locus
-        scores = scores * (genes_found / np.array([len(l.genes) for l in db.loci.values()]))
-    elif weight_metric == 1:  # Number of genes expected in locus
-        scores = scores / np.array([len(l.genes) for l in db.loci.values()])
-    elif weight_metric == 2:  # Number of genes found in locus
-        scores = scores / genes_found
-    elif weight_metric == 3:  # Length of locus
-        scores = scores / np.array([len(l) for l in db.loci.values()])
-    best_match = list(db.loci.values())[np.argmax(scores)]
+    # SCORE LOCI -------------------------------------------------------------------------------------------------------
+    scores[:, 5] = np.array([len(l.genes) for l in db.loci.values()])  # Add expected genes to the score matrix
+
+    if score_file:
+        score_file.write(
+            ''.join([f"{assembly}\t{k}\t" + '\t'.join(map(str, v)) + '\n' for k, v in zip(idx.keys(), scores)])
+        )
+        return rtrn(f"Finished scoring {assembly}", verbose=verbose)
+
+    if (prop_genes := (scores[:, 4] / scores[:, 5])).max() * 100 < percent_expected_genes:
+        warning(f"Max proportion of genes is < {percent_expected_genes}% for {assembly}, using fallback weight")
+        weight_metric = fallback_weight
+
+    # Matrix cols correspond to score_metric: 0 = AS, 1 = mlen, 2 = blen, 3 = q_len, 4 = genes found, 5 = genes expected
+    # Weight arguments: 0 = None, 1 = Genes found, 2 = Genes expected, 3 = Prop genes, 4 = blen, 5 = q_len
+    if weight_metric:  # If we are using a weighted score
+        if weight_metric == 1:
+            scores = scores[:, score_metric] / scores[:, 4]  # Genes found
+        elif weight_metric == 2:
+            scores = scores[:, score_metric] / scores[:, 5]  # Genes expected
+        elif weight_metric == 3:
+            scores = scores[:, score_metric] * prop_genes  # Prop genes
+        elif weight_metric == 4:
+            scores = scores[:, score_metric] / scores[:, 2]  # blen
+        elif weight_metric == 5:
+            scores = scores[:, score_metric] / scores[:, 3]  # q_len
+    else:
+        scores = scores[:, score_metric]  # Unweighted score
+
+    best_loci = [db[int(i)] for i in np.argsort(scores)[::-1][:max_full]]
+    scores, idx = np.zeros((len(best_loci), 4)), {l.name: i for i, l in enumerate(best_loci)}
+    locus_alignments = {l.name: [] for l in best_loci}
+    for locus, alns in group_alns(assembly.map(''.join(i.format('fna') for i in best_loci), threads)):
+        for a in alns:
+            scores[idx[locus]] += [a.tags['AS'], a.mlen, a.blen, a.q_len]
+            locus_alignments[locus].append(a)
+    best_match = best_loci[np.argmax(scores[:, score_metric])]  # Get the best match based on the highest score
 
     # RECONSTRUCT LOCUS ------------------------------------------------------------------------------------------------
-    result = TypingResult(assembly.name, db, best_match, max((scores - np.mean(scores)) / np.std(scores)))
+    result = TypingResult(assembly.name, db, best_match)
     pieces = {  # Align best match seq to assembly, group alignments by ctg and create pieces
         ctg: [LocusPiece(ctg, result, s, e) for s, e in
               merge_ranges([(a.r_st, a.r_en) for a in alns], len(db.largest_locus))]
-        for ctg, alns in group_alns(assembly.map(best_match.format('fna'), threads), key='ctg')
+        for ctg, alns in group_alns(locus_alignments[best_match.name], key='ctg')
     }  # We can't add strand as the pieces may be merged from multiple alignments, we will determine from the genes
 
-    if any(gene.startswith("Extra") for genes, _ in best_match.phenotypes for gene, _ in genes):
-        for gene, alns in group_alns(assembly.map(''.join([i.format('ffn') for i in db.extra_loci.values()]), threads)):
-            alignments.append(max(alns, key=lambda x: x.mlen))
-
-    # CULL ALIGNMENTS --------------------------------------------------------------------------------------------------
-    expected, other = [], []
-    [expected.append(a) if a.q in best_match.genes else other.append(a) for a in alignments]
-    other = cull_all(other)  # Remove conflicting other alignments
-    for i in expected:  # Remove other alignments overlapping best match gene alignments
-        other = list(cull(i, other))
-
     # GET GENE RESULTS -------------------------------------------------------------------------------------------------
-    previous_result, piece = None, None  # For determining neighbouring genes
-    for a in chain(expected, other):  # For each gene alignment
+    for a in cull_filtered(lambda i: i.q in best_match.genes, alignments):  # For each gene alignment
+        # Get gene reference from database and gene type
         if (gene := best_match.genes.get(a.q)):
             gene_type = "expected_genes"
         elif (gene := db.extra_genes.get(a.q)):
@@ -246,26 +273,20 @@ def typing_pipeline(
             gene = db.genes.get(a.q)
             gene_type = "unexpected_genes"
 
-        piece = next(filter(lambda p: range_overlap((p.start, p.end), (a.r_st, a.r_en)) > 0, pieces.get(a.ctg, [])),
-                     None)
-        # Test if gene is partial (would overlap with ctg edge if alignment carried through the full gene)
-        partial_gene = True if a.r_st <= a.q_st or a.r_en <= a.q_en or \
-                               (a.ctg_len - a.r_en) <= (len(gene) - a.q_en) else False
-
+        # Get Piece if gene range overlaps with a piece
+        piece = next(filter(lambda p: range_overlap((p.start, p.end), (a.r_st, a.r_en)) > 0,
+                            pieces.get(a.ctg, [])), None)
+        # Create gene result and add it to the result
         gene_result = GeneResult(  # Create gene result and add it to the result
-            a.ctg, gene, result, piece, a.r_st, a.r_en, a.strand, previous_result,
-            gene_type=gene_type, partial=partial_gene, dna_seq=assembly.seq(a.ctg, a.r_st, a.r_en, a.strand)
+            a.ctg, gene, result, piece, a.r_st, a.r_en, a.strand,
+            gene_type=gene_type, partial=a.partial, dna_seq=assembly.seq(a.ctg, a.r_st, a.r_en, a.strand)
         )
-
-        gene_result.compare_translation(  # Extract translation and align to reference
-            next((i for i in [0, 1, 2] if (a.q_st + i) / 3 % 1 == 0), 0),  # Get the frame
-            table=11, to_stop=True)  # This will also trigger the protein alignment
-
+        gene_result.compare_translation(table=11, to_stop=True)  # This will also trigger the protein alignment
         gene_result.below_threshold = gene_result.percent_identity < db.gene_threshold  # Check if below threshold
         if not piece and gene_result.below_threshold:  # If below threshold
             continue  # Skip this gene, probably a homologue in another part of the genome
         result.add_gene_result(gene_result)  # Add the gene result to the result to get neighbouring genes
-        previous_result = gene_result  # Set the previous gene result to the current result
+        # previous_result = gene_result  # Set the previous gene result to the current result
 
     # FINALISE PIECES --------------------------------------------------------------------------------------------------
     for ctg, pieces in pieces.items():  # Add sequences to pieces and add them to the result
@@ -286,5 +307,4 @@ def typing_pipeline(
         i.gene.name for i in chain(result.expected_genes_inside_locus, result.expected_genes_outside_locus)}),
                                   key=lambda x: int(x.split("_")[1]))
     result.get_confidence(allow_below_threshold, max_other_genes, percent_expected_genes)
-    log(f"Finished typing {result}", verbose=verbose)
-    return result
+    return rtrn(f"Finished typing {result}", return_obj=result, verbose=verbose)

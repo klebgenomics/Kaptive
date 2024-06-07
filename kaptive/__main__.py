@@ -102,18 +102,35 @@ def assembly_subparser(subparsers):
                       type=argparse.FileType('at'),
                       help='Turn on JSON lines output\n'
                            'Optionally choose file (can be existing) (default: %(const)s)')
+    opts.add_argument('-s', '--scores', metavar='', nargs='?', default=None, const=sys.stdout,
+                      type=argparse.FileType('at'),
+                      help='Will only report locus typing scores per assembly (for debugging)\n'
+                           'Optionally choose file (can be existing) (default: stdout)')
     other_fmt_opts(opts)
     opts = assembly_parser.add_argument_group(bold('Scoring options'), "")
-    opts.add_argument("--score-metric", metavar='', choices={0, 1}, default=0, type=int,
-                      help="Cumulative alignment metric for scoring each locus (default: %(default)s)\n"
-                           "  0: Matching bases / aligned bases (percent identity)\n"
-                           "  1: Alignment score / aligned bases")
-    opts.add_argument("--weight-metric", metavar='', choices={0, 1, 2, 3, 4}, default=0, type=int,
-                      help="Weighting for each locus score (default: %(default)s)\n"
-                           "  0: Proportion of genes found\n  1: Number of genes expected\n"
-                           "  2: Number of genes found\n  3: Length of the locus\n  4: No weighting")
     opts.add_argument('--min-cov', type=float, required=False, default=50.0, metavar='',
-                      help='Minimum gene %%coverage to be used for scoring (default: %(default)s)')
+                      help='Minimum gene %%coverage (blen/q_len*100) to be used for scoring (default: %(default)s)')
+    opts.add_argument("--score-metric", metavar='', default=0, type=int, choices=range(4),
+                      help="Metric for scoring each locus (default: %(default)s)\n"
+                           "  0: AS (alignment score of genes found)\n"
+                           "  1: mlen (matching bases of genes found)\n"
+                           "  2: blen (alignment bases of genes found)\n"
+                           "  3: q_len (query length of genes found)")
+    opts.add_argument("--weight-metric", metavar='', default=3, type=int, choices=range(6),
+                      help="Weighting for the 1st stage of the scoring algorithm (default: %(default)s)\n"
+                           "  0: No weighting\n"
+                           "  1: Number of genes found\n"
+                           "  2: Number of genes expected\n"
+                           "  3: Proportion of genes found\n"
+                           "  4: blen (alignment bases of genes found)\n"
+                           "  5: q_len (query length of genes found)")
+    opts.add_argument("--fallback-weight", metavar='', default=4, type=int, choices=range(6),
+                      help="Fallback weighting for the 1st stage of the scoring algorithm if the max percent\n"
+                           "genes found is less than '--percent-expected' (default: %(default)s)")
+    opts.add_argument('--max-full', type=int, default=2, metavar='', choices=range(1, 51),
+                      help='Maximum number of full-length loci to be aligned to assembly for\n'
+                           'the 2nd stage of the scoring algorithm (default: %(default)s)')
+
     opts = assembly_parser.add_argument_group(bold('Confidence options'), "")
     opts.add_argument("--gene-threshold", type=float, metavar='',
                       help="Species-level locus gene identity threshold (default: database specific)")
@@ -130,7 +147,7 @@ def assembly_subparser(subparsers):
     opts = assembly_parser.add_argument_group(bold('Other options'), "")
     other_opts(opts)
     opts.add_argument('-t', '--threads', type=check_cpus, default=check_cpus(), metavar='',
-                      help="Number of alignment threads or 0 for all available (default: 0")
+                      help="Number of alignment threads or 0 for all available (default: 0)")
 
 
 def convert_subparser(subparsers):
@@ -222,6 +239,13 @@ def other_opts(opts: argparse.ArgumentParser):
     opts.add_argument('-h', '--help', help='Show this help message and exit', metavar='')
 
 
+def close_files(args: argparse.Namespace):
+    """Close all open files in the args namespace if they aren't sys.stdout or sys.stdin"""
+    for attr in vars(args):
+        if (x := getattr(args, attr, None)) and isinstance(x, TextIOWrapper) and x not in {sys.stdout, sys.stdin}:
+            x.close()
+
+
 # Main -----------------------------------------------------------------------------------------------------------------
 def main():
     check_python_version(3, 9)
@@ -236,14 +260,12 @@ def main():
             args.db, args.gene_threshold, locus_filter=args.filter, load_locus_seqs=True, verbose=args.verbose,
             extract_translations=False, locus_regex=args.locus_regex, type_regex=args.type_regex)
 
-        write_headers(args.out, args.no_header)
-
+        write_headers(args.scores or args.out, args.no_header, args.scores)
         [result.write(args.out, args.json, args.fasta, None, None, args.plot, args.plot_fmt)
-         for sample in args.input if (result := typing_pipeline(sample, args.db, args.threads, args.score_metric,
-                                                                args.weight_metric, args.min_cov,
-                                                                args.max_other_genes, args.percent_expected,
-                                                                args.below_threshold, args.verbose))]
-        log("Done!", verbose=args.verbose)
+         for sample in args.input if (result := typing_pipeline(
+            sample, args.db, args.threads, args.score_metric, args.weight_metric, args.fallback_weight, args.min_cov,
+            args.max_full, args.max_other_genes, args.percent_expected, args.below_threshold, args.scores, args.verbose
+        ))]
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
@@ -265,3 +287,7 @@ def main():
 
         [result.write(args.tsv, args.json, args.fna, args.ffn, args.faa, args.plot, args.plot_fmt) for
          line in args.input if (result := parse_result(line, args.db, args.regex, args.samples, args.loci))]
+
+    # Finish ----------------------------------------------------------------------------------------------------------
+    close_files(args)
+    log("Done!", verbose=args.verbose)

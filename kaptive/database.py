@@ -15,6 +15,7 @@ from __future__ import annotations
 from functools import cached_property
 from pathlib import Path
 from typing import Generator, TextIO
+from itertools import chain
 import re
 from warnings import catch_warnings
 
@@ -76,9 +77,13 @@ class Database(object):
         return len(self.loci)
 
     def __iter__(self):
-        return iter(self.loci.values())
+        return chain(self.loci.values(), self.extra_loci.values())
 
-    def __getitem__(self, item) -> Locus | Gene:
+    def __getitem__(self, item: str | int) -> Locus | Gene:
+        if isinstance(item, int):
+            if not 0 <= item < len(self):
+                raise DatabaseError(f'Index {item} out of range for database {self.name}')
+            return list(self.loci.values())[item]
         if not (result := self.loci.get(item, self.extra_loci.get(item, self.genes.get(item, self.extra_genes.get(item, self.is_elements.get(item)))))):
             raise DatabaseError(f'Could not find {item} in database {self.name}')
         return result
@@ -109,7 +114,7 @@ class Database(object):
 
     def add_phenotype(self, loci: list[str], genes: dict[str, str], phenotype: str):
         extra_genes = {(g.name, 'present') for g in self.extra_genes.values() if g.gene_name in genes}
-        for locus in self.loci.keys() if loci == ["ALL"] else loci:
+        for locus in (self.loci.keys() if loci == ["ALL"] else loci):
             if locus not in self.loci:
                 raise PhenotypeError(f'Could not find {locus} in database {self.name}')
             if extra_genes:
@@ -249,6 +254,7 @@ class Gene(object):
             raise GeneError(f'{feature} does not have a locus tag.')
         self.name = locus_tag
         self.gene_name = feature.qualifiers.get('gene', [self.name])[0]  # Use locus tag if gene name is not present
+        assert len(self.dna_seq) % 3 == 0, quit_with_error(f'DNA sequence of {self} is not a multiple of 3')
         return self
 
     @classmethod

@@ -19,7 +19,7 @@ from gzip import open as gzopen
 from bz2 import open as bzopen
 from typing import Generator, TextIO
 
-from kaptive.log import log, quit_with_error, bold_cyan
+from kaptive.log import log, warning, quit_with_error, bold_cyan
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
@@ -33,6 +33,12 @@ _LOGO = r"""  _  __    _    ____ _____ _____     _______
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
+def rtrn(message: str = '', log_func: callable = log, return_obj: any = None, **kwargs):
+    """Exit a function with a message and code"""
+    log_func(message, **kwargs)
+    return return_obj
+
+
 def check_programs(progs: list[str], verbose: bool = False):
     """Check if programs are installed and executable"""
     bins = {  # Adapted from: https://unix.stackexchange.com/a/261971/375975
@@ -42,19 +48,19 @@ def check_programs(progs: list[str], verbose: bool = False):
     }
     for program in progs:
         if program in bins.keys():
-            log(f'{program}: {bins[program]}', verbose)
+            log(f'{program}: {bins[program]}', verbose=verbose)
         else:
-            quit_with_error(f'{program} not found')
+            rtrn(f'{program} not found', quit_with_error, verbose=verbose)
 
 
-def check_file(path: str | Path) -> Path:
+def check_file(path: str | Path, log_func: callable = quit_with_error) -> Path | None:
     path = Path(path) if isinstance(path, str) else path
     if not path.exists():
-        quit_with_error(f'{path.name} does not exist')
+        rtrn(f'{path} does not exist', log_func)
     if not path.is_file():
-        quit_with_error(f'{path.name} is not a file')
+        rtrn(f'{path} is not a file', log_func)
     elif path.stat().st_size == 0:
-        quit_with_error(f'{path.name} is empty')
+        rtrn(f'{path} is empty', log_func)
     else:
         return path.absolute()
 
@@ -77,17 +83,16 @@ def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool 
     If it looks like/is already a file (has an extension), return the file object.
     If it looks like/is already a directory, return the directory path.
     """
-    # This may also be sys.stdout
-    if path == '-':
+    if path == '-':  # If the path is '-', return stdout
         return sys.stdout
-    if (path := Path(path)).suffix:
+    if (path := Path(path)).suffix:  # If the path has an extension, it's probably a file
         try:
-            return path.open(mode)
+            return path.open(mode)  # Open the file
         except Exception as e:
             quit_with_error(f'Could not open {path}: {e}')
-    if not path.exists():
+    if not path.exists():  # Assume directory
         try:
-            path.mkdir(parents=parents, exist_ok=exist_ok)
+            path.mkdir(parents=parents, exist_ok=exist_ok)  # Create the directory if it doesn't exist
         except Exception as e:
             quit_with_error(f'Could not create {path}: {e}')
     return path
