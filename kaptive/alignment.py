@@ -89,7 +89,7 @@ class Alignment:
             return True
         if self.r_en < self.q_len:  # E.g. Contig position 99 and gene length 100 means 1bp is missing
             return True
-        if (self.ctg_len - self.r_en) < (self.q_en - self.q_st):  # Where the alignment is partial at the end
+        if (self.ctg_len - self.r_en) < (self.q_len - self.q_en):  # Where the alignment is partial at the end
             return True
         return False
 

@@ -26,6 +26,7 @@ from kaptive.misc import check_python_version, check_biopython_version, get_logo
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _URL = 'https://kaptive.readthedocs.io/en/latest/'
+# TODO: Add a citation message to the help message
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
@@ -65,8 +66,9 @@ def parse_args(a) -> argparse.Namespace:
 
 
 def check_args(args: argparse.Namespace) -> argparse.Namespace:
-    # If any args are TextIO, check they are unique
-    inputs = {'assembly': {'fasta', 'out', 'json', 'plot'}, 'convert': {'json', 'tsv', 'fna', 'ffn', 'faa', 'plot'},
+    # If any args are TextIO, check they are writing to separate files
+    inputs = {'assembly': {'fasta', 'out', 'json', 'plot'},  # Note we don't include scores as only one file is written
+              'convert': {'json', 'tsv', 'fna', 'ffn', 'faa', 'plot'},
               'extract': {'fna', 'ffn', 'faa'}}
     file_args, expected_args = {}, 0
     for arg in (fmts := inputs[args.subparser_name]):
@@ -124,9 +126,6 @@ def assembly_subparser(subparsers):
                            "  3: Proportion of genes found\n"
                            "  4: blen (alignment bases of genes found)\n"
                            "  5: q_len (query length of genes found)")
-    opts.add_argument("--fallback-weight", metavar='', default=4, type=int, choices=range(6),
-                      help="Fallback weighting for the 1st stage of the scoring algorithm if the max percent\n"
-                           "genes found is less than '--percent-expected' (default: %(default)s)")
     opts.add_argument('--max-full', type=int, default=2, metavar='', choices=range(1, 51),
                       help='Maximum number of full-length loci to be aligned to assembly for\n'
                            'the 2nd stage of the scoring algorithm (default: %(default)s)')
@@ -239,18 +238,12 @@ def other_opts(opts: argparse.ArgumentParser):
     opts.add_argument('-h', '--help', help='Show this help message and exit', metavar='')
 
 
-def close_files(args: argparse.Namespace):
-    """Close all open files in the args namespace if they aren't sys.stdout or sys.stdin"""
-    for attr in vars(args):
-        if (x := getattr(args, attr, None)) and isinstance(x, TextIOWrapper) and x not in {sys.stdout, sys.stdin}:
-            x.close()
-
-
 # Main -----------------------------------------------------------------------------------------------------------------
 def main():
     check_python_version(3, 9)
     check_biopython_version(1, 83)
     args = parse_args(sys.argv[1:])
+    # TODO: Look into file locking to enable writing to the same file in parallel
 
     # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
@@ -259,18 +252,16 @@ def main():
         args.db = load_database(
             args.db, args.gene_threshold, locus_filter=args.filter, load_locus_seqs=True, verbose=args.verbose,
             extract_translations=False, locus_regex=args.locus_regex, type_regex=args.type_regex)
-
         write_headers(args.scores or args.out, args.no_header, args.scores)
         [result.write(args.out, args.json, args.fasta, None, None, args.plot, args.plot_fmt)
-         for sample in args.input if (result := typing_pipeline(
-            sample, args.db, args.threads, args.score_metric, args.weight_metric, args.fallback_weight, args.min_cov,
+         for assembly in args.input if (result := typing_pipeline(
+            assembly, args.db, args.threads, args.score_metric, args.weight_metric, args.min_cov,
             args.max_full, args.max_other_genes, args.percent_expected, args.below_threshold, args.scores, args.verbose
         ))]
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
         from kaptive.database import parse_database, get_database
-
         [locus.write(args.fna, args.ffn, args.faa) for locus in parse_database(
             get_database(args.db), args.filter, args.fna, args.faa, args.verbose, locus_regex=args.locus_regex,
             type_regex=args.type_regex)]
@@ -282,12 +273,12 @@ def main():
         args.db = load_database(  # Load database in memory, we don't need to load the full sequences (False)
             args.db, verbose=args.verbose, load_locus_seqs=False, extract_translations=False,
             locus_regex=args.locus_regex, type_regex=args.type_regex)
-
         write_headers(args.tsv, args.no_header)
-
         [result.write(args.tsv, args.json, args.fna, args.ffn, args.faa, args.plot, args.plot_fmt) for
          line in args.input if (result := parse_result(line, args.db, args.regex, args.samples, args.loci))]
 
-    # Finish ----------------------------------------------------------------------------------------------------------
-    close_files(args)
+    # Finish -----------------------------------------------------------------------------------------------------------
+    for attr in vars(args):  # Close all open files in the args namespace if they aren't sys.stdout or sys.stdin
+        if (x := getattr(args, attr, None)) and isinstance(x, TextIOWrapper) and x not in {sys.stdout, sys.stdin}:
+            x.close()
     log("Done!", verbose=args.verbose)
