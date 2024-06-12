@@ -19,7 +19,7 @@ from gzip import open as gzopen
 from bz2 import open as bzopen
 from typing import Generator, TextIO
 
-from kaptive.log import log, warning, quit_with_error, bold_cyan
+from kaptive.log import log, quit_with_error, bold_cyan
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
@@ -108,7 +108,8 @@ def check_biopython_version(major: int = 1, minor: int = 79):
         from Bio import __version__ as biopython_version
     except ImportError:
         quit_with_error('BioPython is required')
-    if (major_version := int(biopython_version.split('.')[0])) < major or (minor_version := int(biopython_version.split('.')[1])) < minor:
+    if ((major_version := int(biopython_version.split('.')[0])) < major or
+            (minor_version := int(biopython_version.split('.')[1])) < minor):
         quit_with_error(f'Biopython version {major}.{minor} or greater required, got {major_version}.{minor_version}')
 
 
@@ -132,7 +133,8 @@ def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the lo
     return bold_cyan(f'{_LOGO}\n{message.center(width)}')
 
 
-def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False) -> Generator[tuple[int | float, int | float], None, None]:
+def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False
+                 ) -> Generator[tuple[int | float, int | float], None, None]:
     """
     Merge overlapping ranges
     :param ranges: List of tuples of start and end positions
