@@ -381,7 +381,7 @@ class GeneResult:
             )
         raise ValueError(f"Unknown format specifier {format_spec}")
 
-    def compare_translation(self, warnings: bool = False, **kwargs):
+    def compare_translation(self, **kwargs):
         """
         Extracts the translation from the DNA sequence of the gene result.
         Will also extract the translation from the gene if it is not already stored.
@@ -391,21 +391,17 @@ class GeneResult:
         self.gene.extract_translation(**kwargs)  # Extract the translation from the gene if it is not already stored
         if len(self.dna_seq) == 0:  # If the DNA sequence is empty, raise an error
             raise GeneResultError(f'No DNA sequence for {self.__repr__()}')
-        for i in 0, 1, 2:  # Try all three frames
-            with catch_warnings(record=True) as w:
-                self.protein_seq = self.dna_seq[i:].translate(**kwargs)  # Translate the DNA sequence from the frame
-                if warnings:
-                    for i in w:
-                        warning(f"{i.message}: {self.__repr__()}")
-            if len(self.protein_seq) > 0:
-                self.start += i  # Update the start position to the correct frame
-                break
-        if len(self.protein_seq) == 0:  # If the protein sequence is still empty, raise a warning
+        with catch_warnings(record=True) as w:  # Catch Biopython warnings
+            protein_seqs = [self.dna_seq[i:].translate(**kwargs) for i in range(3)]  # Translate in all 3 frames
+        frame, self.protein_seq = max(enumerate(protein_seqs), key=lambda x: len(x[1]))  # Get the longest translation
+        self.start += frame  # Update the start position to the frame with the longest translation
+        if len(self.protein_seq) <= 1:  # If the protein sequence is still empty, raise a warning
             warning(f'No protein sequence for {self.__repr__()}')
-        elif len(self.gene.protein_seq) > 0:  # If both sequences are not empty
+        elif len(self.gene.protein_seq) > 1:  # If both sequences are not empty
             alignment = max(_PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq), key=lambda x: x.score)
             self.percent_identity = alignment.counts().identities / alignment.length * 100
             self.percent_coverage = (len(self.protein_seq) / len(self.gene.protein_seq)) * 100
             if not self.partial and self.percent_coverage < 95 and not (self.gene_type == "unexpected_genes" and not self.piece):
                 # At least 95% of the length of the reference gene, not partial, and not unexpected outside locus
                 self.phenotype = "truncated"  # Set the phenotype to truncated
+
