@@ -123,6 +123,8 @@ same loci, the phenotype will instead be predicted as 'O1ab'.
 This logic is applied during the :ref:`phenotype prediction <Phenotype-prediction>` step of typing and is reported in
 the `Type` column of the Kaptive tabular output.
 
+.. _Distributed-databases:
+
 Databases distributed with Kaptive
 ====================================
 
@@ -331,51 +333,29 @@ Database                                                      Keywords
 
 Extract
 ====================================
-Kaptive 3.0.0 and above include a new command-line option ``--extract`` that allows you to extract features
+Kaptive 3.0.0 and above includes a new command-line mode ``extract`` that allows you to extract features
 from a Kaptive database in the following formats:
 
-* **loci**: Locus nucleotide sequences in fasta (fna) format.
-* **genes**: Gene nucleotide sequences in fasta (fna) format.
-* **proteins**: Protein sequences in fasta (faa) format.
-* **genbank**: Genbank format (same as input but optionally filtered).
+* **fna**: Locus nucleotide sequences in fasta format.
+* **ffn**: Gene nucleotide sequences in fasta format.
+* **faa**: Protein sequences in fasta format.
 
-Simple usage is as follows::
+Usage
+----------
+General usage is as follows::
 
-    kaptive extract <db> <format> [options]
+    kaptive extract <db> [formats] [options]
 
-For example, If I wanted to extract the gene nucleotide sequences from the *Klebsiella pneumoniae* K locus primary
-reference database in fasta format, I would run::
+Formats::
 
-    kaptive extract kp_k loci > k_loci.fna
+  Note, text outputs accept '-' for stdout
 
-If I wanted to extract all protein sequences from KL1 and KL2, I would run::
-
-    kaptive extract kp_k proteins --filter "^KL(1|2)$" > KL1_KL2_proteins.faa
-
-If I wanted to do the same but output each locus to a separate file, I would run::
-
-    kaptive extract kp_k proteins --filter "^KL(1|2)$" -d KL1_KL2_proteins
-
-Which would create two files: ``KL1.faa`` and ``KL2.faa``.
-
-Inputs::
-
-  db path/keyword  Kaptive database path or keyword
-  format           Format to extract database
-                    - loci: Loci (fasta nucleotide)
-                    - genes: Genes (fasta nucleotide)
-                    - proteins: Proteins (fasta amino acid)
-                    - genbank: Genbank format
-
-.. note::
-  Combine with ``--filter`` to select loci
-
-Output options::
-
-  -o , --out       Output file to write/append loci to (default: stdout)
-  -d , --outdir    Output directory for converted results
-                    - Note: This forces the output to be written to files (instead of stdout)
-                            and one file will be written per locus.
+  --fna []         Convert to locus nucleotide sequences in fasta format
+                   Accepts a single file or a directory (default: cwd)
+  --ffn []         Convert to locus gene nucleotide sequences in fasta format
+                   Accepts a single file or a directory (default: cwd)
+  --faa []         Convert to locus gene protein sequences in fasta format
+                   Accepts a single file or a directory (default: cwd)
 
 .. _Database-options:
 
@@ -394,3 +374,27 @@ Other options::
   -V, --verbose    Print debug messages to stderr
   -v , --version   Show version number and exit
   -h , --help      Show this help message and exit
+
+For example, to extract the gene nucleotide sequences from the *Klebsiella pneumoniae* K locus primary
+reference database in fasta format, run::
+
+    kaptive extract kp_k --fna k_loci.fna
+
+To extract all protein sequences from KL1 and KL2, run either one of the following::
+
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa KL1_KL2_proteins.faa
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa - > KL1_KL2_proteins.faa
+
+To do the same but output each locus to a separate file, run either::
+
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa protein_files/
+
+Which would create two files: ``KL1.faa`` and ``KL2.faa``.
+
+        kaptive assembly kpsc_k assembly.fasta -j kaptive_results.json
+
+.. warning::
+ It is possible to write **all** text formats (FNA, FAA and FFN) to the same file (including stdout), however
+ this is not recommended for downstream analysis.
+

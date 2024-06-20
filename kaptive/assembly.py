@@ -31,13 +31,11 @@ np.seterr(divide='ignore', invalid='ignore')  # Ignore divide by zero and invali
 from kaptive.typing import TypingResult, LocusPiece, GeneResult
 from kaptive.database import Database, load_database
 from kaptive.alignment import Alignment, iter_alns, group_alns, cull_filtered
-from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus, rtrn, check_file
-from kaptive.log import warning
+from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus, check_file
+from kaptive.log import log, warning
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
-
-
 # _ASSEMBLY_GRAPH_REGEX = compile(r'\.(gfa)(\.gz)?$')
 
 
@@ -56,7 +54,7 @@ class Assembly:
         return self.name
 
     def __len__(self):
-        return self.path.stat().st_size
+        return sum(len(i) for i in self.contigs.values())
 
     def seq(self, ctg: str, start: int, end: int, strand: str = "+") -> Seq:
         return self.contigs[ctg].seq[start:end] if strand == "+" else self.contigs[ctg].seq[
@@ -91,24 +89,21 @@ class Contig(object):
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
-def parse_assembly(file: Path | str, **kwargs) -> Assembly | None:
+def parse_assembly(file: Path | str, verbose: bool = False) -> Assembly | None:
     """Parse an assembly file and return an Assembly object"""
-    if not (file := check_file(file, warning)):  # Check the file exists, warn if not (instead of quitting)
-        return None
-    if _ASSEMBLY_FASTA_REGEX.search(file.name):
-        try:
+    if file := check_file(file):  # Check the file exists, warn if not (instead of quitting)
+        if _ASSEMBLY_FASTA_REGEX.search(file.name):
             assembly = Assembly(file)
-            with opener(file, mode='rt') as f:
-                for h, s in SimpleFastaParser(f):
-                    n, d = h.split(' ', 1) if ' ' in h else (h, '')
-                    assembly.contigs[n] = Contig(n, d, Seq(s))
-            return rtrn(f"Parsed {assembly} as FASTA", return_obj=assembly, **kwargs)
-        except Exception as e:
-            return rtrn(f"Error parsing {file.name}\n{e}", warning)
-    # elif _ASSEMBLY_GRAPH_REGEX.search(file.name):
-    #     log(f"Parsing {file.name} as GFA", verbose=verbose)
-    #     return parse_gfa(file, **kwargs)
-    return rtrn(f"Unknown assembly format for {file.name}", warning)
+            try:
+                with opener(file, mode='rt') as f:
+                    for header, seq in SimpleFastaParser(f):
+                        name, description = header.split(' ', 1) if ' ' in header else (header, '')
+                        assembly.contigs[name] = Contig(name, description, Seq(seq))
+            except Exception as e:
+                return warning(f"Error parsing {file.name}\n{e}")
+            log(f"Parsed {assembly} as FASTA", verbose=verbose)
+            return assembly
+        return warning(f"File extension must match {_ASSEMBLY_FASTA_REGEX.pattern}: {file.name}")
 
 
 # class GFAError(Exception):
@@ -158,7 +153,7 @@ def parse_result(line: str, db: Database, regex: Pattern | None = None, samples:
     try:
         return TypingResult.from_dict(d, db)
     except Exception as e:
-        warning(f"Error converting JSON line to TypingResult: {e}\n{line}")
+        warning(f"Error converting JSON line to TypingResult: {e}")
         return None
 
 
@@ -201,7 +196,7 @@ def typing_pipeline(
     :return: TypingResult object or None
     """
     # CHECK ARGS -------------------------------------------------------------------------------------------------------
-    threads = check_cpus(threads) if not threads else threads  # Get the number of threads if 0
+    threads = check_cpus(threads, verbose=verbose) if not threads else threads  # Get the number of threads if 0
     if not isinstance(db, Database) and not (db := load_database(db, verbose=verbose)):
         return None
     if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
@@ -209,7 +204,7 @@ def typing_pipeline(
 
     # ALIGN GENES ------------------------------------------------------------------------------------------------------
     # TODO: Consider creating a Scores object to store the scores and methods for scoring/writing
-    scores = np.zeros((len(db), 6))  # Init scores array with 6 columns
+    scores = np.zeros((len(db), 6))  # Init scores array with 6 columns: AS, mlen, blen, q_len, genes_found, genes_expected
     idx, alignments = {l: i for i, l in enumerate(db.loci)}, []  # Set up index for loci and list for alignments
     for q, alns in group_alns(assembly.map(db.format('ffn'), threads)):  # Group alignments by query gene (Alignment.q)
         if q.startswith("Extra"):
@@ -219,17 +214,19 @@ def typing_pipeline(
             # Use the best alignment for each gene for scoring, if the coverage is above the minimum
             if ((best := max(alns, key=lambda x: x.mlen)).blen / best.q_len) * 100 >= min_cov:
                 scores[idx[q.split("_", 1)[0]]] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
+            # For each gene, add: AS, mlen, blen, q_len, genes_found (1), genes_expected (0 but will update later)
 
-    if scores.max() == 0:
-        return rtrn(f'No gene alignments sufficient for typing {assembly}', warning)
+    if scores.max() == 0:  # If no gene alignments were found, return None so pipeline can continue
+        return warning(f'No gene alignments sufficient for typing {assembly}')
 
     # SCORE LOCI -------------------------------------------------------------------------------------------------------
     scores[:, 5] = np.array([len(l.genes) for l in db.loci.values()])  # Add expected genes to the score matrix
+
     if score_file:  # If we are just scoring the assembly
         score_file.write(  # Write the scores to the file
             ''.join([f"{assembly}\t{k}\t" + '\t'.join(map(str, v)) + '\n' for k, v in zip(idx.keys(), scores)])
         )
-        return rtrn(f"Finished scoring {assembly}", verbose=verbose)  # Return without typing the assembly
+        return log(f"Finished scoring {assembly}", verbose=verbose)  # Return without typing the assembly
 
     # Process the scores to get the best loci to fully align, this collapses the matrix to a 1D array
     if weight_metric:  # If we are using a weighted score
@@ -306,4 +303,5 @@ def typing_pipeline(
         i.gene.name for i in chain(result.expected_genes_inside_locus, result.expected_genes_outside_locus)}),
                                   key=lambda x: int(x.split("_")[1]))
     result.get_confidence(allow_below_threshold, max_other_genes, percent_expected_genes)
-    return rtrn(f"Finished typing {result}", return_obj=result, verbose=verbose)
+    log(f"Finished typing {result}", verbose=verbose)
+    return result

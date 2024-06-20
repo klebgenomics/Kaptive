@@ -134,8 +134,8 @@ class TypingResult:
         return self._confidence if self._confidence is not None else "Not calculated"
 
     def get_confidence(self, allow_below_threshold: bool, max_other_genes: int, percent_expected_genes: float):
-        p = len(self.expected_genes_inside_locus) / len(self.best_match.genes) * 100
-        other_genes = len([i for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"])
+        p = len(set(i.gene.name for i in self.expected_genes_inside_locus)) / len(self.best_match.genes) * 100
+        other_genes = len(set(i.gene.name for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"))
         if not allow_below_threshold and "*" in self.problems:
             self._confidence = "Untypeable"
         else:
@@ -229,10 +229,9 @@ class TypingResult:
          fh.write(self.format(fmt)) for fh, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')] if fh]
         if plot:
             ax = self.format(plot_fmt).plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
-            ax.set_title(  # Add title to figure
-                f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
+            ax.set_title(f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
             ax.figure.savefig(plot / f'{self.sample_name}_kaptive_results.{plot_fmt}', bbox_inches='tight')
-            ax.figure.clear()  # Close figure to prevent memory leak
+            ax.figure.clear()  # TODO: Check if this is necessary
 
 
 class LocusPieceError(Exception):
@@ -381,12 +380,10 @@ class GeneResult:
             )
         raise ValueError(f"Unknown format specifier {format_spec}")
 
-    def compare_translation(self, **kwargs):
+    def compare_translation(self, truncation_tolerance: float = 95, **kwargs):
         """
         Extracts the translation from the DNA sequence of the gene result.
         Will also extract the translation from the gene if it is not already stored.
-        param frame: 0, 1, or 2, the frame to start translating from.
-        param kwargs: Additional keyword arguments to pass to the Bio.Seq.translate method.
         """
         self.gene.extract_translation(**kwargs)  # Extract the translation from the gene if it is not already stored
         if len(self.dna_seq) == 0:  # If the DNA sequence is empty, raise an error
@@ -398,10 +395,14 @@ class GeneResult:
         if len(self.protein_seq) <= 1:  # If the protein sequence is still empty, raise a warning
             warning(f'No protein sequence for {self.__repr__()}')
         elif len(self.gene.protein_seq) > 1:  # If both sequences are not empty
-            alignment = max(_PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq), key=lambda x: x.score)
-            self.percent_identity = alignment.counts().identities / alignment.length * 100
-            self.percent_coverage = (len(self.protein_seq) / len(self.gene.protein_seq)) * 100
-            if not self.partial and self.percent_coverage < 95 and not (self.gene_type == "unexpected_genes" and not self.piece):
-                # At least 95% of the length of the reference gene, not partial, and not unexpected outside locus
-                self.phenotype = "truncated"  # Set the phenotype to truncated
+            if alignments := _PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq):  # Align the sequences
+                alignment = max(alignments, key=lambda x: x.score)  # Get the best alignment
+                self.percent_identity = alignment.counts().identities / alignment.length * 100
+                self.percent_coverage = (len(self.protein_seq) / len(self.gene.protein_seq)) * 100
+                if (self.percent_coverage < truncation_tolerance and  # If the coverage is less than the tolerance
+                        # not partial, and not unexpected gene outside locus
+                        not self.partial and not (self.gene_type == "unexpected_genes" and not self.piece)):
+                    self.phenotype = "truncated"  # Set the phenotype to truncated
+            else:
+                warning(f'Error aligning {self.__repr__()}')
 

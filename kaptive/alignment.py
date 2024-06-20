@@ -81,15 +81,15 @@ class Alignment:
 
     @property
     def partial(self) -> bool:
-        """Check if the query is partial or would be partial if alignment was full length"""
-        # First two cases just check for overlap
-        if self.ctg_len < self.q_len:  # E.g. Contig length 99 and gene length 100 means 1bp is missing
+        if self.q_len > self.ctg_len:
             return True
-        if self.r_st < self.q_st:  # E.g. Contig position 0 and gene position 1 means 1bp is missing
+        if (self.r_en == self.ctg_len or self.r_st == 0) and (self.q_en - self.q_st) < self.q_len:
             return True
-        if self.r_en < self.q_len:  # E.g. Contig position 99 and gene length 100 means 1bp is missing
-            return True
-        if (self.ctg_len - self.r_en) < (self.q_len - self.q_en):  # Where the alignment is partial at the end
+        ref_start_diff = self.r_st
+        ref_end_diff = self.ctg_len - self.r_en
+        query_start_diff = self.q_st if self.strand == '+' else self.q_len - self.q_en
+        query_end_diff = self.q_len - self.q_en if self.strand == '+' else self.q_st
+        if query_start_diff > ref_start_diff or query_end_diff > ref_end_diff:
             return True
         return False
 

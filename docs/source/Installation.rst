@@ -5,7 +5,8 @@ Installation
 Dependencies
 =============
 
-Kaptive requires the following software and libraries to be installed and available in your path:
+Kaptive requires the following software and libraries, if installing from source they will need to be installed and
+available in your path:
 
 * `Python <https://python.org/>`_ >=3.9
 * `Biopython <https://biopython.org/>`_ >=1.83
@@ -16,16 +17,15 @@ Kaptive requires the following software and libraries to be installed and availa
 Download and install Kaptive
 =============================
 
-With pip::
+From PyPI::
 
     pip install kaptive
 
-With conda::
+From Bioconda::
 
     conda install -c bioconda kaptive
 
 From source::
 
-    git clone https://github.com/klebgenomics/Kaptive.git
-    python -m pip install Kaptive/
+    pip install git+https://github.com/klebgenomics/Kaptive.git
 

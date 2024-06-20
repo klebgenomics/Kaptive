@@ -458,7 +458,7 @@ def parse_database(genbank: Path, locus_filter: re.Pattern | None = None, load_l
             if locus_filter and not locus_filter.search(locus_name):
                 continue
             yield Locus.from_seqrecord(record, locus_name, type_name, load_locus_seqs, extract_translations)
-    except ValueError as e:
+    except Exception as e:
         quit_with_error(f'Could not parse database {genbank.name}: {e}')
 
 

@@ -26,7 +26,6 @@ from kaptive.misc import check_python_version, check_biopython_version, get_logo
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _URL = 'https://kaptive.readthedocs.io/en/latest/'
-# TODO: Add a citation message to the help message
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
@@ -62,26 +61,7 @@ def parse_args(a) -> argparse.Namespace:
     else:  # Unknown command
         parser.print_help(sys.stderr)
         quit_with_error(f'Unknown command "{a[0]}"; choose from {{assembly,extract,convert}}')
-    return check_args(parser.parse_args(a))
-
-
-def check_args(args: argparse.Namespace) -> argparse.Namespace:
-    # If any args are TextIO, check they are writing to separate files
-    inputs = {'assembly': {'fasta', 'out', 'json', 'plot'},  # Note we don't include scores as only one file is written
-              'convert': {'json', 'tsv', 'fna', 'ffn', 'faa', 'plot'},
-              'extract': {'fna', 'ffn', 'faa'}}
-    file_args, expected_args = {}, 0
-    for arg in (fmts := inputs[args.subparser_name]):
-        if x := getattr(args, arg, None):
-            if isinstance(x, TextIOWrapper):
-                if y := file_args.get(x, None):
-                    quit_with_error(f"Output file '{x.name}' is specified for --{y} --{arg}")
-                file_args[x] = arg
-            expected_args += 1
-    if not expected_args:
-        quit_with_error(f"No outputs specified for {args.subparser_name}, please specify at least one of:"
-                        f" --{', --'.join(fmts)}")
-    return args
+    return parser.parse_args(a)
 
 
 def assembly_subparser(subparsers):
@@ -92,21 +72,20 @@ def assembly_subparser(subparsers):
     opts = assembly_parser.add_argument_group(bold('Inputs'), "")
     opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
     opts.add_argument('input', nargs='+', metavar='fasta', type=check_file, help='Assemblies in fasta format')
-    opts = assembly_parser.add_argument_group(bold('Output options'), "")
+    opts = assembly_parser.add_argument_group(bold('Output options'), "\nNote, text outputs accept '-' for stdout")
     # Note these are different to the convert output options as TSV is the main output and fna is the main fasta output
     opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
                       help='Output file to write/append tabular results to (default: stdout)')
     opts.add_argument('-f', '--fasta', metavar='', nargs='?', default=None, const='.', type=check_out,
-                      help='Turn on fasta output, defaulting "./{assembly}_kaptive_results.fna" per assembly.\n'
-                           'Can optionally specify a directory or file (default: cwd)\n'
-                           'If a file is specified, all locus sequences will be written to that file.')
+                      help='Turn on fasta output\n'
+                           'Accepts a single file or a directory (default: cwd)')
     opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const='kaptive_results.json',
                       type=argparse.FileType('at'),
                       help='Turn on JSON lines output\n'
                            'Optionally choose file (can be existing) (default: %(const)s)')
     opts.add_argument('-s', '--scores', metavar='', nargs='?', default=None, const=sys.stdout,
                       type=argparse.FileType('at'),
-                      help='Will only report locus typing scores per assembly (for debugging)\n'
+                      help='Dump locus score matrix to tsv (typing will not be performed!)\n'
                            'Optionally choose file (can be existing) (default: stdout)')
     other_fmt_opts(opts)
     opts = assembly_parser.add_argument_group(bold('Scoring options'), "")
@@ -116,7 +95,7 @@ def assembly_subparser(subparsers):
                       help="Metric for scoring each locus (default: %(default)s)\n"
                            "  0: AS (alignment score of genes found)\n"
                            "  1: mlen (matching bases of genes found)\n"
-                           "  2: blen (alignment bases of genes found)\n"
+                           "  2: blen (aligned bases of genes found)\n"
                            "  3: q_len (query length of genes found)")
     opts.add_argument("--weight-metric", metavar='', default=3, type=int, choices=range(6),
                       help="Weighting for the 1st stage of the scoring algorithm (default: %(default)s)\n"
@@ -124,7 +103,7 @@ def assembly_subparser(subparsers):
                            "  1: Number of genes found\n"
                            "  2: Number of genes expected\n"
                            "  3: Proportion of genes found\n"
-                           "  4: blen (alignment bases of genes found)\n"
+                           "  4: blen (aligned bases of genes found)\n"
                            "  5: q_len (query length of genes found)")
     opts.add_argument('--n-best', type=int, default=2, metavar='', choices=range(1, 51),
                       help='Number of best loci from the 1st round of scoring to be\n'
@@ -158,9 +137,7 @@ def convert_subparser(subparsers):
     opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
     opts.add_argument('input', help='Kaptive JSON lines file or - for stdin', type=argparse.FileType('rt'),
                       metavar='json')
-    opts = convert_parser.add_argument_group(bold('Formats'),
-                                             "\nNote, you can select multiple formats to output but Kaptive will \n"
-                                             "throw an error if you try to output multiple formats to the same file")
+    opts = convert_parser.add_argument_group(bold('Formats'), "\nNote, text outputs accept '-' for stdout")
     opts.add_argument('-t', '--tsv', metavar='', nargs='?', default=None, const='-', type=check_out,
                       help='Convert to tabular format in file (default: stdout)')
     opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const='-', type=check_out,
@@ -190,9 +167,7 @@ def extract_subparser(subparsers):
         help='Extract entries from a Kaptive database', usage="kaptive extract <db> [formats] [options]")
     opts = extract_parser.add_argument_group(bold('Inputs'), "\nNote, combine with --filter to select loci")
     opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
-    opts = extract_parser.add_argument_group(bold('Formats'),
-                                             "\nNote, you can select multiple formats to output but Kaptive will \n"
-                                             "throw an error if you try to output multiple formats to the same file")
+    opts = extract_parser.add_argument_group(bold('Formats'), "\nNote, text outputs accept '-' for stdout")
     fmt_opts(opts)
     opts = extract_parser.add_argument_group(bold('Database options'), "")
     db_opts(opts)
@@ -206,13 +181,13 @@ def fmt_opts(opts: argparse.ArgumentParser):
     """Format opts shared by convert and extract"""
     opts.add_argument('--fna', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Convert to locus nucleotide sequences in fasta format\n'
-                           'Either in a single file/stdout or separate files in a directory (default: cwd)')
+                           'Accepts a single file or a directory (default: cwd)')
     opts.add_argument('--ffn', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Convert to locus gene nucleotide sequences in fasta format\n'
-                           'Either in a single file/stdout or separate files in a directory (default: cwd)')
+                           'Accepts a single file or a directory (default: cwd)')
     opts.add_argument('--faa', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Convert to locus gene protein sequences in fasta format\n'
-                           'Either in a single file/stdout or separate files in a directory (default: cwd)')
+                           'Accepts a single file or a directory (default: cwd)')
 
 
 def other_fmt_opts(opts: argparse.ArgumentParser):
@@ -240,45 +215,53 @@ def other_opts(opts: argparse.ArgumentParser):
 
 # Main -----------------------------------------------------------------------------------------------------------------
 def main():
-    check_python_version(3, 9)
-    check_biopython_version(1, 83)
-    args = parse_args(sys.argv[1:])
-    # TODO: Look into file locking to enable writing to the same file in parallel
+    check_python_version(3, 9)  # Check the python version
+    check_biopython_version(1, 83)  # Check the biopython version
+    args = parse_args(sys.argv[1:])  # Parse the arguments
 
     # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
         from kaptive.assembly import typing_pipeline, write_headers
         from kaptive.database import load_database
+
         args.db = load_database(
             args.db, args.gene_threshold, locus_filter=args.filter, load_locus_seqs=True, verbose=args.verbose,
             extract_translations=False, locus_regex=args.locus_regex, type_regex=args.type_regex)
+
         write_headers(args.scores or args.out, args.no_header, args.scores)
-        [result.write(args.out, args.json, args.fasta, None, None, args.plot, args.plot_fmt)
-         for assembly in args.input if (result := typing_pipeline(
-            assembly, args.db, args.threads, args.score_metric, args.weight_metric, args.min_cov,
-            args.n_best, args.max_other_genes, args.percent_expected, args.below_threshold, args.scores, args.verbose
-        ))]
+
+        for assembly in args.input:
+            if result := typing_pipeline(assembly, args.db, args.threads, args.score_metric, args.weight_metric,
+                                         args.min_cov, args.n_best, args.max_other_genes, args.percent_expected,
+                                         args.below_threshold, args.scores, args.verbose):
+                result.write(args.out, args.json, args.fasta, None, None, args.plot, args.plot_fmt)
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
         from kaptive.database import parse_database, get_database
-        [locus.write(args.fna, args.ffn, args.faa) for locus in parse_database(
-            get_database(args.db), args.filter, args.fna, args.faa, args.verbose, locus_regex=args.locus_regex,
-            type_regex=args.type_regex)]
+
+        for locus in parse_database(get_database(args.db), args.filter, args.fna, args.faa, args.verbose,
+                                    locus_regex=args.locus_regex, type_regex=args.type_regex):
+            locus.write(args.fna, args.ffn, args.faa)
 
     # Convert mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'convert':
         from kaptive.database import load_database
         from kaptive.assembly import parse_result, write_headers
+
         args.db = load_database(  # Load database in memory, we don't need to load the full sequences (False)
             args.db, verbose=args.verbose, load_locus_seqs=False, extract_translations=False,
             locus_regex=args.locus_regex, type_regex=args.type_regex)
-        write_headers(args.tsv, args.no_header)
-        [result.write(args.tsv, args.json, args.fna, args.ffn, args.faa, args.plot, args.plot_fmt) for
-         line in args.input if (result := parse_result(line, args.db, args.regex, args.samples, args.loci))]
 
-    # Finish -----------------------------------------------------------------------------------------------------------
+        write_headers(args.tsv, args.no_header)
+
+        for line in args.input:
+            if result := parse_result(line, args.db, args.regex, args.samples, args.loci):
+                result.write(args.tsv, args.json, args.fna, args.ffn, args.faa, args.plot, args.plot_fmt)
+
+    # Cleanup ----------------------------------------------------------------------------------------------------------
     for attr in vars(args):  # Close all open files in the args namespace if they aren't sys.stdout or sys.stdin
         if (x := getattr(args, attr, None)) and isinstance(x, TextIOWrapper) and x not in {sys.stdout, sys.stdin}:
-            x.close()
+            x.close()  # Close the file
+
     log("Done!", verbose=args.verbose)

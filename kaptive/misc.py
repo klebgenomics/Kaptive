@@ -19,7 +19,7 @@ from gzip import open as gzopen
 from bz2 import open as bzopen
 from typing import Generator, TextIO
 
-from kaptive.log import log, quit_with_error, bold_cyan
+from kaptive.log import log, quit_with_error, bold_cyan, warning
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
@@ -33,12 +33,6 @@ _LOGO = r"""  _  __    _    ____ _____ _____     _______
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
-def rtrn(message: str = '', log_func: callable = log, return_obj: any = None, **kwargs):
-    """Exit a function with a message and code"""
-    log_func(message, **kwargs)
-    return return_obj
-
-
 def check_programs(progs: list[str], verbose: bool = False):
     """Check if programs are installed and executable"""
     bins = {  # Adapted from: https://unix.stackexchange.com/a/261971/375975
@@ -47,34 +41,28 @@ def check_programs(progs: list[str], verbose: bool = False):
         ) for f in os.listdir(p) if os.access(f'{p}/{f}', os.X_OK)
     }
     for program in progs:
-        if program in bins.keys():
+        if program in bins:
             log(f'{program}: {bins[program]}', verbose=verbose)
         else:
-            rtrn(f'{program} not found', quit_with_error, verbose=verbose)
+            quit_with_error(f'{program} not found')
 
 
-def check_file(path: str | Path, log_func: callable = quit_with_error) -> Path | None:
+def check_file(path: str | Path) -> Path | None:
     path = Path(path) if isinstance(path, str) else path
     if not path.exists():
-        rtrn(f'{path} does not exist', log_func)
+        return warning(f'{path} does not exist')
     if not path.is_file():
-        rtrn(f'{path} is not a file', log_func)
+        return warning(f'{path} is not a file')
     elif path.stat().st_size == 0:
-        rtrn(f'{path} is empty', log_func)
+        return warning(f'{path} is empty')
     else:
         return path.absolute()
 
 
-def check_cpus(cpus: int | str | None = 0) -> int:
-    if not cpus:
-        return os.cpu_count()
-    try:
-        cpus = int(cpus)
-    except ValueError:
-        quit_with_error(f"CPUs must be an integer, got {cpus}")
-    if cpus < 1:
-        quit_with_error(f"CPUs must be > 0, got {cpus}")
-    return min(cpus, os.cpu_count())
+def check_cpus(cpus: int | None = 0, verbose: bool = False) -> int:
+    cpus = os.cpu_count() if not cpus else min(cpus, os.cpu_count())
+    log(f'Using {cpus} CPUs', verbose)
+    return cpus
 
 
 def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool = True) -> Path | TextIO:
