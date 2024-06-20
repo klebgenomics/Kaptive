@@ -8,33 +8,42 @@ kaptive assembly
 For each input assembly, Kaptive runs the ``kaptive.assembly.typing_pipeline`` which does the following:
 
 #. Aligns locus gene nucleotide sequences to the assembly contig sequences using minimap2.
-#. Identifies the best matching locus type using the `Scoring-algorithm`_.
+#. Identifies the best matching locus type using the :ref:`scoring algorithm<Scoring-algorithm>`.
 #. Extracts the locus gene sequences from the assembly contig sequences.
+#. Predicts the serotype/phenotype based on the gene content.
 
 .. _Scoring-algorithm:
 
 Scoring algorithm
 -------------------
-#. For each locus gene, the best alignment is chosen and sorted by locus.
-#. For each locus, a chosen alignment metric is summed across genes and weighted to generate a score.
-#. The locus with the highest score is chosen as the best match.
+#. A matrix is initialised with one row per locus and one column per score metric.
+#. For each gene found, the best alignment is chosen and the scores are added to the respective locus row
+   if the coverage passes the threshold (``--min-cov``).
+#. The matrix is then weighted by the ``--weight-metric`` and the scores are selected from the column corresponding
+   to the ``--score-metric``.
+#. The top N loci (``--n-best``) are selected to be fully aligned to the assembly.
+#. Steps 1 and 2 are repeated and the best locus is selected from the column corresponding
+   to the ``--score-metric``.
 
-The alignment metric can be explicitly set by the flag ``--alignment_metric``; the options are any attribute
-of the ``kaptive.alignment.Alignment`` object, such as:
+The score metric can be explicitly set by the flag ``--score-metric``, the options are:
 
-* ``AS`` - alignment score calculated by minimap2 (default)
-* ``matching_bases`` - number of matching bases in the alignment
-* ``percent_query_coverage`` - the percent of the query sequence covered by the alignment
-* ``percent_target_coverage`` - the percent of the target sequence covered by the alignment
-* ``percent_identity`` - the percent identity of the alignment
+* ``0`` (``AS``) - Sum of the alignment scores per query
+* ``1`` (``mlen``) - Sum of the number of matching bases in the alignment per query
+* ``2`` (``blen``) - Sum of the number of aligned bases per query
+* ``3`` (``q_len``) - Sum of the number of bases of each query found (regardless of whether they are aligned)
 
-The weighting can be explicitly set by the flag ``--weight_metric``; the options are:
+The weighting can be explicitly set by the flag ``--weight-metric``; the options are:
 
-* ``none`` - No weighting
-* ``locus_length`` - length of the locus
-* ``genes_expected`` - number of genes expected in the locus
-* ``genes_found`` - number of genes found in the locus
-* ``prop_genes_found`` - number of genes found divided by number of genes expected (default)
+* ``0`` - No weighting
+* ``1`` - Number of genes found
+* ``2`` - Number of genes expected
+* ``3`` - Proportion of genes found
+* ``4`` - Sum of the number of aligned bases per query (``blen``)
+* ``5`` - Sum of the number of bases of each query found (regardless of whether they are aligned) (``q_len``)
+
+.. note::
+ The gene score matrix can be written to a TSV file using the ``--scores`` flag, however this will not type the
+ assembly or reconstruct the locus.
 
 .. _Locus-reconstruction:
 
@@ -42,9 +51,14 @@ Locus reconstruction
 ---------------------
 After the best matching locus type has been identified, Kaptive will:
 
-#. Align the best matching locus nucleotide sequence to the assembly contig sequences using minimap2.
-#. Create pieces of the locus on the contig by merging together ranges of the alignments that are within the distance
-   of the largest locus in the database.
+#. For each contig, the ranges from the full-length locus alignments of the best match are extracted.
+#. The ranges are merged together if they are within the distance of the largest locus in the database.
+#. The merged ranges are used to create ``LocusPiece`` objects and the sequence is extracted from the assembly contig.
+#. Gene alignments are culled twice to determine the gene content:
+    #. The first removes alignments overlapping genes from the best match.
+    #. The remaining alignments that are not part of the best match are culled so that the best alignment is kept
+       and each alignment represents the best gene for that part of the contig.
+#. For each remaining gene alignment, the gene is then evaluated.
 
 .. _Gene-evaluation:
 
@@ -52,7 +66,7 @@ Gene evaluation
 ---------------------
 For each ``GeneResult`` object, Kaptive will:
 
-#. Check whether the gene is **partial** by determining if the gene overlaps the start or end of the contig.
+#. Check whether the gene is **partial** by determining if the gene overlaps the contig boundaries.
 #. Extract the DNA sequence from the assembly contig and translate to amino acid.
 #. Perform pairwise alignment to the reference gene amino acid sequence and calculate percent identity.
 #. Check for **truncation** by determining if the amino acid sequence length is <95% of the reference gene protein length.
@@ -70,3 +84,6 @@ As of Kaptive 3, we have added the ability to predict the resulting phenotype of
 to how the *Type* was reported in previous versions, but now includes the ability to predict specific phenotypes
 based on known mutations/modifications in a given set of locus genes as defined in the database :ref:`logic file<Phenotype-logic>`.
 
+Confidence score
+---------------------
+Kaptive with finally calculate how confident it is in the prediction, which is explained :ref:`here <Confidence-score>`.

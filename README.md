@@ -7,4 +7,4 @@ Kaptive reports information about surface polysaccharide loci for _Klebsiella pn
 
 A step-by-step tutorial is also available [here](https://bit.ly/kaptive-workshop).
 
-[![DOI](https://zenodo.org/badge/60247148.svg)](https://zenodo.org/badge/latestdoi/60247148)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11257262.svg)](https://doi.org/10.5281/zenodo.11257262)

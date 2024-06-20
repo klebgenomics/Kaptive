@@ -19,7 +19,7 @@ from gzip import open as gzopen
 from bz2 import open as bzopen
 from typing import Generator, TextIO
 
-from kaptive.log import log, quit_with_error, bold_cyan
+from kaptive.log import log, quit_with_error, bold_cyan, warning
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
@@ -41,34 +41,28 @@ def check_programs(progs: list[str], verbose: bool = False):
         ) for f in os.listdir(p) if os.access(f'{p}/{f}', os.X_OK)
     }
     for program in progs:
-        if program in bins.keys():
-            log(f'{program}: {bins[program]}', verbose)
+        if program in bins:
+            log(f'{program}: {bins[program]}', verbose=verbose)
         else:
             quit_with_error(f'{program} not found')
 
 
-def check_file(path: str | Path) -> Path:
+def check_file(path: str | Path) -> Path | None:
     path = Path(path) if isinstance(path, str) else path
     if not path.exists():
-        quit_with_error(f'{path.name} does not exist')
+        return warning(f'{path} does not exist')
     if not path.is_file():
-        quit_with_error(f'{path.name} is not a file')
+        return warning(f'{path} is not a file')
     elif path.stat().st_size == 0:
-        quit_with_error(f'{path.name} is empty')
+        return warning(f'{path} is empty')
     else:
         return path.absolute()
 
 
-def check_cpus(cpus: int | str | None = 0) -> int:
-    if not cpus:
-        return os.cpu_count()
-    try:
-        cpus = int(cpus)
-    except ValueError:
-        quit_with_error(f"CPUs must be an integer, got {cpus}")
-    if cpus < 1:
-        quit_with_error(f"CPUs must be > 0, got {cpus}")
-    return min(cpus, os.cpu_count())
+def check_cpus(cpus: int | None = 0, verbose: bool = False) -> int:
+    cpus = os.cpu_count() if not cpus else min(cpus, os.cpu_count())
+    log(f'Using {cpus} CPUs', verbose)
+    return cpus
 
 
 def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool = True) -> Path | TextIO:
@@ -77,17 +71,16 @@ def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool 
     If it looks like/is already a file (has an extension), return the file object.
     If it looks like/is already a directory, return the directory path.
     """
-    # This may also be sys.stdout
-    if path == '-':
+    if path == '-':  # If the path is '-', return stdout
         return sys.stdout
-    if (path := Path(path)).suffix:
+    if (path := Path(path)).suffix:  # If the path has an extension, it's probably a file
         try:
-            return path.open(mode)
+            return path.open(mode)  # Open the file
         except Exception as e:
             quit_with_error(f'Could not open {path}: {e}')
-    if not path.exists():
+    if not path.exists():  # Assume directory
         try:
-            path.mkdir(parents=parents, exist_ok=exist_ok)
+            path.mkdir(parents=parents, exist_ok=exist_ok)  # Create the directory if it doesn't exist
         except Exception as e:
             quit_with_error(f'Could not create {path}: {e}')
     return path
@@ -103,7 +96,8 @@ def check_biopython_version(major: int = 1, minor: int = 79):
         from Bio import __version__ as biopython_version
     except ImportError:
         quit_with_error('BioPython is required')
-    if (major_version := int(biopython_version.split('.')[0])) < major or (minor_version := int(biopython_version.split('.')[1])) < minor:
+    if ((major_version := int(biopython_version.split('.')[0])) < major or
+            (minor_version := int(biopython_version.split('.')[1])) < minor):
         quit_with_error(f'Biopython version {major}.{minor} or greater required, got {major_version}.{minor_version}')
 
 
@@ -127,7 +121,8 @@ def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the lo
     return bold_cyan(f'{_LOGO}\n{message.center(width)}')
 
 
-def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False) -> Generator[tuple[int | float, int | float], None, None]:
+def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False
+                 ) -> Generator[tuple[int | float, int | float], None, None]:
     """
     Merge overlapping ranges
     :param ranges: List of tuples of start and end positions

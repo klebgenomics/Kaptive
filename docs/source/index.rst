@@ -18,8 +18,8 @@
 Introducing Kaptive 3
 ########################
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10252121.svg
-    :target: https://doi.org/10.5281/zenodo.10252121
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.11257262.svg
+    :target: https://doi.org/10.5281/zenodo.11257262
     :alt: DOI
 
 .. image:: https://img.shields.io/github/stars/klebgenomics/Kaptive
@@ -33,6 +33,9 @@ Introducing Kaptive 3
    :target: https://www.gnu.org/licenses/gpl-3.0
    :alt: License
 
+.. image:: https://img.shields.io/pypi/pyversions/Kaptive
+   :alt: PyPI - Python Version
+
 .. image:: https://img.shields.io/conda/vn/bioconda/kaptive
    :target: https://anaconda.org/bioconda/kaptive
    :alt: Conda
@@ -41,7 +44,7 @@ About
 ==========
 Kaptive is a system for surface polysaccharide typing from bacterial genome sequences. It consists of two main components:
 
-#. Curated reference databases of surface polysaccharide gene clusters (loci).
+#. Curated reference :ref:`databases <Distributed-databases>` of surface polysaccharide gene clusters (loci).
 #. A command-line interface (CLI) with three modes:
 
    -  **assembly**: surface polysaccharide typing from assemblies
@@ -50,7 +53,7 @@ Kaptive is a system for surface polysaccharide typing from bacterial genome sequ
 
 Kaptive can be found:
 
-* On `GitHub <https://github.com/klebgenomics/Kaptive>`_ alongside the reference databases.
+* On `GitHub <https://github.com/klebgenomics/Kaptive>`_ alongside the reference :ref:`databases <Distributed-databases>`.
 * On `PathogenWatch <https://pathogen.watch/>`_ where it is used to serotype *Klebsiella* and *Acinetobacter baumannii* isolates.
 * As a GUI in `Kaptive Web <https://kaptive-web.erc.monash.edu/>`_ (`source code <https://github.com/kelwyres/Kaptive-Web>`_),
   which includes a `third-party database <https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping>`_ for

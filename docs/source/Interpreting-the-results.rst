@@ -17,8 +17,8 @@ The four most important columns in the Kaptive :ref:`tabular <Tabular>` output:
 
 Confidence score  
 =================
-Kaptive will indicate the best matching locus and its confidence in the locus match.
-
+Kaptive will indicate the best matching locus and its confidence in the locus match. The critera mentioned below
+can be tweaked using the :ref:`confidence options <Confidence-options>`.
 
 Typeable loci
 ---------------------

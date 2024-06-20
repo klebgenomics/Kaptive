@@ -20,6 +20,8 @@ from typing import TextIO
 
 from Bio.Seq import Seq
 from Bio.Align import PairwiseAligner
+import matplotlib
+matplotlib.use('Agg')  # Prevents the need for a display when plotting
 from dna_features_viewer import GraphicFeature, GraphicRecord
 
 from kaptive.database import Database, Locus, Gene
@@ -44,8 +46,7 @@ class TypingResult:
 
     def __init__(
             self, sample_name: str | None, db: Database | None, best_match: Locus | None = None,
-            zscore: float | None = 0, pieces: list[LocusPiece] | None = None,
-            expected_genes_inside_locus: list[GeneResult] | None = None,
+            pieces: list[LocusPiece] | None = None, expected_genes_inside_locus: list[GeneResult] | None = None,
             expected_genes_outside_locus: list[GeneResult] | None = None, missing_genes: list[str] | None = None,
             unexpected_genes_inside_locus: list[GeneResult] | None = None,
             unexpected_genes_outside_locus: list[GeneResult] | None = None,
@@ -53,7 +54,6 @@ class TypingResult:
         self.sample_name = sample_name or ""
         self.db = db
         self.best_match = best_match
-        self.zscore = zscore
         self.pieces = pieces or []  # Pieces of locus reconstructed from alignments
         self.expected_genes_inside_locus = expected_genes_inside_locus or []  # Genes from best_match
         self.expected_genes_outside_locus = expected_genes_outside_locus or []  # Genes from best_match
@@ -134,8 +134,8 @@ class TypingResult:
         return self._confidence if self._confidence is not None else "Not calculated"
 
     def get_confidence(self, allow_below_threshold: bool, max_other_genes: int, percent_expected_genes: float):
-        p = len(self.expected_genes_inside_locus) / len(self.best_match.genes) * 100
-        other_genes = len([i for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"])
+        p = len(set(i.gene.name for i in self.expected_genes_inside_locus)) / len(self.best_match.genes) * 100
+        other_genes = len(set(i.gene.name for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"))
         if not allow_below_threshold and "*" in self.problems:
             self._confidence = "Untypeable"
         else:
@@ -150,8 +150,7 @@ class TypingResult:
     def from_dict(cls, d: dict, db: Database) -> TypingResult:
         if not (best_match := db.loci.get(d['best_match'])):
             raise TypingResultError(f"Best match {d['best_match']} not found in database")
-        self = TypingResult(sample_name=d['sample_name'], db=db, best_match=best_match, zscore=float(d['zscore']),
-                            missing_genes=d['missing_genes'])
+        self = TypingResult(sample_name=d['sample_name'], db=db, best_match=best_match, missing_genes=d['missing_genes'])
         # Set the cached properties
         self._percent_identity = float(d['percent_identity'])
         self._percent_coverage = float(d['percent_coverage'])
@@ -193,8 +192,7 @@ class TypingResult:
                     f"{len(x := self.unexpected_genes_outside_locus)}",
                     ';'.join(str(i) for i in x) if x else '',
                     ';'.join(str(i) for i in filter(lambda z: z.phenotype == "truncated", self)),
-                    ';'.join([str(i) for i in self.extra_genes]),
-                    f"{self.zscore:.1f}"
+                    ';'.join([str(i) for i in self.extra_genes])
                 ]
             ) + "\n"
         if format_spec == 'fna':  # Return the nucleotide sequence of the locus
@@ -209,17 +207,17 @@ class TypingResult:
             return GraphicRecord(sequence_length=self.__len__(), first_index=0, features=features,
                                  feature_level_height=1.5, sequence=[p.sequence for p in self.pieces])
         if format_spec == 'json':
-            return dumps({
-                             'sample_name': self.sample_name, 'best_match': self.best_match.name,
-                             'zscore': str(self.zscore),
-                             'confidence': self.confidence, 'phenotype': self.phenotype, 'problems': self.problems,
-                             'percent_identity': str(self.percent_identity),
-                             'percent_coverage': str(self.percent_coverage),
-                             'missing_genes': self.missing_genes} | {
-                             attr: [i.format(format_spec) for i in getattr(self, attr)] for attr in {
-                    'pieces', 'expected_genes_inside_locus', 'unexpected_genes_inside_locus',
-                    'expected_genes_outside_locus', 'unexpected_genes_outside_locus', 'extra_genes'}
-                         }) + "\n"
+            return dumps(
+                {
+                    'sample_name': self.sample_name, 'best_match': self.best_match.name, 'confidence': self.confidence,
+                    'phenotype': self.phenotype, 'problems': self.problems, 'percent_identity': str(self.percent_identity),
+                    'percent_coverage': str(self.percent_coverage), 'missing_genes': self.missing_genes
+                } | {
+                    attr: [i.format(format_spec) for i in getattr(self, attr)] for attr in {
+                        'pieces', 'expected_genes_inside_locus', 'unexpected_genes_inside_locus',
+                        'expected_genes_outside_locus', 'unexpected_genes_outside_locus', 'extra_genes'
+                    }
+                }) + "\n"
         raise ValueError(f"Unknown format specifier {format_spec}")
 
     def write(self, tsv: TextIO | None = None, json: TextIO | None = None, fna: Path | TextIO | None = None,
@@ -231,10 +229,9 @@ class TypingResult:
          fh.write(self.format(fmt)) for fh, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')] if fh]
         if plot:
             ax = self.format(plot_fmt).plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
-            ax.set_title(  # Add title to figure
-                f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
+            ax.set_title(f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
             ax.figure.savefig(plot / f'{self.sample_name}_kaptive_results.{plot_fmt}', bbox_inches='tight')
-            ax.figure.clear()  # Close figure to prevent memory leak
+            ax.figure.clear()  # TODO: Check if this is necessary
 
 
 class LocusPieceError(Exception):
@@ -383,26 +380,29 @@ class GeneResult:
             )
         raise ValueError(f"Unknown format specifier {format_spec}")
 
-    def compare_translation(self, frame: int = 0, **kwargs):
+    def compare_translation(self, truncation_tolerance: float = 95, **kwargs):
         """
         Extracts the translation from the DNA sequence of the gene result.
         Will also extract the translation from the gene if it is not already stored.
-        param frame: 0, 1, or 2, the frame to start translating from.
-        param kwargs: Additional keyword arguments to pass to the Bio.Seq.translate method.
         """
         self.gene.extract_translation(**kwargs)  # Extract the translation from the gene if it is not already stored
         if len(self.dna_seq) == 0:  # If the DNA sequence is empty, raise an error
             raise GeneResultError(f'No DNA sequence for {self.__repr__()}')
-        with catch_warnings(record=True) as w:
-            self.protein_seq = self.dna_seq[frame:].translate(**kwargs)  # Translate the DNA sequence from the frame
-            # for i in w:
-            #     warning(f"{i.message}: {self.__repr__()}")
-        if len(self.protein_seq) == 0:  # If the protein sequence is still empty, raise a warning
+        with catch_warnings(record=True) as w:  # Catch Biopython warnings
+            protein_seqs = [self.dna_seq[i:].translate(**kwargs) for i in range(3)]  # Translate in all 3 frames
+        frame, self.protein_seq = max(enumerate(protein_seqs), key=lambda x: len(x[1]))  # Get the longest translation
+        self.start += frame  # Update the start position to the frame with the longest translation
+        if len(self.protein_seq) <= 1:  # If the protein sequence is still empty, raise a warning
             warning(f'No protein sequence for {self.__repr__()}')
-        elif len(self.gene.protein_seq) > 0:  # If both sequences are not empty
-            alignment = max(_PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq), key=lambda x: x.score)
-            self.percent_identity = alignment.counts().identities / alignment.length * 100
-            self.percent_coverage = (len(self.protein_seq) / len(self.gene.protein_seq)) * 100
-            if not self.partial and self.percent_coverage < 95:  # If the protein sequence less than 95% of reference
-                self.phenotype = "truncated"  # Set the phenotype to truncated
+        elif len(self.gene.protein_seq) > 1:  # If both sequences are not empty
+            if alignments := _PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq):  # Align the sequences
+                alignment = max(alignments, key=lambda x: x.score)  # Get the best alignment
+                self.percent_identity = alignment.counts().identities / alignment.length * 100
+                self.percent_coverage = (len(self.protein_seq) / len(self.gene.protein_seq)) * 100
+                if (self.percent_coverage < truncation_tolerance and  # If the coverage is less than the tolerance
+                        # not partial, and not unexpected gene outside locus
+                        not self.partial and not (self.gene_type == "unexpected_genes" and not self.piece)):
+                    self.phenotype = "truncated"  # Set the phenotype to truncated
+            else:
+                warning(f'Error aligning {self.__repr__()}')
 
