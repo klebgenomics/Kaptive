@@ -213,7 +213,7 @@ def typing_pipeline(
             alignments += (alns := list(alns))  # Add all alignments to the list
             # Use the best alignment for each gene for scoring, if the coverage is above the minimum
             if ((best := max(alns, key=lambda x: x.mlen)).blen / best.q_len) * 100 >= min_cov:
-                scores[idx[q.split("_", 1)[0]]] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
+                scores[idx[db.genes[q].locus.name]] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
             # For each gene, add: AS, mlen, blen, q_len, genes_found (1), genes_expected (0 but will update later)
 
     if scores.max() == 0:  # If no gene alignments were found, return None so pipeline can continue
@@ -295,13 +295,13 @@ def typing_pipeline(
 
     # FINALISE RESULT -------------------------------------------------------------------------------------------------
     # Sort the pieces by the sum of the expected gene order to get the expected order of the pieces
-    result.pieces.sort(key=lambda x: min(int(i.gene.name.split("_")[1]) for i in x.expected_genes))
-    [l.sort(key=lambda x: int(x.gene.name.split("_")[1])) for l in (
+    result.pieces.sort(key=lambda x: min(i.gene.position_in_locus for i in x.expected_genes))
+    [l.sort(key=lambda x: gene.position_in_locus) for l in (
         result.expected_genes_inside_locus, result.expected_genes_outside_locus, result.unexpected_genes_inside_locus,
         result.unexpected_genes_outside_locus)]
-    result.missing_genes = sorted(list(set(best_match.genes) - {
-        i.gene.name for i in chain(result.expected_genes_inside_locus, result.expected_genes_outside_locus)}),
-                                  key=lambda x: int(x.split("_")[1]))
+    result.missing_genes = list(set(best_match.genes) - {
+        i.gene.name for i in chain(result.expected_genes_inside_locus, result.expected_genes_outside_locus)
+    })
     result.get_confidence(allow_below_threshold, max_other_genes, percent_expected_genes)
     log(f"Finished typing {result}", verbose=verbose)
     return result
