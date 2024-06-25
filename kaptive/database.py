@@ -153,14 +153,13 @@ class Locus(object):
         n = 1
         for feature in record.features:  # type: SeqFeature
             if feature.type == 'CDS':
-                gene = Gene.from_feature(record, feature, position_in_locus=n)
+                gene = Gene.from_feature(record, feature, position_in_locus=n, locus=self)
                 if gene.name in self.genes:
                     raise LocusError(f'Gene {gene} already exists in locus {self}')
                 if gene.locus and gene.locus != self:
                     raise LocusError(f'Gene {gene} is from a different locus than locus {self}')
                 if extract_translations:  # Force translation of the gene
                     gene.extract_translation()
-                gene.locus = self
                 self.genes[gene.name] = gene
                 n += 1
         self.type_label = type_name if not self.extra() else None  # Extra genes don't have a type
@@ -250,10 +249,8 @@ class Gene(object):
         self = cls(
             start=feature.location.start, end=feature.location.end, strand='+' if feature.location.strand == 1 else '-',
             dna_seq=feature.extract(record.seq), product=feature.qualifiers.get('product', [''])[0], **kwargs)
-        if not (locus_tag := feature.qualifiers.get('locus_tag', [None])[0]):
-            raise GeneError(f'{feature} does not have a locus tag.')
-        self.name = locus_tag
-        self.gene_name = feature.qualifiers.get('gene', [self.name])[0]  # Use locus tag if gene name is not present
+        self.name = f"{self.locus.name}_{str(self.position_in_locus).zfill(2)}" + (f"_{x}" if (x := feature.qualifiers.get('gene', [''])[0]) else '')
+        self.gene_name = x
         assert len(self.dna_seq) % 3 == 0, quit_with_error(f'DNA sequence of {self} is not a multiple of 3')
         return self
 

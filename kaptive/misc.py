@@ -47,14 +47,14 @@ def check_programs(progs: list[str], verbose: bool = False):
             quit_with_error(f'{program} not found')
 
 
-def check_file(path: str | Path) -> Path | None:
+def check_file(path: str | Path) -> Path:
     path = Path(path) if isinstance(path, str) else path
     if not path.exists():
-        return warning(f'{path} does not exist')
+        quit_with_error(f'{path} does not exist')
     if not path.is_file():
-        return warning(f'{path} is not a file')
+        quit_with_error(f'{path} is not a file')
     elif path.stat().st_size == 0:
-        return warning(f'{path} is empty')
+        quit_with_error(f'{path} is empty')
     else:
         return path.absolute()
 

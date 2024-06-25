@@ -59,6 +59,28 @@ Example piece of input Genbank file::
     CDS             1..897
                     /gene="galF"
 
+Nomenclature
+^^^^^^^^^^^^^^^
+In constructing the databases included with Kaptive, we have used the following nomenclature rules:
+
+* Loci are named after their respective antigen (**K**, **O**, or **OC**) followed by the letter **L** (which
+  stands for **Locus**), which separates the label for the genotype from the phenotype (e.g. KL1 -> K1). These
+  letters should be in upper case.
+* Loci are numbered, first, by their corresponding antigen, and second, in the order in which they were discovered.
+  For example, *Klebsiella* K-loci 1-79 correspond to K-types 1-79. K-loci 101 and greater correspond to K-loci with
+  unknown antigens in the order in which they were discovered. We intentionally started at 101 to leave room to assign
+  phenotype-genotype pairs.
+* Locus genes are named in three parts delimited by an **underscore** (**_**):
+
+  #. The locus the gene belongs to, e.g. ``KL1_`` for a gene in the ``KL1`` locus.
+  #. The position of the gene in the locus, e.g. ``KL1_01`` for the first gene in the ``KL1`` locus.
+  #. The name of the gene as a three-letter italicized symbol written in lower case letters and usually suffixed with
+     an italicized capital letter, e.g. ``KL1_01_galF`` for the *galF* gene in the ``KL1`` locus.
+     If the gene name is unknown, this part will be blank and the gene instead would be called ``KL1_01``.
+
+.. note::
+ Databases **must** follow this nomenclature system for distribution within Kaptive.
+
 .. _Phenotype-logic:
 
 Phenotype logic
