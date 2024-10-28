@@ -26,16 +26,16 @@ Typeable loci
 The locus was found in a single piece in the query assembly with no genes below the minimum translated identity
 according to the :ref:`locus thresholds <Locus definition>` and:
 
-* no missing genes (as determined by at least 50% nucleotide mapping coverage)
-* no unexpected genes (genes from other loci) inside the locus region of the assembly
+* no missing genes
+* no (non-truncated) unexpected genes (genes from other loci) inside the locus region of the assembly
 
 **OR**
 
 The locus was found in more than one piece in the query assembly with no genes below the minimum translated identity
 according to the :ref:`locus thresholds <Locus definition>` and:
 
-* no more than 1 missing gene  
-* no more than 1 unexpected gene (genes from other loci) inside the locus region of the assembly
+* no less than N% missing genes (default: 50%)
+* no more than N unexpected gene (genes from other loci) inside the locus region of the assembly (default: 1)
 
 These criteria were designed in consideration of the locus definition rules (i.e. that each locus represents a unique set of genes defined at a given minimum translated identity threshold) and following systematic analysis of Kaptive outputs for draft genome assemblies compared against manually confirmed loci determined from matched completed genomes.
 
@@ -57,7 +57,7 @@ Problems
 * ``-`` = genes expected in the locus were not found.
 * ``+`` = extra genes were found in the locus.
 * ``*`` = one or more expected genes was found but with translated identity below the minimum threshold.
-* ``!`` = one or more genes was found but truncated
+* ``!`` = one or more genes was found but truncated.
 
 
 Exploring the other columns

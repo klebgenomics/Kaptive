@@ -60,6 +60,12 @@ After the best matching locus type has been identified, Kaptive will:
        and each alignment represents the best gene for that part of the contig.
 #. For each remaining gene alignment, the gene is then evaluated.
 
+.. note::
+ You may see multiple entries for the same gene in the gene details columns. This can happen when there are
+ multiple significant alignments for a gene that has been split, either over contigs or by an artefact such as
+ and insertion element. This will be evident by the low percent coverage of the entries, which should all add up
+ to ~100% if they are indeed part of the same gene.
+
 .. _Gene-evaluation:
 
 Gene evaluation

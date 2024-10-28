@@ -120,7 +120,7 @@ See database options :ref:`here <Database-options>` and other options::
     -V, --verbose         Print debug messages to stderr
     -v , --version        Show version number and exit
     -h , --help           Show this help message and exit
-    -t , --threads        Number of threads for alignment (default: maximum available CPUs)
+    -t , --threads        Number of threads for alignment (default: maximum available CPUs / 32)
 
 .. _kaptive-convert:
 

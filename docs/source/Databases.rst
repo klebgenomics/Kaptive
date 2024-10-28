@@ -187,12 +187,6 @@ The *Klebsiella* K locus primary reference database (``Klebsiella_k_locus_primar
 Synthetic IS-free K locus sequences were generated for K loci for which no naturally occurring IS-free variants have
 been identified to date.
 
-The variants database (``Klebsiella_k_locus_variant_reference.gbk``) comprises full-length annotated sequences for
-variants of the distinct loci:
-
-* IS variants are named as KLN -1, -2 etc e.g. KL15-1 is an IS variant of KL15.
-* Deletion variants are named KLN-D1, -D2 etc e.g. KL15-D1 is a deletion variant of KL15.
-
 .. note::
  KL156-D1 is included in the primary reference database since no full-length version of this locus has been
  identified to date.
@@ -201,7 +195,8 @@ We recommend screening your data with the primary reference database first to fi
 have poor matches or are particularly interested in detecting variant loci you should try the variant database.
 
 .. warning::
- We do not currently recommend using the variant database with Kaptive 3. It is included in the repository for completeness. 
+ The variants database (``Klebsiella_k_locus_variant_reference.gbk``) has been retired as of ``v3.0.0b6`` as it's no
+ longer actively maintained and results can be misleading without additional in depth analysis.
 
 Database versions:
 
