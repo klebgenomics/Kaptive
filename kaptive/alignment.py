@@ -13,8 +13,7 @@ If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 from typing import Iterable, Generator
 from itertools import groupby
-from kaptive.misc import range_overlap
-from kaptive.log import warning
+from kaptive.utils import range_overlap
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -95,19 +94,6 @@ class Alignment:
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def iter_alns(data: str) -> Generator[Alignment, None, None]:
-    """Iterate over alignments in a chunk of data"""
-    # It's probably better to decode the data here rather than in the Alignment class
-    if not data:
-        return None
-    for line in data.splitlines():
-        try:
-            yield Alignment.from_paf_line(line)
-        except AlignmentError:
-            warning(f"Skipping invalid alignment line: {line}")
-            continue
-
-
 def group_alns(alignments: Iterable[Alignment], key: str = 'q') -> Generator[tuple[str, Generator[Alignment]]]:
     """Group alignments by a key"""
     yield from groupby(sorted(alignments, key=lambda x: getattr(x, key)), key=lambda x: getattr(x, key))

@@ -14,16 +14,21 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
-from gzip import open as gzopen
-from bz2 import open as bzopen
-from typing import Generator, TextIO
+from zlib import decompress as gz_decompress
+from gzip import open as gz_open
+from bz2 import (decompress as bz2_decompress, open as bz2_open)
+from lzma import (decompress as xz_decompress, open as xz_open)
+from typing import Generator, TextIO, Any, BinaryIO
+from operator import itemgetter
 
 from kaptive.log import log, quit_with_error, bold_cyan, warning
 
 # Constants -----------------------------------------------------------------------------------------------------------
-_COMPRESSION_MAGIC = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\x50\x4b': 'zip', b'\x37\x7a': '7z', b'\x78\x01': 'xz'}
-_READ_N_BYTES = max(len(x) for x in _COMPRESSION_MAGIC)
+_MAX_CPUS = 32
+_MAGIC_BYTES = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\xfd7zXZ\x00': 'xz'}
+_OPEN = {'gz': gz_open, 'bz2': bz2_open, 'xz': xz_open}
+_DECOMPRESS = {'gz': gz_decompress, 'bz2': bz2_decompress, 'xz': xz_decompress}
+_MIN_N_BYTES = max(len(i) for i in _MAGIC_BYTES)  # Minimum number of bytes to read in a file to guess the compression)
 _LOGO = r"""  _  __    _    ____ _____ _____     _______ 
  | |/ /   / \  |  _ \_   _|_ _\ \   / / ____|
  | ' /   / _ \ | |_) || |  | | \ \ / /|  _|  
@@ -36,9 +41,9 @@ _LOGO = r"""  _  __    _    ____ _____ _____     _______
 def check_programs(progs: list[str], verbose: bool = False):
     """Check if programs are installed and executable"""
     bins = {  # Adapted from: https://unix.stackexchange.com/a/261971/375975
-        f: Path(f'{p}/{f}') for p in filter(
+        binary: x for path in filter(
             os.path.isdir, os.environ["PATH"].split(os.path.pathsep)
-        ) for f in os.listdir(p) if os.access(f'{p}/{f}', os.X_OK)
+        ) for binary in os.listdir(path) if os.access((x := os.path.join(path, binary)), os.X_OK)
     }
     for program in progs:
         if program in bins:
@@ -47,25 +52,33 @@ def check_programs(progs: list[str], verbose: bool = False):
             quit_with_error(f'{program} not found')
 
 
-def check_file(path: str | Path) -> Path:
-    path = Path(path) if isinstance(path, str) else path
-    if not path.exists():
-        quit_with_error(f'{path} does not exist')
-    if not path.is_file():
-        quit_with_error(f'{path} is not a file')
-    elif path.stat().st_size == 0:
-        quit_with_error(f'{path} is empty')
+def check_file(file: str | os.PathLike, panic: bool = False) -> os.PathLike | None:
+    """Checks a file exists and is non-empty and returns the absolute path"""
+    func = quit_with_error if panic else warning
+    if not os.path.exists(file):
+        return func(f'{file} does not exist')
+    if not os.path.isfile(file):
+        return func(f'{file} is not a file')
+    elif not os.path.getsize(file):
+        return func(f'{file} is empty')
     else:
-        return path.absolute()
+        return os.path.abspath(file)
 
 
-def check_cpus(cpus: int | None = 0, verbose: bool = False) -> int:
-    cpus = os.cpu_count() if not cpus else min(cpus, os.cpu_count())
-    log(f'Using {cpus} CPUs', verbose)
+def check_cpus(cpus: Any = None, max_cpus: int = _MAX_CPUS, verbose: bool = False) -> int:
+    avail_cpus = os.cpu_count() or max_cpus
+    if isinstance(cpus, str):
+        cpus = int(cpus) if cpus.isdigit() else avail_cpus
+    elif isinstance(cpus, float):
+        cpus = int(cpus)
+    else:
+        cpus = avail_cpus
+    cpus = min(cpus, avail_cpus, max_cpus)
+    log(f'Using {cpus=}', verbose)
     return cpus
 
 
-def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool = True) -> Path | TextIO:
+def check_out(path: str | os.PathLike, mode: str = "at", exist_ok: bool = True) -> os.PathLike | TextIO:
     """
     Check if the user wants to create/append a file or directory.
     If it looks like/is already a file (has an extension), return the file object.
@@ -73,48 +86,42 @@ def check_out(path: str, mode: str = "at", parents: bool = True, exist_ok: bool 
     """
     if path == '-':  # If the path is '-', return stdout
         return sys.stdout
-    if (path := Path(path)).suffix:  # If the path has an extension, it's probably a file
+    if os.path.splitext(path)[1]:  # If the path has an extension, it's probably a file
         try:
-            return path.open(mode)  # Open the file
+            return open(path, mode)  # Open the file
         except Exception as e:
             quit_with_error(f'Could not open {path}: {e}')
-    if not path.exists():  # Assume directory
+    if not os.path.exists(path):  # Assume directory
         try:
-            path.mkdir(parents=parents, exist_ok=exist_ok)  # Create the directory if it doesn't exist
+            os.makedirs(path, exist_ok=exist_ok)  # Create the directory if it doesn't exist
         except Exception as e:
             quit_with_error(f'Could not create {path}: {e}')
     return path
 
 
-def check_python_version(major: int = 3, minor: int = 8):
-    if sys.version_info.major < major or sys.version_info.minor < minor:
-        quit_with_error(f'Python version {major}.{minor} or greater required')
-
-
-def check_biopython_version(major: int = 1, minor: int = 79):
+def opener(file: str | os.PathLike, verbose: bool = False, *args, **kwargs) -> TextIO | BinaryIO:
+    """
+    Opens a file with the appropriate open function based on the magic bytes at the beginning of the data
+    :param file: File to open
+    :param verbose: Print log messages to stderr
+    :return: File handle
+    """
     try:
-        from Bio import __version__ as biopython_version
-    except ImportError:
-        quit_with_error('BioPython is required')
-    if ((major_version := int(biopython_version.split('.')[0])) < major or
-            (minor_version := int(biopython_version.split('.')[1])) < minor):
-        quit_with_error(f'Biopython version {major}.{minor} or greater required, got {major_version}.{minor_version}')
-
-
-def opener(file: Path | str, check: bool = True, verbose: bool = False, *args, **kwargs):
-    """Opens a file with the appropriate open function based on the compression format of the file"""
-    with open(check_file(file) if check else file, 'rb') as f:
-        file_start = f.read(_READ_N_BYTES)
-    compression = next((comp for magic, comp in _COMPRESSION_MAGIC.items() if file_start.startswith(magic)), 'no')
-    log(f'Opening {file} with {compression} compression, file start: {file_start}', verbose)
-    if compression == 'no':
-        return open(file, *args, **kwargs)  # Use the built-in open function
-    elif compression == 'gz':
-        return gzopen(file, *args, **kwargs)  # Use the gzip open function
-    elif compression == 'bz2':
-        return bzopen(file, *args, **kwargs)  # Use the bzip2 open function
-    else:
-        quit_with_error(f'Unsupported compression format: {compression}')
+        file = check_file(file)
+    except FileNotFoundError as e:
+        raise e
+    basename = os.path.basename(file)
+    with open(file, 'rb') as f:  # Open the file to read bytes
+        first_bytes = f.read(_MIN_N_BYTES)  # Get the bytes necessary to guess the compression type
+    for magic, compression in _MAGIC_BYTES.items():
+        if first_bytes.startswith(magic):
+            log(f"Assuming {basename} is compressed with {compression}", verbose=verbose)
+            try:
+                return _OPEN[compression](file, *args, **kwargs)
+            except Exception as e:
+                return warning(f"Error opening {basename} with {compression}; {first_bytes=}\n{e}")
+    log(f"Assuming {basename} is uncompressed", verbose=verbose)
+    return open(file, *args, **kwargs)
 
 
 def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the logo
@@ -131,11 +138,11 @@ def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int |
     :return: List of merged ranges
     """
     if not ranges:
-        return
+        return None
     if len(ranges) == 1:
         yield ranges[0]
-        return
-    current_range = (ranges := ranges if skip_sort else sorted(ranges, key=lambda x: x[0]))[0]  # Start with the first range
+        return None
+    current_range = (ranges := ranges if skip_sort else sorted(ranges, key=itemgetter(0)))[0]  # Start with the first range
     for start, end in ranges[1:]:  # Iterate through the ranges
         if start - tolerance <= current_range[1]:  # Overlap, merge the ranges
             current_range = (current_range[0], max(current_range[1], end))

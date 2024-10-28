@@ -14,7 +14,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from datetime import datetime
 import sys
-from inspect import currentframe
+from inspect import stack
 
 
 def bold(text: str):
@@ -33,26 +33,22 @@ def bold_cyan(text: str):
     return f"\033[1;36m{text}\033[0m"
 
 
-def log(message: str = '', verbose: bool = True, rjust: int = 15):
-    if verbose:
-        prefix = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {currentframe().f_back.f_code.co_name:>{rjust}}]"
-        sys.stderr.write(f"{prefix} {message}\n")
-        # sys.stderr.flush()
+def log(message: str = '', verbose: bool = True, rjust: int = 20, stack_depth: int = 1):
+    """
+    Simple function for logging messages to stderr. Only runs if verbose == True.
+    Stack depth can be increased if the parent function name needs to be exposed.
+    """
+    if verbose:  # Only build log if verbosity is requested; simple way of controlling log
+        sys.stderr.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} {stack()[stack_depth].function:>{rjust}}] {message}\n")
 
 
 def warning(message: str):
-    # The currentframe() in log() will tell user the message is a warning, so no need to prefix message
     for line in message.splitlines():
-        log(bold_yellow(line))
+        log(bold_yellow(f"WARNING] {line}"), verbose=True, stack_depth=2)
 
 
-def error(message: str):
-    # The currentframe() in log() will tell user the message is an error, so no need to prefix message
+def quit_with_error(message: str):
     for line in message.splitlines():
-        log(bold_red(line))
-
-
-def quit_with_error(text: str):
-    error(text)
+        log(bold_red(f"  ERROR] {line}"), verbose=True, stack_depth=2)
     sys.exit(1)
 

@@ -15,28 +15,35 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from itertools import chain
 from json import loads
 from subprocess import Popen, PIPE
 from typing import TextIO, Pattern, Generator
 from re import compile
-from os import fstat
+from os import fstat, PathLike, path
 
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 import numpy as np
+
 np.seterr(divide='ignore', invalid='ignore')  # Ignore divide by zero and invalid value errors
 
 from kaptive.typing import TypingResult, LocusPiece, GeneResult
 from kaptive.database import Database, load_database
-from kaptive.alignment import Alignment, iter_alns, group_alns, cull_filtered
-from kaptive.misc import opener, merge_ranges, range_overlap, check_cpus, check_file
+from kaptive.alignment import Alignment, group_alns, cull_filtered
+from kaptive.utils import opener, merge_ranges, range_overlap, check_cpus, check_file
 from kaptive.log import log, warning
 
 # Constants -----------------------------------------------------------------------------------------------------------
+# _ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz|\.bz2|\.xz)?$')
 _ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
-# _ASSEMBLY_GRAPH_REGEX = compile(r'\.(gfa)(\.gz)?$')
+_ASSEMBLY_HEADER = ('Assembly\tBest match locus\tBest match type\tMatch confidence\tProblems\tIdentity\tCoverage\t'
+                    'Length discrepancy\tExpected genes in locus\tExpected genes in locus, details\t'
+                    'Missing expected genes\tOther genes in locus\tOther genes in locus, details\t'
+                    'Expected genes outside locus\tExpected genes outside locus, details\t'
+                    'Other genes outside locus\tOther genes outside locus, details\t'
+                    'Truncated genes, details\tExtra genes, details\n')
+_SCORES_HEADER = 'Assembly\tLocus\tAS\tmlen\tblen\tq_len\tgenes_found\tgenes_expected\n'
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -45,9 +52,10 @@ class AssemblyError(Exception):
 
 
 class Assembly:
-    def __init__(self, path: Path | None = None, name: str | None = None, contigs: dict[str: Contig] | None = None):
-        self.path = path or Path()
-        self.name = name or path.name.strip('.gz').rsplit('.', 1)[0] if path else ''
+    def __init__(self, path: PathLike | None = None, name: str | None = None,
+                 contigs: dict[str: Contig] | None = None):
+        self.path = path
+        self.name = name
         self.contigs = contigs or {}
 
     def __repr__(self):
@@ -60,9 +68,16 @@ class Assembly:
         return self.contigs[ctg].seq[start:end] if strand == "+" else self.contigs[ctg].seq[
                                                                       start:end].reverse_complement()
 
-    def map(self, stdin: str, threads: int, ) -> Generator[Alignment, None, None]:
-        return iter_alns(Popen(f"minimap2 -c -t {threads} {self.path} -".split(), stdin=PIPE, stdout=PIPE,
-                               stderr=PIPE).communicate(stdin.encode())[0].decode())
+    def map(self, query: str, threads: int, extra_args: str = '', verbose: bool = False
+            ) -> Generator[Alignment, None, None]:
+        cmd = "minimap2 -c " + (f"{extra_args} " if extra_args else '') + f'-t {threads} "{self.path}" -'
+        log(f"{cmd=}", verbose=verbose)
+        stdout, stderr = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True,
+                               shell=True).communicate(query)
+        if not stdout and stderr:  # No alignments, maybe an error with minimap2
+            return warning(stderr)
+        for line in stdout.splitlines():
+            yield Alignment.from_paf_line(line)
 
 
 class ContigError(Exception):
@@ -74,12 +89,10 @@ class Contig(object):
     This class describes a contig in an assembly: the name, length, and sequence.
     """
 
-    def __init__(self, name: str | None = None, desc: str | None = None, seq: Seq | None = Seq('')):
-        self.name = name or ''
-        self.desc = desc or ''
+    def __init__(self, name: str, desc: str, seq: Seq):
+        self.name = name
+        self.desc = desc
         self.seq = seq
-        # self.neighbours_L = neighbours_L or {}  # For assembly graphs
-        # self.neighbours_R = neighbours_R or {}  # For assembly graphs
 
     def __repr__(self):
         return self.name
@@ -89,52 +102,22 @@ class Contig(object):
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
-def parse_assembly(file: Path | str, verbose: bool = False) -> Assembly | None:
+def parse_assembly(file: PathLike | str, verbose: bool = False) -> Assembly | None:
     """Parse an assembly file and return an Assembly object"""
     if file := check_file(file):  # Check the file exists, warn if not (instead of quitting)
-        if _ASSEMBLY_FASTA_REGEX.search(file.name):
-            assembly = Assembly(file)
+        if match := _ASSEMBLY_FASTA_REGEX.search(basename := path.basename(file)):
+            log(f'Assuming {basename} is in fasta format', verbose=verbose)
+            assembly = Assembly(file, basename.rstrip(match.group()))
             try:
-                with opener(file, mode='rt') as f:
+                with opener(file, verbose=verbose, mode='rt') as f:
                     for header, seq in SimpleFastaParser(f):
-                        name, description = header.split(' ', 1) if ' ' in header else (header, '')
+                        header = header.split(maxsplit=1)
+                        name, description = header if len(header) == 2 else (header[0], '')
                         assembly.contigs[name] = Contig(name, description, Seq(seq))
             except Exception as e:
-                return warning(f"Error parsing {file.name}\n{e}")
-            log(f"Parsed {assembly} as FASTA", verbose=verbose)
+                return warning(f"Error parsing {basename}\n{e}")
             return assembly
-        return warning(f"File extension must match {_ASSEMBLY_FASTA_REGEX.pattern}: {file.name}")
-
-
-# class GFAError(Exception):
-#     pass
-#
-#
-# def parse_gfa(file: Path, **kwargs) -> Assembly:
-#     """Parse a GFA file and return an Assembly object"""
-#     links = []  # Store links as we need to ensure all ctgs are added first
-#     with opener(file) as f, NamedTemporaryFile(mode='wt') as tmp:
-#         for line in f:
-#             if (parts := line.strip().split('\t')):  # See https://github.com/GFA-spec/GFA-spec for GFA format spec
-#                 if parts[0] == 'S':
-#                     tmp.write(f">{parts[1]}\n{parts[2]}\n")
-#                 elif parts[0] == 'L':
-#                     links.append((parts[1], parts[2], parts[3], parts[4]))
-#         # tmp.flush()
-#         try:
-#             assembly = Assembly(file, aligner=mp.Aligner(tmp.name, **kwargs))
-#         except Exception as e:
-#             raise GFAError(f"Error parsing {file}: {e}")
-#     for fr, to, from_orient, to_orient in links:
-#         try:
-#             from_ctg, to_ctg = assembly.contigs[fr], assembly.contigs[to]
-#         except KeyError as e:
-#             raise GFAError(f"Cannot link {fr} -> {to} in {file}: {e}")
-#         from_dict = from_ctg.neighbours_R if from_orient == '+' else from_ctg.neighbours_L
-#         to_dict = to_ctg.neighbours_L if to_orient == '+' else to_ctg.neighbours_R
-#         from_dict[to_ctg.name] = to_ctg
-#         to_dict[from_ctg.name] = from_ctg
-#     return assembly
+        return warning(f"File extension must match {_ASSEMBLY_FASTA_REGEX.pattern}: {basename}")
 
 
 def parse_result(line: str, db: Database, regex: Pattern | None = None, samples: set[str] | None = None,
@@ -157,37 +140,26 @@ def parse_result(line: str, db: Database, regex: Pattern | None = None, samples:
         return None
 
 
-def write_headers(tsv: TextIO | None = None, no_header: bool = False, scores: bool = False) -> None:
-    """Write the headers to a file handle."""
+def write_headers(tsv: TextIO | None = None, no_header: bool = False, scores: bool = False) -> int:
+    """Write appropriate header to a file handle."""
     if tsv and not no_header and (tsv.name == '<stdout>' or fstat(tsv.fileno()).st_size == 0):
-        if scores:
-            tsv.write('Assembly\tLocus\tAS\tmlen\tblen\tq_len\tgenes_found\tgenes_expected\n')
-        else:
-            tsv.write(
-                'Assembly\tBest match locus\tBest match type\tMatch confidence\tProblems\tIdentity\tCoverage\t'
-                'Length discrepancy\tExpected genes in locus\tExpected genes in locus, details\t'
-                'Missing expected genes\tOther genes in locus\tOther genes in locus, details\t'
-                'Expected genes outside locus\tExpected genes outside locus, details\t'
-                'Other genes outside locus\tOther genes outside locus, details\t'
-                'Truncated genes, details\tExtra genes, details\n'
-            )
+        return tsv.write(_SCORES_HEADER if scores else _ASSEMBLY_HEADER)
 
 
 def typing_pipeline(
-        assembly: str | Path | Assembly, db: str | Path | Database, threads: None | int = 0,
-        score_metric: int | None = 0, weight_metric: int | None = 3, min_cov: float | None = 50,
-        n_best: int | None = 2, max_other_genes: int | None = 1, percent_expected_genes: float | None = 50,
-        allow_below_threshold: bool | None = False, score_file: TextIO | None = None, verbose: bool | None = False
-) -> TypingResult | None:
+        assembly: str | PathLike | Assembly, db: str | PathLike | Database, threads: int = 0,
+        score_metric: int = 0, weight_metric: int = 3, min_cov: float = 50, n_best: int = 2,
+        max_other_genes: int = 1, percent_expected_genes: float = 50, allow_below_threshold: bool = False,
+        score_file: TextIO = None, verbose: bool = False) -> TypingResult | None:
     """
     Performs *in silico* serotyping on a bacterial genome assembly using a database of known loci.
     :param assembly: Path to the assembly file or Assembly object
     :param db: Path to the database file or Database object
     :param threads: Number of threads to use for alignment
-    :param score_metric: Alignment score to use: 0=AS, 1=mlen, 2=blen, 3=q_len
+    :param score_metric:  score to use: 0=AS, 1=mlen, 2=blen, 3=q_len
     :param weight_metric: Score weighting metric: 0=None, 1=Genes found, 2=Genes expected, 3=Prop genes, 4=blen, 5=q_len
     :param min_cov: Minimum coverage for a gene to be used for scoring
-    :param n_best: Number of best loci from the 1st round of scoring to be fully aligned to the assembly
+    :param n_best: Number of top loci from the 1st round of scoring to be fully aligned to the assembly
     :param max_other_genes: Max other genes to allow in the best locus to be considered Typeable
     :param percent_expected_genes: Percent of expected genes required to be considered Typeable
     :param allow_below_threshold: Allow genes below the threshold to be considered Typeable
@@ -196,35 +168,35 @@ def typing_pipeline(
     :return: TypingResult object or None
     """
     # CHECK ARGS -------------------------------------------------------------------------------------------------------
-    threads = check_cpus(threads, verbose=verbose) if not threads else threads  # Get the number of threads if 0
     if not isinstance(db, Database) and not (db := load_database(db, verbose=verbose)):
         return None
     if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
         return None
-
+    threads = threads if threads else check_cpus(threads, verbose=verbose)
     # ALIGN GENES ------------------------------------------------------------------------------------------------------
-    # TODO: Consider creating a Scores object to store the scores and methods for scoring/writing
-    scores = np.zeros((len(db), 6))  # Init scores array with 6 columns: AS, mlen, blen, q_len, genes_found, genes_expected
-    idx, alignments = {l: i for i, l in enumerate(db.loci)}, []  # Set up index for loci and list for alignments
-    for q, alns in group_alns(assembly.map(db.format('ffn'), threads)):  # Group alignments by query gene (Alignment.q)
+    # Init scores array with 6 columns: AS, mlen, blen, q_len, genes_found, genes_expected
+    scores, alignments = np.zeros((len(db), 6)), []
+    # Group alignments by query gene (Alignment.q)
+    for q, alns in group_alns(assembly.map(db.format('ffn'), threads, verbose=verbose)):
         if q.startswith("Extra"):
             alignments.append(max(alns, key=lambda x: x.mlen))  # Add the best alignment for extra genes
         else:
-            alignments += (alns := list(alns))  # Add all alignments to the list
+            alignments.extend(alns := list(alns))  # Add all alignments to the list, convert generator to list too
             # Use the best alignment for each gene for scoring, if the coverage is above the minimum
             if ((best := max(alns, key=lambda x: x.mlen)).blen / best.q_len) * 100 >= min_cov:
-                scores[idx[db.genes[q].locus.name]] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
+                scores[db.genes[q].locus.index] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
             # For each gene, add: AS, mlen, blen, q_len, genes_found (1), genes_expected (0 but will update later)
 
     if scores.max() == 0:  # If no gene alignments were found, return None so pipeline can continue
-        return warning(f'No gene alignments sufficient for typing {assembly}')
+        return warning(f'No gene alignments sufficient for typing {assembly}\n'
+                       f'Have you used the appropriate database for your species?')
 
     # SCORE LOCI -------------------------------------------------------------------------------------------------------
-    scores[:, 5] = np.array([len(l.genes) for l in db.loci.values()])  # Add expected genes to the score matrix
+    scores[:, 5] = db.expected_gene_counts  # Add expected genes to the 6th column (0-based) score matrix
 
     if score_file:  # If we are just scoring the assembly
         score_file.write(  # Write the scores to the file
-            ''.join([f"{assembly}\t{k}\t" + '\t'.join(map(str, v)) + '\n' for k, v in zip(idx.keys(), scores)])
+            ''.join([f"{assembly}\t{k}\t" + '\t'.join(map(str, v)) + '\n' for k, v in zip(db.loci.keys(), scores)])
         )
         return log(f"Finished scoring {assembly}", verbose=verbose)  # Return without typing the assembly
 
@@ -243,12 +215,14 @@ def typing_pipeline(
     else:
         scores = scores[:, score_metric]  # Unweighted score
 
-    best_loci = [db[int(i)] for i in np.argsort(scores)[::-1][:n_best]]  # Get the best loci to fully align
+    best_loci = [db[int(i)] for i in
+                 np.argsort(scores)[::-1][:min(n_best, len(scores))]]  # Get the best loci to fully align
     scores, idx = np.zeros((len(best_loci), 4)), {l.name: i for i, l in enumerate(best_loci)}  # Init scores and index
     locus_alignments = {l.name: [] for l in best_loci}  # Init dict to store alignments for each locus
-    for locus, alns in group_alns(assembly.map(''.join(i.format('fna') for i in best_loci), threads)):  # Group by locus
+    # Group alignments by locus
+    for locus, alns in group_alns(assembly.map(''.join(i.format('fna') for i in best_loci), threads, verbose=verbose)):
         for a in alns:  # For each alignment of the locus
-            scores[idx[locus]] += [a.tags['AS'], a.mlen, a.blen, a.q_len]  # Add the alignment to the scores
+            scores[idx[locus]] += [a.tags['AS'], a.mlen, a.blen, a.q_len]  # Add alignment metrics to the scores
             locus_alignments[locus].append(a)  # Add the alignment to the locus alignments
     best_match = best_loci[np.argmax(scores[:, score_metric])]  # Get the best match based on the highest score
 
@@ -262,9 +236,9 @@ def typing_pipeline(
 
     # GET GENE RESULTS -------------------------------------------------------------------------------------------------
     for a in cull_filtered(lambda i: i.q in best_match.genes, alignments):  # For each non-overlapping gene alignment
-        if (gene := best_match.genes.get(a.q)):  # Get gene reference from database and gene type
+        if gene := best_match.genes.get(a.q):  # Get gene reference from database and gene type
             gene_type = "expected_genes"
-        elif (gene := db.extra_genes.get(a.q)):
+        elif gene := db.extra_genes.get(a.q):
             gene_type = "extra_genes"
         else:
             gene = db.genes.get(a.q)

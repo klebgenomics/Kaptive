@@ -12,11 +12,12 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from itertools import chain
 from warnings import catch_warnings
 from json import dumps
 from typing import TextIO
+from io import TextIOBase
+from os import PathLike, path
 
 from Bio.Seq import Seq
 from Bio.Align import PairwiseAligner
@@ -61,7 +62,6 @@ class TypingResult:
         self.unexpected_genes_inside_locus = unexpected_genes_inside_locus or []  # Genes from other loci
         self.unexpected_genes_outside_locus = unexpected_genes_outside_locus or []  # Genes from other loci
         self.extra_genes = extra_genes or []  # in db.extra_genes, ALWAYS outside locus (gene_result.piece == None)
-        # self.is_elements = is_elements or []  # in db.is_elements, ALWAYS inside locus (gene_result.piece != None)
         # Properties to cache the values, these are protected to prevent accidental modification
         self._percent_identity = None
         self._percent_coverage = None
@@ -81,8 +81,6 @@ class TypingResult:
             self.expected_genes_outside_locus, self.unexpected_genes_outside_locus, self.extra_genes)
 
     def add_gene_result(self, gene_result: GeneResult):
-        if gene_result.neighbour_left:  # If gene_result.neighbour_left is not None, the gene is not the first gene
-            gene_result.neighbour_left.neighbour_right = gene_result
         if gene_result.piece:  # If gene_result.piece is not None, the gene is inside the locus
             gene_result.piece.add_gene_result(gene_result)
             gene_type = f"{gene_result.gene_type}{'_inside_locus' if gene_result.gene_type.startswith(('expected', 'unexpected')) else ''}"
@@ -169,10 +167,7 @@ class TypingResult:
             x = GeneResult.from_dict(r, result=self, piece=pieces.get(r['piece']), gene=gene)
             gene_results[x.__repr__()] = x
 
-        # Add gene result neighbours and add to the typing result
         for gene_result in gene_results.values():
-            gene_result.neighbour_left = gene_results.get(gene_result.neighbour_left.__repr__())
-            gene_result.neighbour_right = gene_results.get(gene_result.neighbour_right.__repr__())
             self.add_gene_result(gene_result)
         return self
 
@@ -220,17 +215,27 @@ class TypingResult:
                 }) + "\n"
         raise ValueError(f"Unknown format specifier {format_spec}")
 
-    def write(self, tsv: TextIO | None = None, json: TextIO | None = None, fna: Path | TextIO | None = None,
-              ffn: Path | TextIO | None = None, faa: Path | TextIO | None = None, plot: Path | None = None,
+    def write(self,
+              tsv: TextIO | None = None,
+              json: TextIO | None = None,
+              fna: str | PathLike | TextIO | None = None,
+              ffn: str | PathLike | TextIO | None = None,
+              faa: str | PathLike | TextIO | None = None,
+              plot: str | PathLike | None = None,
               plot_fmt: str = 'png'):
         """Write the typing result to files or file handles."""
-        [fh.write(self.format(fmt)) for fh, fmt in [(tsv, 'tsv'), (json, 'json')] if fh]
-        [(fh / f'{self.sample_name}_kaptive_results.{fmt}').write_text(self.format(fmt)) if isinstance(fh, Path) else
-         fh.write(self.format(fmt)) for fh, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')] if fh]
+        [f.write(self.format(fmt)) for f, fmt in [(tsv, 'tsv'), (json, 'json')] if isinstance(f, TextIOBase)]
+        for f, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')]:
+            if f:
+                if isinstance(f, TextIOBase):
+                    f.write(self.format(fmt))
+                elif isinstance(f, PathLike) or isinstance(f, str):
+                    with open(path.join(f,  f'{self.sample_name}_kaptive_results.{fmt}'), 'wt') as handle:
+                        handle.write(self.format(fmt))
         if plot:
             ax = self.format(plot_fmt).plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
             ax.set_title(f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
-            ax.figure.savefig(plot / f'{self.sample_name}_kaptive_results.{plot_fmt}', bbox_inches='tight')
+            ax.figure.savefig(path.join(plot, f'{self.sample_name}_kaptive_results.{plot_fmt}'), bbox_inches='tight')
             ax.figure.clear()  # TODO: Check if this is necessary
 
 
@@ -252,7 +257,6 @@ class LocusPiece:
         self.expected_genes = expected_genes or []  # Genes from best_match
         self.unexpected_genes = unexpected_genes or []  # Genes that were found from other loci
         self.extra_genes = extra_genes or []  # Genes that were found outside the locus
-        # self.is_elements = is_elements or []  # Specifically db.is_elements
 
     def __len__(self):
         return self.end - self.start
@@ -302,7 +306,6 @@ class GeneResult:
 
     def __init__(self, id: str, gene: Gene, result: TypingResult | None = None,
                  piece: LocusPiece | None = None, start: int | None = 0, end: int | None = 0, strand: str | None = None,
-                 neighbour_left: GeneResult | None = None, neighbour_right: GeneResult | None = None,
                  dna_seq: Seq | None = Seq(""), protein_seq: Seq | None = Seq(""), below_threshold: bool | None = False,
                  phenotype: str | None = "present", gene_type: str | None = None, partial: bool | None = False,
                  percent_identity: float | None = 0, percent_coverage: float | None = 0):
@@ -314,8 +317,6 @@ class GeneResult:
         self.strand = strand
         self.partial = partial
         self.piece = piece  # inside locus if not None
-        self.neighbour_left = neighbour_left  # neighbour to the left of the gene
-        self.neighbour_right = neighbour_right  # neighbour to the right of the gene
         self.dna_seq = dna_seq
         self.protein_seq = protein_seq
         self.below_threshold = below_threshold
@@ -366,8 +367,6 @@ class GeneResult:
                 'below_threshold': str(self.below_threshold), 'phenotype': self.phenotype, 'gene_type': self.gene_type,
                 'percent_identity': str(self.percent_identity), 'percent_coverage': str(self.percent_coverage),
                 'gene': self.gene.name, 'piece': self.piece.__repr__() if self.piece else '',
-                'neighbour_left': self.neighbour_left.__repr__() if self.neighbour_left else '',
-                'neighbour_right': self.neighbour_right.__repr__() if self.neighbour_right else '',
             }
         if format_spec in {'png', 'svg'}:
             strand = self.gene.strand if self.strand == self.gene.strand else self.strand

@@ -19,10 +19,13 @@ import sys
 import re
 import argparse
 from io import TextIOWrapper
+from os import path
+
+from Bio import __version__ as biopython_version
 
 from kaptive.version import __version__
 from kaptive.log import bold, quit_with_error, log
-from kaptive.misc import check_python_version, check_biopython_version, get_logo, check_out, check_file, check_cpus
+from kaptive.utils import get_logo, check_out, check_cpus
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _URL = 'https://kaptive.readthedocs.io/en/latest/'
@@ -71,7 +74,7 @@ def assembly_subparser(subparsers):
         help='In silico serotyping of assemblies', usage="kaptive assembly <db> <fasta> [<fasta> ...] [options]")
     opts = assembly_parser.add_argument_group(bold('Inputs'), "")
     opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
-    opts.add_argument('input', nargs='+', metavar='fasta', type=check_file, help='Assemblies in fasta format')
+    opts.add_argument('input', nargs='+', metavar='fasta', help='Assemblies in fasta(.gz|.xz|.bz2) format')
     opts = assembly_parser.add_argument_group(bold('Output options'), "\nNote, text outputs accept '-' for stdout")
     # Note these are different to the convert output options as TSV is the main output and fna is the main fasta output
     opts.add_argument('-o', '--out', metavar='', default=sys.stdout, type=argparse.FileType('at'),
@@ -105,7 +108,7 @@ def assembly_subparser(subparsers):
                            "  3: Proportion of genes found\n"
                            "  4: blen (aligned bases of genes found)\n"
                            "  5: q_len (query length of genes found)")
-    opts.add_argument('--n-best', type=int, default=2, metavar='', choices=range(1, 51),
+    opts.add_argument('--n-best', type=int, default=2, metavar='',
                       help='Number of best loci from the 1st round of scoring to be\n'
                            'fully aligned to the assembly (default: %(default)s)')
 
@@ -215,8 +218,12 @@ def other_opts(opts: argparse.ArgumentParser):
 
 # Main -----------------------------------------------------------------------------------------------------------------
 def main():
-    check_python_version(3, 9)  # Check the python version
-    check_biopython_version(1, 83)  # Check the biopython version
+    if sys.version_info.major < 3 or sys.version_info.minor < 9:
+        quit_with_error(f'Python version 3.9 or greater required')
+
+    if int(biopython_version.split('.')[0]) < 1 or int(biopython_version.split('.')[1]) < 83:
+        quit_with_error('Biopython version 1.83 or greater required')
+
     args = parse_args(sys.argv[1:])  # Parse the arguments
 
     # Assembly mode ----------------------------------------------------------------------------------------------------
@@ -238,9 +245,8 @@ def main():
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
-        from kaptive.database import parse_database, get_database
-
-        for locus in parse_database(get_database(args.db), args.filter, args.fna, args.faa, args.verbose,
+        from kaptive.database import parse_database
+        for locus in parse_database(args.db, args.filter, args.fna, args.faa, args.verbose,
                                     locus_regex=args.locus_regex, type_regex=args.type_regex):
             locus.write(args.fna, args.ffn, args.faa)
 
