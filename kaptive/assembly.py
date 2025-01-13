@@ -52,9 +52,9 @@ class AssemblyError(Exception):
 
 
 class Assembly:
-    def __init__(self, path: PathLike | None = None, name: str | None = None,
-                 contigs: dict[str: Contig] | None = None):
-        self.path = path
+    def __init__(self, path_: PathLike = None, name: str = None,
+                 contigs: dict[str: Contig] = None):
+        self.path = path_
         self.name = name
         self.contigs = contigs or {}
 
@@ -120,8 +120,8 @@ def parse_assembly(file: PathLike | str, verbose: bool = False) -> Assembly | No
         return warning(f"File extension must match {_ASSEMBLY_FASTA_REGEX.pattern}: {basename}")
 
 
-def parse_result(line: str, db: Database, regex: Pattern | None = None, samples: set[str] | None = None,
-                 loci: set[str] | None = None) -> TypingResult | None:
+def parse_result(line: str, db: Database, regex: Pattern = None, samples: set[str] = None,
+                 loci: set[str] = None) -> TypingResult | None:
     if regex and not regex.search(line):
         return None
     try:
@@ -140,7 +140,7 @@ def parse_result(line: str, db: Database, regex: Pattern | None = None, samples:
         return None
 
 
-def write_headers(tsv: TextIO | None = None, no_header: bool = False, scores: bool = False) -> int:
+def write_headers(tsv: TextIO = None, no_header: bool = False, scores: bool = False) -> int:
     """Write appropriate header to a file handle."""
     if tsv and not no_header and (tsv.name == '<stdout>' or fstat(tsv.fileno()).st_size == 0):
         return tsv.write(_SCORES_HEADER if scores else _ASSEMBLY_HEADER)

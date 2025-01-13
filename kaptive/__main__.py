@@ -19,13 +19,12 @@ import sys
 import re
 import argparse
 from io import TextIOWrapper
-from os import path
 
 from Bio import __version__ as biopython_version
 
 from kaptive.version import __version__
 from kaptive.log import bold, quit_with_error, log
-from kaptive.utils import get_logo, check_out, check_cpus
+from kaptive.utils import get_logo, check_out, check_cpus, check_programs
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _URL = 'https://kaptive.readthedocs.io/en/latest/'
@@ -228,6 +227,7 @@ def main():
 
     # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
+        check_programs(['minimap2'], verbose=args.verbose)
         from kaptive.assembly import typing_pipeline, write_headers
         from kaptive.database import load_database
 

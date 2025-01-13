@@ -22,6 +22,7 @@ from os import PathLike, path
 from Bio.Seq import Seq
 from Bio.Align import PairwiseAligner
 import matplotlib
+
 matplotlib.use('Agg')  # Prevents the need for a display when plotting
 from dna_features_viewer import GraphicFeature, GraphicRecord
 
@@ -46,12 +47,12 @@ class TypingResult:
     """
 
     def __init__(
-            self, sample_name: str | None, db: Database | None, best_match: Locus | None = None,
-            pieces: list[LocusPiece] | None = None, expected_genes_inside_locus: list[GeneResult] | None = None,
-            expected_genes_outside_locus: list[GeneResult] | None = None, missing_genes: list[str] | None = None,
-            unexpected_genes_inside_locus: list[GeneResult] | None = None,
-            unexpected_genes_outside_locus: list[GeneResult] | None = None,
-            extra_genes: list[GeneResult] | None = None):
+            self, sample_name: str | None, db: Database | None, best_match: Locus = None,
+            pieces: list[LocusPiece] = None, expected_genes_inside_locus: list[GeneResult] = None,
+            expected_genes_outside_locus: list[GeneResult] = None, missing_genes: list[str] = None,
+            unexpected_genes_inside_locus: list[GeneResult] = None,
+            unexpected_genes_outside_locus: list[GeneResult] = None,
+            extra_genes: list[GeneResult] = None):
         self.sample_name = sample_name or ""
         self.db = db
         self.best_match = best_match
@@ -133,7 +134,8 @@ class TypingResult:
 
     def get_confidence(self, allow_below_threshold: bool, max_other_genes: int, percent_expected_genes: float):
         p = len(set(i.gene.name for i in self.expected_genes_inside_locus)) / len(self.best_match.genes) * 100
-        other_genes = len(set(i.gene.name for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"))
+        other_genes = len(
+            set(i.gene.name for i in self.unexpected_genes_inside_locus if not i.phenotype == "truncated"))
         if not allow_below_threshold and "*" in self.problems:
             self._confidence = "Untypeable"
         else:
@@ -148,7 +150,8 @@ class TypingResult:
     def from_dict(cls, d: dict, db: Database) -> TypingResult:
         if not (best_match := db.loci.get(d['best_match'])):
             raise TypingResultError(f"Best match {d['best_match']} not found in database")
-        self = TypingResult(sample_name=d['sample_name'], db=db, best_match=best_match, missing_genes=d['missing_genes'])
+        self = TypingResult(sample_name=d['sample_name'], db=db, best_match=best_match,
+                            missing_genes=d['missing_genes'])
         # Set the cached properties
         self._percent_identity = float(d['percent_identity'])
         self._percent_coverage = float(d['percent_coverage'])
@@ -178,7 +181,7 @@ class TypingResult:
                     self.sample_name, self.best_match.name, self.phenotype, self.confidence, self.problems,
                     f"{self.percent_identity:.2f}%", f"{self.percent_coverage:.2f}%",
                     f"{self.__len__() - len(self.best_match)} bp" if len(self.pieces) == 1 else 'n/a',
-                    f"{(x := len({i.gene.gene_name for i in self.expected_genes_inside_locus}))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
+                    f"{(x := len({i.gene.name for i in self.expected_genes_inside_locus}))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
                     ';'.join(str(i) for i in x) if (x := self.expected_genes_inside_locus) else '',
                     ';'.join(self.missing_genes), f"{len(x := self.unexpected_genes_inside_locus)}",
                     ';'.join(str(i) for i in x) if x else '',
@@ -205,7 +208,8 @@ class TypingResult:
             return dumps(
                 {
                     'sample_name': self.sample_name, 'best_match': self.best_match.name, 'confidence': self.confidence,
-                    'phenotype': self.phenotype, 'problems': self.problems, 'percent_identity': str(self.percent_identity),
+                    'phenotype': self.phenotype, 'problems': self.problems,
+                    'percent_identity': str(self.percent_identity),
                     'percent_coverage': str(self.percent_coverage), 'missing_genes': self.missing_genes
                 } | {
                     attr: [i.format(format_spec) for i in getattr(self, attr)] for attr in {
@@ -216,12 +220,12 @@ class TypingResult:
         raise ValueError(f"Unknown format specifier {format_spec}")
 
     def write(self,
-              tsv: TextIO | None = None,
-              json: TextIO | None = None,
-              fna: str | PathLike | TextIO | None = None,
-              ffn: str | PathLike | TextIO | None = None,
-              faa: str | PathLike | TextIO | None = None,
-              plot: str | PathLike | None = None,
+              tsv: TextIO = None,
+              json: TextIO = None,
+              fna: str | PathLike | TextIO = None,
+              ffn: str | PathLike | TextIO = None,
+              faa: str | PathLike | TextIO = None,
+              plot: str | PathLike = None,
               plot_fmt: str = 'png'):
         """Write the typing result to files or file handles."""
         [f.write(self.format(fmt)) for f, fmt in [(tsv, 'tsv'), (json, 'json')] if isinstance(f, TextIOBase)]
@@ -230,7 +234,7 @@ class TypingResult:
                 if isinstance(f, TextIOBase):
                     f.write(self.format(fmt))
                 elif isinstance(f, PathLike) or isinstance(f, str):
-                    with open(path.join(f,  f'{self.sample_name}_kaptive_results.{fmt}'), 'wt') as handle:
+                    with open(path.join(f, f'{self.sample_name}_kaptive_results.{fmt}'), 'wt') as handle:
                         handle.write(self.format(fmt))
         if plot:
             ax = self.format(plot_fmt).plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
@@ -244,10 +248,10 @@ class LocusPieceError(Exception):
 
 
 class LocusPiece:
-    def __init__(self, id: str | None = None, result: TypingResult | None = None, start: int | None = 0,
-                 end: int | None = 0, strand: str | None = None, sequence: Seq | None = None,
-                 expected_genes: list[GeneResult] | None = None, unexpected_genes: list[GeneResult] | None = None,
-                 extra_genes: list[GeneResult] | None = None):
+    def __init__(self, id: str = None, result: TypingResult = None, start: int | None = 0,
+                 end: int | None = 0, strand: str = None, sequence: Seq = None,
+                 expected_genes: list[GeneResult] = None, unexpected_genes: list[GeneResult] = None,
+                 extra_genes: list[GeneResult] = None):
         self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
         self.result = result
         self.start = start
@@ -304,10 +308,10 @@ class GeneResult:
     Class to store alignment results for a single gene in a locus for either a ReadResult or a AssemblyResult.
     """
 
-    def __init__(self, id: str, gene: Gene, result: TypingResult | None = None,
-                 piece: LocusPiece | None = None, start: int | None = 0, end: int | None = 0, strand: str | None = None,
+    def __init__(self, id: str, gene: Gene, result: TypingResult = None,
+                 piece: LocusPiece = None, start: int | None = 0, end: int | None = 0, strand: str = None,
                  dna_seq: Seq | None = Seq(""), protein_seq: Seq | None = Seq(""), below_threshold: bool | None = False,
-                 phenotype: str | None = "present", gene_type: str | None = None, partial: bool | None = False,
+                 phenotype: str | None = "present", gene_type: str = None, partial: bool | None = False,
                  percent_identity: float | None = 0, percent_coverage: float | None = 0):
         self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
         self.gene = gene
@@ -404,4 +408,3 @@ class GeneResult:
                     self.phenotype = "truncated"  # Set the phenotype to truncated
             else:
                 warning(f'Error aligning {self.__repr__()}')
-

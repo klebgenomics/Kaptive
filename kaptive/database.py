@@ -31,7 +31,6 @@ from Bio.Seq import Seq
 from kaptive.log import log, quit_with_error, warning
 from kaptive.utils import check_file
 
-
 # Constants -----------------------------------------------------------------------------------------------------------
 _LOCUS_REGEX = re.compile(r'(?<=locus:)\w+|(?<=locus: ).*')
 _TYPE_REGEX = re.compile(r'(?<=type:)\w+|(?<=type: ).*')
@@ -56,9 +55,9 @@ class DatabaseError(Exception):
 
 
 class Database:
-    def __init__(self, name: str, loci: dict[str, Locus] | None = None, genes: dict[str, Gene] | None = None,
-                 extra_loci: dict[str, Locus] | None = None, extra_genes: dict[str, Gene] | None = None,
-                 gene_threshold: float | None = None):
+    def __init__(self, name: str, loci: dict[str, Locus] = None, genes: dict[str, Gene] = None,
+                 extra_loci: dict[str, Locus] = None, extra_genes: dict[str, Gene] = None,
+                 gene_threshold: float = None):
         self.name = name
         self.loci = loci or {}
         self.extra_loci = extra_loci or {}
@@ -85,7 +84,8 @@ class Database:
             if not 0 <= item < len(self):
                 raise DatabaseError(f'Index {item} out of range for database {self.name}')
             return list(self.loci.values())[item]
-        if not (result := self.loci.get(item, self.extra_loci.get(item, self.genes.get(item, self.extra_genes.get(item))))):
+        if not (
+        result := self.loci.get(item, self.extra_loci.get(item, self.genes.get(item, self.extra_genes.get(item))))):
             raise DatabaseError(f'Could not find {item} in database {self.name}')
         return result
 
@@ -140,8 +140,8 @@ class PhenotypeError(Exception):
 
 
 class Locus:
-    def __init__(self, name: str | None = None, seq: Seq | None = Seq(''), genes: dict[str: Gene] | None = None,
-                 type_label: str | None = None, phenotypes: list[tuple[set[tuple[str, str]], str]] | None = None,
+    def __init__(self, name: str = None, seq: Seq | None = Seq(''), genes: dict[str: Gene] = None,
+                 type_label: str = None, phenotypes: list[tuple[set[tuple[str, str]], str]] = None,
                  index: int | None = 0):
         self.name = name or ''
         self.seq = seq
@@ -194,11 +194,14 @@ class Locus:
     def extra(self) -> bool:
         return self.name.startswith('Extra_genes')
 
-    def add_phenotype(self, genes: dict[str, str] | None, extra_genes: set[tuple[str, str]] | None, phenotype: str, strict: bool = False):
+    def add_phenotype(self, genes: dict[str, str] | None, extra_genes: set[tuple[str, str]] | None, phenotype: str,
+                      strict: bool = False):
         if extra_genes:
-            self.phenotypes = sorted(self.phenotypes + [(extra_genes, phenotype)], key=lambda x: len(x[0]), reverse=True)
+            self.phenotypes = sorted(self.phenotypes + [(extra_genes, phenotype)], key=lambda x: len(x[0]),
+                                     reverse=True)
         else:  # Turn gene names into a set of tuples with the gene name and state
-            genes = {(g.name, state) for g in self if (state := genes.get('ALL', genes.get(g.gene_name, genes.get(g.name, None))))}
+            genes = {(g.name, state) for g in self if
+                     (state := genes.get('ALL', genes.get(g.gene_name, genes.get(g.name, None))))}
             if genes:
                 self.phenotypes = sorted(self.phenotypes + [(genes, phenotype)], key=lambda x: len(x[0]), reverse=True)
             elif strict:  # If strict, raise an error
@@ -214,15 +217,15 @@ class Locus:
             return ''.join([gene.format(format_spec) for gene in self])
         raise ValueError(f'Invalid format specifier: {format_spec}')
 
-    def write(self, fna: str | PathLike | TextIO | None = None, ffn: str | PathLike | TextIO | None = None,
-              faa: str | PathLike | TextIO | None = None):
+    def write(self, fna: str | PathLike | TextIO = None, ffn: str | PathLike | TextIO = None,
+              faa: str | PathLike | TextIO = None):
         """Write the typing result to files or file handles."""
         for f, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')]:
             if f:
                 if isinstance(f, TextIOBase):
                     f.write(self.format(fmt))
                 elif isinstance(f, PathLike) or isinstance(f, str):
-                    with open(path.join(f, f'{self.name.replace("/", "_")}.{fmt}', 'wt')) as handle:
+                    with open(path.join(f, f'{self.name.replace("/", "_")}.{fmt}'), 'wt') as handle:
                         handle.write(self.format(fmt))
 
     # def as_gff_record(self) -> GffRecord:
@@ -244,9 +247,10 @@ class Gene:
     It is designed so that the Feature itself doesn't need to be stored, only the information required to
     extract it from the record.
     """
-    def __init__(self, name: str | None = None, locus: Locus | None = None, position_in_locus: int | None = 0,
-                 start: int | None = 0, end: int | None = 0, strand: str | None = None, protein_seq: Seq | None = None,
-                 dna_seq: Seq | None = None, gene_name: str | None = None, product: str | None = None):
+
+    def __init__(self, name: str = None, locus: Locus = None, position_in_locus: int | None = 0,
+                 start: int | None = 0, end: int | None = 0, strand: str = None, protein_seq: Seq = None,
+                 dna_seq: Seq = None, gene_name: str = None, product: str = None):
         self.name = name or ''
         self.locus = locus  # Keep reference to parent class for now
         self.position_in_locus = position_in_locus
@@ -264,7 +268,8 @@ class Gene:
         self = cls(
             start=feature.location.start, end=feature.location.end, strand='+' if feature.location.strand == 1 else '-',
             dna_seq=feature.extract(record.seq), product=feature.qualifiers.get('product', [''])[0], **kwargs)
-        self.name = f"{self.locus.name}_{str(self.position_in_locus).zfill(2)}" + (f"_{x}" if (x := feature.qualifiers.get('gene', [''])[0]) else '')
+        self.name = f"{self.locus.name}_{str(self.position_in_locus).zfill(2)}" + (
+            f"_{x}" if (x := feature.qualifiers.get('gene', [''])[0]) else '')
         self.gene_name = x
         if not len(self.dna_seq) % 3 == 0:  # Check the gene is a multiple of 3 (complete CDS)
             # TODO: this is quite strict, but enforces the inclusion of complete CDS in Kaptive databases
@@ -361,9 +366,9 @@ class Gene:
 #
 #
 # class GffRecord:
-#     def __init__(self, seqid: str | None = None, source: str | None = None,
-#                  type_: str | None = None, start: int | None = None, end: int | None = None, score: float | None = 0,
-#                  strand: str | None = None, phase: float | None = 0, attributes: dict | None = None):
+#     def __init__(self, seqid: str= None, source: str= None,
+#                  type_: str= None, start: int= None, end: int= None, score: float | None = 0,
+#                  strand: str= None, phase: float | None = 0, attributes: dict= None):
 #         # https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
 #
 #         self.seqid = seqid or ''
@@ -423,7 +428,8 @@ def parse_logic(logic_file: str | os.PathLike, verbose: bool = False
             quit_with_error(f'Logic file {logic_file} has invalid header: {line}')
         for line in f:
             loci, genes, phenotype = line.strip().split('\t')
-            yield loci.split(';'), dict(gene.split(",", 1) if "," in gene else (gene, 'present') for gene in genes.split(';')), phenotype
+            yield loci.split(';'), dict(
+                gene.split(",", 1) if "," in gene else (gene, 'present') for gene in genes.split(';')), phenotype
 
 
 def get_database(argument: str | PathLike) -> tuple[str, PathLike]:
@@ -449,7 +455,7 @@ def get_database(argument: str | PathLike) -> tuple[str, PathLike]:
                     f'Valid keywords: {", ".join([i for x in _DB_KEYWORDS.values() for i in x])}')
 
 
-def parse_database(db: str | PathLike, locus_filter: re.Pattern | None = None, load_locus_seqs: bool = True,
+def parse_database(db: str | PathLike, locus_filter: re.Pattern = None, load_locus_seqs: bool = True,
                    extract_translations: bool = False, verbose: bool = False, **kwargs) -> Generator[Locus, None, None]:
     """
     Wrapper around SeqIO.parse to parse a Kaptive database genbank file and return a generator of Locus objects
@@ -470,7 +476,7 @@ def parse_database(db: str | PathLike, locus_filter: re.Pattern | None = None, l
         quit_with_error(f'Could not parse database {db_name}: {e}')
 
 
-def load_database(argument: str | PathLike, gene_threshold: float | None = None, **kwargs) -> Database:
+def load_database(argument: str | PathLike, gene_threshold: float = None, **kwargs) -> Database:
     db_name, db_path = get_database(argument)
     db = Database(db_name, gene_threshold=gene_threshold)
     for locus in parse_database(db_path, **kwargs):

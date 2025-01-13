@@ -27,11 +27,11 @@ class Alignment:
     """
 
     def __init__(
-            self, q: str | None = None, q_len: int | None = 0, q_st: int | None = 0,
-            q_en: int | None = 0, strand: str | None = None, ctg: str | None = None,
+            self, q: str = None, q_len: int | None = 0, q_st: int | None = 0,
+            q_en: int | None = 0, strand: str = None, ctg: str = None,
             ctg_len: int | None = 0, r_st: int | None = 0, r_en: int | None = 0,
             mlen: int | None = 0, blen: int | None = 0, mapq: int | None = 0,
-            tags: dict | None = None):
+            tags: dict = None):
         self.q = q or 'unknown'  # Query sequence name
         self.q_len = q_len  # Query sequence length
         self.q_st = q_st  # Query start coordinate (0-based)
@@ -129,7 +129,6 @@ def cull_filtered(pred: callable, alignments: Iterable[Alignment]) -> Generator[
         other = list(cull(i, other))
         yield i
     yield from other
-
 
 # def extend_aln_ranges(q_len: int, q_st: int, q_en: int, ctg_len: int, r_st: int, r_en: int, tolerance: int = 10
 #                       ) -> tuple[int, int, int, int]:

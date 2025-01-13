@@ -37,9 +37,7 @@ test/
 tests/
 
 # Experimental modules
-kaptive/build.py
-kaptive/sam.py
-kaptive/reads.py
+development/
 
 # Script Folder
 scripts/
