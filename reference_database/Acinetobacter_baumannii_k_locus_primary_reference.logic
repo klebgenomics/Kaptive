@@ -2,9 +2,14 @@ loci	genes	phenotype
 KL1	wzy-GI1;atr25-GI	K1-Wzy/Atr25-GI1
 KL1	wzy-GI1	K1-Wzy-GI1
 KL1	atr25-GI	K1-Atr25-GI
+KL3	gtr6,truncated	K3-v1
 KL5	atr30-Ph	K5-Atr30-Ph
 KL19	wzy-GI1;atr25-GI	K19-Wzy/Atr25-GI1
 KL19	wzy-GI1	K19-Wzy-GI1
+KL22	gtr6,truncated	K3-v1
 KL24	wzy-GI2	K24-Wzy-GI2
 KL46	atr29-Ph	K46-Atr29-Ph
-KL127	wzy-Ph1	K127-Wzy-Ph1
+KL58	epaA;epaB	K58-8ePse
+KL58	atr44-Ph	K58-Atr44-Ph
+KL127	wzyPh1	K127-WzyPh1
+KL135	epaA;epaB	K135-8ePse
