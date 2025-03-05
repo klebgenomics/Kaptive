@@ -1,8 +1,25 @@
 loci	genes	phenotype
-O1/O2v1;O1/O2v2;O1/O2v3	wbbY	O1a
-O1/O2v1;O1/O2v2;O1/O2v3	wbbY;wbbZ	O1ab
-O8	wbbY	O8
-O1/O2v1;O1/O2v2;O1/O2v3;O8	wbmV;wbmW	O2ac
-O1/O2v1;O1/O2v2;O1/O2v3;O8	gmlA;gmlB;gmlD	O2aeh
-O1/O2v1;O1/O2v2;O1/O2v3;O8	wbbY;wbmV;wbmW	O1a (O2ac)
-O1/O2v1;O1/O2v2;O1/O2v3;O8	wbbY;wbbZ;wbmV;wbmW	O1ab (O2ac)
+O1α,O2α wbbY    O1α,O2α
+O1α,O2β wbbY    O1α,O2β
+O1α,O2δ	wbbY	O1α,O2δ
+O1α,O2γ	wbbY	O1α,O2γ
+O1α,O2α wbbY;wbbZ   O1αβ,O2α
+O1α,O2β wbbY;wbbZ   O1αβ,O2β
+O1α,O2δ	wbbY;wbbZ	O1αβ,O2δ
+O1α,O2γ wbbY;wbbZ	O1αβ,O2γ
+O1α,O2α wbmV;wbmW
+O1α,O2β wbmV;wbmW
+O1α,O2δ wbmV;wbmW
+O1α,O2γ	wbmV;wbmW	O2ac
+O1α,O2α gmlA;gmlB;gmlD
+O1α,O2β gmlA;gmlB;gmlD
+O1α,O2δ gmlA;gmlB;gmlD
+O1α,O2γ	gmlA;gmlB;gmlD	O2aeh
+O1α,O2α wbbY;wbmV;wbmW
+O1α,O2β wbbY;wbmV;wbmW
+O1α,O2δ wbbY;wbmV;wbmW
+O1α,O2γ	wbbY;wbmV;wbmW	O1a (O2ac)
+O1α,O2α wbbY;wbbZ;wbmV;wbmW
+O1α,O2β wbbY;wbbZ;wbmV;wbmW
+O1α,O2δ wbbY;wbbZ;wbmV;wbmW
+O1α,O2γ	wbbY;wbbZ;wbmV;wbmW	O1ab (O2ac)

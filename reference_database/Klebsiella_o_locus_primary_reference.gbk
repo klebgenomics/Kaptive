@@ -1790,8 +1790,9 @@ FEATURES             Location/Qualifiers
                      /strain="94"
                      /serovar="O1/O2 Variant 1"
                      /db_xref="taxon:573"
-                     /note="O locus: O1/O2v1"
-                     /note="O type: O2a"
+                     /note="O locus: O1α,O2α"
+                     /note="O type: O2α"
+                     /note="Updated from O1/O2v1 by Tom Stanton in Feb 2025"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -1809,7 +1810,7 @@ FEATURES             Location/Qualifiers
                      SNVMMEGLHFLCTIPVIVVFLFVYGMTPSLSWVWGIPLIAIGQVIFTFGVSIIFSTLNL
                      FFRDLERFVSLGIMLMFYCTPILYASDMIPEKFSWIITYNPLASMILSWRDLFMNGTLN
                      YEYISILYFTGIILTVVGLSIFNKLKYRFAEIL"
-                     /locus_tag="O1/O2v1_01_wzm"
+                     /locus_tag="O1α,O2α_01_wzm"
      gene            768..1508
                      /gene="wzt"
      CDS             768..1508
@@ -1827,7 +1828,7 @@ FEATURES             Location/Qualifiers
                      PELTGRENIYLNATLLGLRRKEVQQRMERIIEFSELGEFIDEPIRVYSSGMLAKLGFSV
                      ISQVEPDILIIDEVLAVGDIAFQAKCIQTIRDFKKRGVTILFVSHNMSDVEKICDRVIW
                      IENHRLREVGSADRIIELYKQAMA"
-                     /locus_tag="O1/O2v1_02_wzt"
+                     /locus_tag="O1α,O2α_02_wzt"
      gene            1524..3419
                      /gene="wbbM"
      CDS             1524..3419
@@ -1850,7 +1851,7 @@ FEATURES             Location/Qualifiers
                      QMVEENTFAELMRVLKAKKYWFLDQDIMNKVFYSRVTFLPLEWNVYHGNGNTDDFFPNL
                      KFATYMKFLAARKKPKMIHYAGENKPWNTEKVDFYDDFIENIANTPWEMEIYKRQMSLA
                      ASIGLTHSEPQQQILFQTKIKNVLMPYVNKYAPIGTPRRNMMTKYYYKVRRAILG"
-                     /locus_tag="O1/O2v1_03_wbbM"
+                     /locus_tag="O1α,O2α_03_wbbM"
      gene            3435..4589
                      /gene="glf"
      CDS             3435..4589
@@ -1870,7 +1871,7 @@ FEATURES             Location/Qualifiers
                      ERTHYDHVFYSGPLDAFYGYQYGRLGYRTLDFKKFTYQGDYQGCAVMNYCSVDVPYTRI
                      TEHKYFSPWEQHDGSVCYKEYSRACEENDIPYYPIRQMGEMALLEKYLSLAENEINITF
                      VGRLGTYRYLDMDVTIAEALKTAEVYLNSLTENQPMPVFTVSVR"
-                     /locus_tag="O1/O2v1_04_glf"
+                     /locus_tag="O1α,O2α_04_glf"
      gene            4586..5479
                      /gene="wbbN"
      CDS             4586..5479
@@ -1888,7 +1889,7 @@ FEATURES             Location/Qualifiers
                      VSFVGMVIHRDLLATSLDYIREQLFIYFDDLYFGYQLSLAGEQIMYSPELLFYHDVSIQ
                      GKLIAPEWKVYYLCRNLILSKKIFQKNGVYSNSAIAIRILKYILILPWQRQKYSYMKFI
                      LRGISHGIKGISGKYH"
-                     /locus_tag="O1/O2v1_05_wbbN"
+                     /locus_tag="O1α,O2α_05_wbbN"
      gene            5492..6625
                      /gene="wbbO"
      CDS             5492..6625
@@ -1908,7 +1909,7 @@ FEATURES             Location/Qualifiers
                      KNIHFTLNVAGILVENDKDAISLQVIENWHQQGLINWLGRSNNVCDLIEQSNIVALPSV
                      YSEGVPRILLEASSVGRACIAYDVGGCDSLIIDNDNGIIVKSNSPEELADKLAFLLSNP
                      KARVEMGIKGRKRIQDKFSSGMIISKTLKTYHDVVEG"
-                     /locus_tag="O1/O2v1_06_wbbO"
+                     /locus_tag="O1α,O2α_06_wbbO"
      gene            6748..8064
                      /gene="kfoC"
      CDS             6748..8064
@@ -1928,7 +1929,7 @@ FEATURES             Location/Qualifiers
                      FDSLFTASREFIASLDIDESDFYDDFIKAAHYRLIRLTPEEYLFSLKDRVLHELESSNL
                      STEKLQASIASQDQVLKAREEEIDELRASVAQKKERIDRLVQRNAYLETEYQKQQEQLT
                      KLQNELNNAAQRYSALISSLSWKVTRPLRLIKALITRKM"
-                     /locus_tag="O1/O2v1_07_kfoC"
+                     /locus_tag="O1α,O2α_07_kfoC"
 ORIGIN
         1 atgaagtaca atttagggta tttatttgat ttacttgttg tgataacaaa taaagatcta
        61 aaagtgcgct ataagagcag catgctaggc tatttatggt cagtagcaaa tccattgctt
@@ -2094,8 +2095,9 @@ FEATURES             Location/Qualifiers
                      /strain="441"
                      /serovar="O1/O2 Variant 2"
                      /db_xref="taxon:573"
-                     /note="O locus: O1/O2v2"
-                     /note="O type: O2afg"
+                     /note="O locus: O1α,O2β"
+                     /note="O type: O2β"
+                     /note="Updated from O1/O2v2 by Tom Stanton in Feb 2025"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -2113,7 +2115,7 @@ FEATURES             Location/Qualifiers
                      SNVMMEGLHFLCTIPVIVVFLFVYGMTPSLSWVWGIPLIAIGQVIFTFGVSIIFSTLNL
                      FFRDLERFVSLGIMLMFYCTPILYASDMIPEKFSWIITYNPLASMILSWRDLFMNGTLN
                      YEYISILYFTGIILTVVGLSIFNKLKYRFAEIL"
-                     /locus_tag="O1/O2v2_01_wzm"
+                     /locus_tag="O1α,O2β_01_wzm"
      gene            768..1508
                      /gene="wzt"
      CDS             768..1508
@@ -2131,7 +2133,7 @@ FEATURES             Location/Qualifiers
                      PELTGRENIYLNATLLGLRRKEVQQRMERIIEFSELGEFIDEPIRVYSSGMLAKLGFSV
                      ISQVEPDILIIDEVLAVGDIAFQAKCIQTIKDFKKRGVTILFVSHNMSDVEKICDRVIW
                      IENHRLREVGSAERIIELYKQAMA"
-                     /locus_tag="O1/O2v2_02_wzt"
+                     /locus_tag="O1α,O2β_02_wzt"
      gene            1524..3419
                      /gene="wbbM"
      CDS             1524..3419
@@ -2154,7 +2156,7 @@ FEATURES             Location/Qualifiers
                      QMVEENTFAELMRVLKAKKYWFLDQDIMNKVFYSRVTFLPLEWNVYHGNGNTDDFFPNL
                      KFATYMKFLAARKKPKMIHYAGENKPWNTEKVDFYDDFIENIANTPWEMEIYKRQMSLA
                      ASIGLTHSEPQQQILFQTKIKNVLMPYVNKYAPIGTPRRNMMTKYYYKVRRAILG"
-                     /locus_tag="O1/O2v2_03_wbbM"
+                     /locus_tag="O1α,O2β_03_wbbM"
      gene            3435..4589
                      /gene="glf"
      CDS             3435..4589
@@ -2174,7 +2176,7 @@ FEATURES             Location/Qualifiers
                      ERTHYDHVFYSGPLDAFYGYQYGRLGYRTLDFKKFTYQGDYQGCAVMNYCSVDVPYTRI
                      TEHKYFSPWEQHDGSVCYKEYSRACEENDIPYYPIRQMGEMALLEKYLSLAENETNITF
                      VGRLGTYRYLDMDVTIAEALKTAEVYLNSLTDNQPMPVFTVSVR"
-                     /locus_tag="O1/O2v2_04_glf"
+                     /locus_tag="O1α,O2β_04_glf"
      gene            4586..5479
                      /gene="wbbN"
      CDS             4586..5479
@@ -2192,7 +2194,7 @@ FEATURES             Location/Qualifiers
                      VSFVGMVIHRDLLATSLDHIHEQLFIYFDDLYFGYQLSLAGEKIMYSTELLFYHDVSIQ
                      GKLIAPEWKVYYLCRNLILSKKIFQKNAVYSNSAIAIRILKYILILPWQRQKYSYMKFI
                      LRGISHGIKGISGKYH"
-                     /locus_tag="O1/O2v2_05_wbbN"
+                     /locus_tag="O1α,O2β_05_wbbN"
      gene            5492..6622
                      /gene="wbbO"
      CDS             5492..6622
@@ -2212,7 +2214,7 @@ FEATURES             Location/Qualifiers
                      KNIHFTLNVAGILVENDKDAISLQVIENWHQQGLINWLGRSNNVCDLIEQSNIVALPSV
                      YSEGVPRILLEASSVGRACIAYDVGGCDSLIIDNDNGIIVKSNSPEELADKLAFLLSNP
                      KARVEMGIKGRKRIQDKFSSVMIIDKTLQIYHDVVR"
-                     /locus_tag="O1/O2v2_06_wbbO"
+                     /locus_tag="O1α,O2β_06_wbbO"
      gene            6718..7926
                      /gene="kfoC"
      CDS             6718..7926
@@ -2233,7 +2235,7 @@ FEATURES             Location/Qualifiers
                      FNKLFQDVKLFISSFDINNEDFYDEFILSAYRRIADMSAEEYLFSLKDRVLNELENAQR
                      NILTLQNEVEEIKQQLQQKDEMIASMNRENLAIKADNKILENYNEELKTVQTKFLKLLS
                      SKD"
-                     /locus_tag="O1/O2v2_07_kfoC"
+                     /locus_tag="O1α,O2β_07_kfoC"
      gene            complement(7996..9456)
                      /gene="gmlC"
      CDS             complement(7996..9456)
@@ -2253,7 +2255,7 @@ FEATURES             Location/Qualifiers
                      FLIGINSLVSRISKQAFVWPLIALTIMIIAQYNIINGFIIPQRSEIQALAAEITNKIPK
                      NYTGKLMFDLTDPAYNAFTKTQRYDEFGNISLAAPWALKGMAEEIRIMKGFNFKLSNNV
                      IISETNRCIDDCMVIKTSDAMRRSTINY"
-                     /locus_tag="O1/O2v2_08_gmlC"
+                     /locus_tag="O1α,O2β_08_gmlC"
      gene            complement(9458..10438)
                      /gene="gmlB"
      CDS             complement(9458..10438)
@@ -2272,7 +2274,7 @@ FEATURES             Location/Qualifiers
                      QTPNHADYRLLSNRALEALKQYKEQNIYLRGLVPLVGYPSIEVQYSREERIAGESKYPI
                      KKMLALALEGITSLSVTPLRIIAMTGFITCIISTIAAIYALIQKTTGTTVEGWTSVMIA
                      IFFLGGVQMLSLGIIGEYVGKIYIETKNRPKYFIDESVGNDSNGK"
-                     /locus_tag="O1/O2v2_09_gmlB"
+                     /locus_tag="O1α,O2β_09_gmlB"
      gene            complement(10435..10812)
                      /gene="gmlA"
      CDS             complement(10435..10812)
@@ -2287,7 +2289,7 @@ FEATURES             Location/Qualifiers
                      /translation="MPSSGPLWQLMKYGLVGIVNTLITAVVIFLLMHLGLGIYLSNAMG
                      YVVGIVFSFIANTIFTFTQPISINRLIKFLCVCFICYVANIIVIKIFFVFMPEKIYSAQ
                      ILGMFTYTITGFILNKFWAMK"
-                     /locus_tag="O1/O2v2_10_gmlA"
+                     /locus_tag="O1α,O2β_10_gmlA"
 ORIGIN
         1 atgaagtaca atttagggta tttatttgat ttacttgttg tcataacaaa taaagatcta
        61 aaagtgcgct ataagagcag catgctaggc tatttatggt cagtagcaaa tccattgctt
@@ -2499,10 +2501,11 @@ FEATURES             Location/Qualifiers
                      /strain="AKPRH077088"
                      /serovar="O3/O3a"
                      /db_xref="taxon:573"
-                     /note="O locus: O3/O3a"
-                     /note="O type: O3/O3a"
+                     /note="O locus: O3α"
+                     /note="O type: O3α"
                      /note="annotation edited from original by K. Wyres Jan
                      2018"
+                     /note="Updated from O3/O3a by Tom Stanton in Feb 2025"
      gene            1..1416
                      /gene="manC"
      CDS             1..1416
@@ -2524,7 +2527,7 @@ FEATURES             Location/Qualifiers
                      VKKAVEFLKQNQRSEYKRHREIYRPWGRCDVVVQTPRFNVNRITVKPGGAFSMQMHHHR
                      AEHWVILAGTGQVTVNGKQFLLTENQSTFIPIGAEHSLENPGRIPLEVLEIQSGSYLGE
                      DDIIRIKDQYGRC"
-                     /locus_tag="O3/O3a_01_manC"
+                     /locus_tag="O3α_01_manC"
      gene            1439..2821
                      /gene="manB"
      CDS             1439..2821
@@ -2546,7 +2549,7 @@ FEATURES             Location/Qualifiers
                      YCDSGMIPWLLVAELLCLKNSSLKSLVADRQAAFPASGEINRKLGNAAEAIARIRAQYE
                      PAAAHIDTTDGISIEYPEWRFNLRTSNTEPVVRLNVESRADTALMNEKTAELLNLLKEE
                      SL"
-                     /locus_tag="O3/O3a_02_manB"
+                     /locus_tag="O3α_02_manB"
      gene            2827..3612
                      /gene="wzm"
      CDS             2827..3612
@@ -2563,7 +2566,7 @@ FEATURES             Location/Qualifiers
                      RICLPIIVTASAFINFLIIFGLFVLFLIVTGNFPGMIFFEIIPVLIVQMLFTLGLGIIL
                      GVLNVFVRDVGQFVNILLQFWFWFTPIVYVSKTLPEWVSGLLAYNPMATIIGSYQNVML
                      YHQSPNWMALLPVTVVSVILFLFAWRLFKKHAADIVDEI"
-                     /locus_tag="O3/O3a_03_wzm"
+                     /locus_tag="O3α_03_wzm"
      gene            3615..4910
                      /gene="wzt"
      CDS             3615..4910
@@ -2584,7 +2587,7 @@ FEATURES             Location/Qualifiers
                      EEYRWGQGGAKIIDYHIQSAGVDFPPSLTGNQQTDFLMKVVFEYDFDCVVPGILIKTLD
                      GLFLYGTNSFLASEGRENISVSRGDVRVFKFSLPVDLNSGDYLLSFGISAGNPQTDMTP
                      LDRRYDSIILHVTKSMDFWGVIDLKSSFTSYQ"
-                     /locus_tag="O3/O3a_04_wzt"
+                     /locus_tag="O3α_04_wzt"
      gene            4930..7056
                      /gene="wbdD"
      CDS             4930..7056
@@ -2609,7 +2612,7 @@ FEATURES             Location/Qualifiers
                      NENQQLRQEIEKIHRSRSWRMTKGYRYLGLQIHLLRQYGFVQRCKHFIKRVLRFVFSFM
                      RKHPQVKHTAVNGLHKLGLYQPAYRLYRRMNPLPHSQYQADAQILSQTELQVMHPELLP
                      PEVYEIYLKLTKNK"
-                     /locus_tag="O3/O3a_05_wbdD"
+                     /locus_tag="O3α_05_wbdD"
      gene            7067..9589
                      /gene="wbdA"
      CDS             7067..9589
@@ -2637,7 +2640,7 @@ FEATURES             Location/Qualifiers
                      LFIVGKQGWNVDSLCEKLRHHPQLNKKLFWLQNISDEFLAELYARSRALIFASQGEGFG
                      LPLIEAAQKKLPVIIRDIPVFKEIAQEHAWYFSGEAPSDIAKAVEEWLALYEQNAHPRS
                      ENINWLTWKQSAEFLLKNLPIIAPAAKQ"
-                     /locus_tag="O3/O3a_06_wbdA"
+                     /locus_tag="O3α_06_wbdA"
      gene            9636..10781
                      /gene="wbdB"
      CDS             9636..10781
@@ -2657,7 +2660,7 @@ FEATURES             Location/Qualifiers
                      LLQAYQLLPMETRMRYPLILSGYRGWEDDVLWQLVERGTREGWIRYLGYVPDEDLPYLY
                      AAARTFVYPSFYEGFGLPILEAMSCGVPVVCSNVTSLPEVVGDAGLVADPNDVDAISAH
                      ILQSLQDDSWREIATARGLAQAKQFSWENCTTQTINAYKLL"
-                     /locus_tag="O3/O3a_07_wbdB"
+                     /locus_tag="O3α_07_wbdB"
      gene            10791..11906
                      /gene="wbdC"
      CDS             10791..11906
@@ -2677,7 +2680,7 @@ FEATURES             Location/Qualifiers
                      IVGGGPLEAEVRREAQQRGLSNVVFTGMLNDEDKYILFQLCRGVVFPSHLRSEAFGITL
                      LEGARFARPLISCEIGTGTSFINQDKVNGCVIPPNDSQALVEAMNELWHNDETASRYGE
                      NSRRRFEEMFTADHMIDAYVNLYTTLLESKS"
-                     /locus_tag="O3/O3a_08_wbdC"
+                     /locus_tag="O3α_08_wbdC"
 ORIGIN
         1 atgttacttc ctgtaattat ggctggtggt accggcagtc gtctctggcc gatgtctcgc
        61 gagctttacc cgaaacagtt cctccggctg tacgggcaga actccatgct gcaggaaacc
@@ -2907,10 +2910,11 @@ FEATURES             Location/Qualifiers
                      /strain="539"
                      /serovar="O3b"
                      /db_xref="taxon:573"
-                     /note="O locus: O3b"
-                     /note="O type: O3b"
+                     /note="O locus: O3β"
+                     /note="O type: O3β"
                      /note="annotation edited from original by K. Wyres Jan
                      2018"
+                     /note="Updated from O3b by Tom Stanton in Feb 2025"
      gene            1..1416
                      /gene="manC"
      CDS             1..1416
@@ -2932,7 +2936,7 @@ FEATURES             Location/Qualifiers
                      VKKAVEFLKQNQRSEYKRHREIYRPWGRCDVVVQTPRFNVNRITVKPGGAFSMQMHHHR
                      AEHWVILAGTGQVTVNGKQFLLTENQSTFIPIGAEHSLENPGRIPLEVLEIQSGSYLGE
                      DDIIRIKDQYGRC"
-                     /locus_tag="O3b_01_manC"
+                     /locus_tag="O3β_01_manC"
      gene            1439..2821
                      /gene="manB"
      CDS             1439..2821
@@ -2954,7 +2958,7 @@ FEATURES             Location/Qualifiers
                      YCDSGMIPWLLVAELLCLKNSSLKSLVADRQAAFPASGEINRKLGNAAEAIARIRAQYE
                      PAAAHIDTTDGISIEYPEWRFNLRTSNTEPVVRLNVESRADTALMNEKTAELLNLLKEE
                      SL"
-                     /locus_tag="O3b_02_manB"
+                     /locus_tag="O3β_02_manB"
      gene            2827..3612
                      /gene="wzm"
      CDS             2827..3612
@@ -2971,7 +2975,7 @@ FEATURES             Location/Qualifiers
                      RICLPIIVTASAFINFLIIFGLFVLFLIVTGNFPGMIFFEIIPVLIVQMLFTLGLGIIL
                      GVLNVFVRDVGQFVNILLQFWFWFTPIVYVSKTLPEWVSGLLAYNPMATIIGSYQNVML
                      YHQSPNWLALLPVTVLSVILFLFAWRLFKKHAADIVDEI"
-                     /locus_tag="O3b_03_wzm"
+                     /locus_tag="O3β_03_wzm"
      gene            3615..4910
                      /gene="wzt"
      CDS             3615..4910
@@ -2992,7 +2996,7 @@ FEATURES             Location/Qualifiers
                      EEYRWGQGGAKIIDYHIQSAGVDFPPSLTGNQQTDFLMKVVFEYDFDCVVPGLLIKTLD
                      GLFLYGTNSFLASEGRENISVSRGDVRVFKFSFPVDLNSGDYLLSFGISEGSPQTEMTP
                      LDRRYDSIILHVTKSMDFWGVIDLKSTFNSYK"
-                     /locus_tag="O3b_04_wzt"
+                     /locus_tag="O3β_04_wzt"
      gene            4931..6988
                      /gene="wbdD"
      CDS             4931..6988
@@ -3016,7 +3020,7 @@ FEATURES             Location/Qualifiers
                      PQDVTTNVQPRIEIEQSKAVDSEEIMRLHTQLNDAQQEIENLRHEIAKIHYSRSWKMTK
                      WYRYAGLQYYLLRQYGFKQRFKHLLKRVLSNVIYFLRAHPRLKQKVINLLRTIGIYDFA
                      YRMHRRMNPGSHNPYPNDPQYQSQTEKQILHPELLPPEVNSIFSELKNKR"
-                     /locus_tag="O3b_05_wbdD"
+                     /locus_tag="O3β_05_wbdD"
      gene            6999..9521
                      /gene="wbdA"
      CDS             6999..9521
@@ -3044,7 +3048,7 @@ FEATURES             Location/Qualifiers
                      LFIIGKQGWHVDDLCERLRHHPQLNKKLFWLQNISDEFLTKLYSQSSALIFASLGEGFG
                      LPLIEAAQKKLPVIIRDIPVFKEIAQEHAWYFSGEAPADIAKAVEDWLALYEQNAHPRS
                      ENINWLTWKQSAEFLLKNLPIIAPAAKQ"
-                     /locus_tag="O3b_06_wbdA"
+                     /locus_tag="O3β_06_wbdA"
      gene            9568..10713
                      /gene="wbdB"
      CDS             9568..10713
@@ -3064,7 +3068,7 @@ FEATURES             Location/Qualifiers
                      LLQAYQLLPMETRMRYPLILSGYRGWEDDVLWQLVERGTREGWIRYLGYVPDEDLPYLY
                      AAARTFVYPSFYEGFGLPILEAMSCGVPVVCSNVTSLPEVVGDAGLVADPNDVDAISAH
                      ILQSLQDDSWREIATARGLAQAKQFSWENCTTQTINAYKLL"
-                     /locus_tag="O3b_07_wbdB"
+                     /locus_tag="O3β_07_wbdB"
      gene            10723..11838
                      /gene="wbdC"
      CDS             10723..11838
@@ -3084,7 +3088,7 @@ FEATURES             Location/Qualifiers
                      IVGGGPLEAEVRREAQQRGLSNVVFTGMLNDEDKYILFQLCRGVVFPSHLRSEAFGITL
                      LEGARFARPLISCEIGTGTSFINQDKVNGCVIPPNDSQALVEAMNELWHNDETASRYGE
                      NSRRRFEEMFTADHMIDAYVNLYTTLLESKS"
-                     /locus_tag="O3b_08_wbdC"
+                     /locus_tag="O3β_08_wbdC"
 ORIGIN
         1 atgttgcttc ctgtgatcat ggctggtggt accggcagtc gtctctggcc gatgtctcgc
        61 gagctttacc cgaaacagtt cctccgcctg ttcgggcaga actccatgct gcaggaaacc
@@ -4046,9 +4050,10 @@ FEATURES             Location/Qualifiers
                      /db_xref="taxon:573"
                      /note="Statens Serum Institut Klebsiella pnuemoniae
                      serotype O8 reference strains"
-                     /note="O locus: O8"
-                     /note="O type: O2a"
+                     /note="O locus: O1α,O2δ"
+                     /note="O type: O2δ"
                      /note="original sequence manually trimmed"
+                     /note="Updated from O8 by Tom Stanton in Feb 2025"
      gene            1..780
                      /gene="wzm"
      CDS             1..780
@@ -4063,7 +4068,7 @@ FEATURES             Location/Qualifiers
                      VIPLSNVMMEGLHFLCTIPVIIAFLFVYGMRPSLSWLWGIPIIAIGQVIFTFGISIIFS
                      TLNLFFRDLERFVSLGIMLMFYCTPILYASDMIPEKFSWIITYNPLASMILSWRELFMN
                      GVLNYEYISILYITGFILTIVGLAIFNKLKYRFAEIL"
-                     /locus_tag="O8_01_wzm"
+                     /locus_tag="O1α,O2δ_01_wzm"
      gene            780..1520
                      /gene="wzt"
      CDS             780..1520
@@ -4078,7 +4083,7 @@ FEATURES             Location/Qualifiers
                      PELTGRENIYLNATLLGLRRKEVQQRMERIIEFSELGEFIDEPIRVYSSGMLAKLGFSV
                      ISQVEPDILIIDEVLAVGDISFQAKCIKTIREFKKKGVTILFVSHNMSDVERICDRVVW
                      IENHRLREIGSAERIIELYKQAMA"
-                     /locus_tag="O8_02_wzt"
+                     /locus_tag="O1α,O2δ_02_wzt"
      gene            1534..3426
                      /gene="wbbM"
      CDS             1534..3426
@@ -4098,7 +4103,7 @@ FEATURES             Location/Qualifiers
                      MVKEDTFSLLMATLKAKKYWFLDQDIMNKVFFGRVKFLPLEWNVYHGNGNTDDFFPNLK
                      FSTFMRFLQARSNPKMIHYAGENKPWNTDKVDFYDDFFENIAHTPWEQEVYYRQLPVTS
                      VMHSHGAETQPAVLMQTKIKSALMPYVNKYAPVGSPRRNTLTKYYYKVRRSILG"
-                     /locus_tag="O8_03_wbbM"
+                     /locus_tag="O1α,O2δ_03_wbbM"
      gene            3445..4599
                      /gene="glf"
      CDS             3445..4599
@@ -4114,7 +4119,7 @@ FEATURES             Location/Qualifiers
                      EREDYAHVFYSGPLDAFYSYQYGRLGYRTLDFEKFTYQGDYQGCAVMNYCSIDVPYTRI
                      TEHKYFSPWESHEGSVCYKEYSRACGENDIPYYPIRQMGEMALLEKYLSLAESEKNITF
                      VGRLGTYRYLDMDVTIAEALKTADEFLSSVANQEEMPVFTVPVR"
-                     /locus_tag="O8_04_glf"
+                     /locus_tag="O1α,O2δ_04_glf"
      gene            4596..5489
                      /gene="wbbN"
      CDS             4596..5489
@@ -4129,7 +4134,7 @@ FEATURES             Location/Qualifiers
                      VSFVGMIISSKVLQEHIDHIHDELFIYFDDLYFGYALTLDGQKILYSPELIFHHDVSIQ
                      GKIISPEWKVYYLCRNLILARKLFQEVKVFSNFSILIRLCKYLSILPWQRRKSSYLCFM
                      YRGIVHGIRGISGKQH"
-                     /locus_tag="O8_05_wbbN"
+                     /locus_tag="O1α,O2δ_05_wbbN"
      gene            5502..6635
                      /gene="wbbO"
      CDS             5502..6635
@@ -4145,7 +4150,7 @@ FEATURES             Location/Qualifiers
                      RNISFTLNVAGILVEHDKDAIPLDVIQRWHEEGAINWLGHSSNVFDLIEESNIVALPSV
                      YSEGVPRILLEASSVGRACIAYDVGGCDSLIVDNDNGLIVKSNSVHELADKLGFLLDNP
                      EARVEMGIKGRKRVQDKFSSVMIINKTLKTYHDVVEG"
-                     /locus_tag="O8_06_wbbO"
+                     /locus_tag="O1α,O2δ_06_wbbO"
      CDS             6759..8078
                      /note="orf11"
                      /codon_start=1
@@ -4160,7 +4165,7 @@ FEATURES             Location/Qualifiers
                      FSPLFDDVKAFIIELDASDDDFYDDFIAAAHQRIATLSADEYLFSLKDRVLKELEFSQA
                      NNARLEQTIDILEQKNNQLGQELAAQQVAQHEEKQNFHDQLTKRDEHHRALQNRYDIQE
                      REMFDQRAKLESLQQHNVNIIGSLSWRLTKPLRLIRRFFK"
-                     /locus_tag="O8_07"
+                     /locus_tag="O1α,O2δ_07"
      CDS             8397..9395
                      /note="orf12"
                      /codon_start=1
@@ -4173,7 +4178,7 @@ FEATURES             Location/Qualifiers
                      MHTAMLSMLVGSFFYSISRTEYFSRIIKERFSAFFVTCAVIISMVGVYAMNHSRLDYFL
                      FIAFVPMLFIDHLADDKIIKKIFTSDLFLFLGYISFPLYLLHELVIVSGFIFDPDNAWT
                      SISIAALTSILISYVYARFIDYPLYKALKRLISKMSWPGAKKDYRGNLLNQ"
-                     /locus_tag="O8_08"
+                     /locus_tag="O1α,O2δ_08"
 ORIGIN
         1 atgagtctaa aaatgaagta taatttaggg tatttgtttg atctgcttgt tgttataaca
        61 aacaaagatt tgaaggtaag atataaaagc agcgtatttg gctatttgtg gtcaattgcc
@@ -4333,7 +4338,7 @@ ORIGIN
      9301 actacccgct gtacaaagcg ttaaaaaggc taatatcaaa aatgtcctgg ccaggtgcta
      9361 aaaaagatta ccgtggtaat cttttaaatc aataa
 //
-LOCUS       O1/O2v3                 9400 bp    DNA     linear   BCT 14-FEB-2018
+LOCUS       O1α,O2γ                 9400 bp    DNA     linear   BCT 14-FEB-2018
 DEFINITION  Klebsiella pneumoniae strain CWK53 O2aeh O locus, complete sequence.
 ACCESSION   MG280710
 VERSION     MG280710.1
@@ -4372,8 +4377,9 @@ FEATURES             Location/Qualifiers
                      /db_xref="taxon:573"
                      /note="Sequence edited to remove hisI gene, Kelly Wyres
                      April 2021"
-                     /note="O locus: O1/O2v3"
-                     /note="O type: O2a"
+                     /note="O locus: O1α,O2γ"
+                     /note="O type: O2γ"
+                     /note="Updated from O1/O2v3 by Tom Stanton in Feb 2025"
      gene            1..768
                      /gene="wzm"
      CDS             1..768
@@ -4389,7 +4395,7 @@ FEATURES             Location/Qualifiers
                      SNVMMEGLHFLCTIPVIIAFLFVYGMSPSISWLWGIPIIAIGQVIFTFGISIIFSTLNL
                      FFRDLERFVSLGIMLMFYCTPILYAADMIPEKFSWIITYNPLASMILSWRQLFMDGVLN
                      YEYISILYVTGIILTIVGLSIFNKLKYRFAEIL"
-                     /locus_tag="O1/O2v3_01_wzm"
+                     /locus_tag="O1α,O2γ_01_wzm"
      misc_feature    1..>9400
                      /note="rfb gene cluster"
      gene            768..1508
@@ -4407,7 +4413,7 @@ FEATURES             Location/Qualifiers
                      PELTGRENIYLNATLLGLRRKEVQQRMERIIEFSELGDFIDEPIRVYSSGMLAKLGFSV
                      ISQVEPDILIIDEVLAVGDISFQAKCIQTIKDFKSKGVTILFVSHNMSDVEKICDRVVW
                      IEDHKLREIGSAERIIELYKQAMA"
-                     /locus_tag="O1/O2v3_02_wzt"
+                     /locus_tag="O1α,O2γ_02_wzt"
      gene            1523..3415
                      /gene="wbbM"
      CDS             1523..3415
@@ -4429,7 +4435,7 @@ FEATURES             Location/Qualifiers
                      MVKENTFAQLMSALKAKKYWFLDQDIMNKVFFGRVKFLPLEWNVYHGNGNTDDFFPNLK
                      FSTYMRFLEARRNPKMIHYAGENKPWNTEKVDFYDDFLENVLNTPWEKEIYYRQLPVAT
                      VVPNQHTELQQTVLLQTKIKRALMPYVNKYAPVGSPRRNKLTKYYYKVRRSILG"
-                     /locus_tag="O1/O2v3_03_wbbM"
+                     /locus_tag="O1α,O2γ_03_wbbM"
      gene            3434..4588
                      /gene="glf"
      CDS             3434..4588
@@ -4447,7 +4453,7 @@ FEATURES             Location/Qualifiers
                      NRESYDHVFYSGPLDAFYSYQHGRLGYRTLDFERFTWQGDYQGCAVMNYCSVDVPYTRI
                      TEHKYFSPWESHEGSVCYKEYSRACGEDDIPYYPIRQMGEMALLDKYLSLAENEKNITF
                      VGRLGTYRYLDMDVTIAEALKTADKYLSSLSNDEAMPVFVADVR"
-                     /locus_tag="O1/O2v3_04_glf"
+                     /locus_tag="O1α,O2γ_04_glf"
      gene            4585..5475
                      /gene="wbbN"
      CDS             4585..5475
@@ -4464,7 +4470,7 @@ FEATURES             Location/Qualifiers
                      SFVGMIIKREVLNEHLHHIYDELFLYFDDLYFGYQLTLSGEKIIYNPELVFTHDVSIQG
                      KVISPEWKVYYLCRNLILAKRIFTEVAVFSSSSILLRLCKYISIFPVQRRKWVYLKFLC
                      RGIVHGVKGISGKFH"
-                     /locus_tag="O1/O2v3_05_wbbN"
+                     /locus_tag="O1α,O2γ_05_wbbN"
      gene            5488..6621
                      /gene="wbbO"
      CDS             5488..6621
@@ -4482,7 +4488,7 @@ FEATURES             Location/Qualifiers
                      KNIHFTLNVAGILVENDKDAIPLATIQKWQSEGVINWLGHCSNVFDLIEESNIVALPSV
                      YAEGVPRILLEASSVGRACIAYDVGGCDSLIINNDNGLIVKSKSVEELAEKLGFLLDNP
                      ETRVAMGINGRKRIQDKFSSVMIINKTLKTYRDVVEE"
-                     /locus_tag="O1/O2v3_06_wbbO"
+                     /locus_tag="O1α,O2γ_06_wbbO"
      CDS             6743..8047
                      /note="Orf7"
                      /codon_start=1
@@ -4497,7 +4503,7 @@ FEATURES             Location/Qualifiers
                      HPFYQQVKEFIVALDAKDDDFYDEFIAAAHHRITTLSAEEYLFSLKDRVLKELEFFQAK
                      SSALQQEVETLTDSFAEQKDENAILHNQLHEIEERVTEQEKNIRQLTDKNNNMHHEITI
                      KQQEFNEIYQHHKNLISSLSWKLTKPLRVVRRFFK"
-                     /locus_tag="O1/O2v3_07"
+                     /locus_tag="O1α,O2γ_07"
      CDS             8381..9400
                      /note="Orf8; involved in lipopolysaccharide O-antigen
                      biosynthesis"
@@ -4511,7 +4517,7 @@ FEATURES             Location/Qualifiers
                      AVVAGLLFIFLWHKHPSGIPPSMLTAMLSMLIGSLFFSLSQTEYFKCLMKEKFMAFFIT
                      AAAIVSIVGVYAMNHSRLDYFLFVAFIPMLFIDHLPDNQLIKRVFTSNLFLFLGYISFP
                      LYLLHELVIVSGFIFDPENAWVSISIAAFASIFIAYIYARFIDYPLYRALKRQIAKIS"
-                     /locus_tag="O1/O2v3_08"
+                     /locus_tag="O1α,O2γ_08"
 ORIGIN
         1 atgaagtata atataggata tttgtttgat cttcttgttg taataacaaa caaagatttg
        61 aaagtacgtt ataaaagcag cgtatttggt tacttatggt caatcgcaaa tccactgctt
