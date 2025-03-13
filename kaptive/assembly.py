@@ -178,13 +178,14 @@ def typing_pipeline(
     scores, alignments = np.zeros((len(db), 6)), []
     # Group alignments by query gene (Alignment.q)
     for q, alns in group_alns(assembly.map(db.format('ffn'), threads, verbose=verbose)):
-        if q.startswith("Extra"):
+        if q.startswith("Extra_genes"):
             alignments.append(max(alns, key=lambda x: x.mlen))  # Add the best alignment for extra genes
         else:
             alignments.extend(alns := list(alns))  # Add all alignments to the list, convert generator to list too
             # Use the best alignment for each gene for scoring, if the coverage is above the minimum
             if ((best := max(alns, key=lambda x: x.mlen)).blen / best.q_len) * 100 >= min_cov:
-                scores[db.genes[q].locus.index] += [best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
+                scores[db.loci[q.split('_', 1)[0]].index] += [
+                    best.tags['AS'], best.mlen, best.blen, best.q_len, 1, 0]
             # For each gene, add: AS, mlen, blen, q_len, genes_found (1), genes_expected (0 but will update later)
 
     if scores.max() == 0:  # If no gene alignments were found, return None so pipeline can continue
@@ -269,8 +270,8 @@ def typing_pipeline(
 
     # FINALISE RESULT -------------------------------------------------------------------------------------------------
     # Sort the pieces by the sum of the expected gene order to get the expected order of the pieces
-    result.pieces.sort(key=lambda x: min(i.gene.position_in_locus for i in x.expected_genes))
-    [l.sort(key=lambda x: gene.position_in_locus) for l in (
+    result.pieces.sort(key=lambda x: min(i.gene.start for i in x.expected_genes))
+    [l.sort(key=lambda x: gene.start) for l in (
         result.expected_genes_inside_locus, result.expected_genes_outside_locus, result.unexpected_genes_inside_locus,
         result.unexpected_genes_outside_locus)]
     result.missing_genes = list(set(best_match.genes) - {
