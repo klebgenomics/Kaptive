@@ -13,6 +13,7 @@ If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import os
+from itertools import chain
 from os import PathLike, path, listdir
 from functools import cached_property
 from typing import Generator, TextIO
@@ -96,10 +97,12 @@ class Database:
         return self._expected_gene_counts
 
     def format(self, format_spec):
-        # f"##gff-version 3\n{''.join([i.as_gff_string() for i in self.loci.values()])}"
-        if format_spec in {'fna', 'ffn', 'faa'}:
-            return ''.join([locus.format(format_spec) for locus in self])
-        raise ValueError(f'Invalid format specifier: {format_spec}')
+        if format_spec in {'fna'}:
+            return ''.join([locus.format(format_spec) for locus in self.loci.values()])
+        elif format_spec in {'ffn', 'faa'}:
+            return ''.join([gene.format(format_spec) for gene in chain(self.genes.values(), self.extra_genes.values())])
+        else:
+            raise ValueError(f'Invalid format specifier: {format_spec}')
 
     def add_locus(self, locus: Locus):
         """
