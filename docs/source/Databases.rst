@@ -125,12 +125,22 @@ KL22, the phenotype is predicted as 'K37', the non-acetylated version of the K22
 
 Let's look at an example that uses extra genes outside of the locus (from the *K. pneumoniae* O locus database):
 
-======================= ============ ===================
-loci                    genes        phenotype
-======================= ============ ===================
-O1/O2v1;O1/O2v2;O1/O2v3	wbbY	     O1a
-O1/O2v1;O1/O2v2;O1/O2v3	wbbY;wbbZ	 O1ab
-======================= ============ ===================
+======================= ============================= ===================
+loci                    genes                         phenotype
+======================= ============================= ===================
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC	              O2β
+OL2α.1;OL2α.2;OL2α.3	orf8	                      O2γ
+OL2α.1;OL2α.2;OL2α.3	wbbY	                      O1α,2α
+OL2α.1;OL2α.2;OL2α.3	wbbY;wbbZ	                  O1αβ,2α
+OL2α.1;OL2α.2;OL2α.3	orf8;wbbY;wbbZ	              O1αβ,2γ
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbbY	          O1α,2β
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbbY;wbbZ	  O1αβ,2β
+OL2α.1;OL2α.2;OL2α.3	wbmV;wbmW	                  O11α,2α
+OL2α.1;OL2α.2;OL2α.3	wbmV;wbmW;wbmX	              O11αβ,2α
+OL2α.1;OL2α.2;OL2α.3	orf8;wbmV;wbmW;wbmX	          O11αβ,2γ
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbmV;wbmW	  O11α,2β
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbmV;wbmW;wbmX O11αβ,2β
+======================= ============================= ===================
 
 Here, the first line states that if *wbbY* is present in a genome carrying any of the O1/O2v1, O1/O2v2, or O1/O2v3 loci, the phenotype
 will be predicted as 'O1a'. The second line states that if **both** *wbbY* and *wbbZ* are present in a genome carrying any of the 
@@ -256,9 +266,9 @@ Database versions:
 
 Genetic determinants of O1 and O2 outer LPS antigens as reported in Kaptive:
 
-========= ==================== ================================== ================================= ======================================== ================================== ==
+========= ==================== ================================== ================================= ======================================== ==================================
 O locus   Extra genes          Kaptive < v2.0 (locus\ :sup:`a`)   Kaptive v2.0+ (locus\ :sup:`a`)   Kaptive v2.0 - v2.0.7 (type\ :sup:`b`)   Kaptive v2.0.8+ (type\ :sup:`b`)
-========= ==================== ================================== ================================= ======================================== ================================== ==
+========= ==================== ================================== ================================= ======================================== ==================================
 O1/O2v1   none                 O2v1                               O1/O2v1                           O2a                                      O2a
 O1/O2v2   none                 O2v2                               O1/O2v2                           O2afg                                    O2afg
 O1/O2v3   none                 Na                                 O1/O2v3                           O2a                                      O2a
@@ -267,7 +277,7 @@ O1/O2v2   *wbbYZ*              O1v2                               O1/O2v2       
 O1/O2v3   *wbbYZ*.             Na                                 O1/O2v3                           Na                                       O1ab
 O1/O2v1   *wbbY* only          O1v1                               O1/O2v1                           O1                                       O1a
 O1/O2v2   *wbbY* only          O1v2                               O1/O2v2                           O1                                       O1a
-O1/O2v3   *wbbY* only          Na.                                O1/O2v3                           O1                                       O1a
+O1/O2v3   *wbbY* only          Na                                 O1/O2v3                           O1                                       O1a
 O1/O2v1   *wbbY* OR *wbbZ*     O1/O2v1                            Na                                Na                                       Na
 O1/O2v2   *wbbY* OR *wbbZ*     O1/O2v2                            Na                                Na                                       Na
 O1/O2v3   *wbbY* OR *wbbZ*     Na                                 Na                                Na                                       Na
@@ -280,7 +290,7 @@ O1/O2v3   *gmlABD*             Na                                 O1/O2v3       
 O1/O2v1   *wbbY* AND *wbmVW*   Na                                 O1/O2v1                           O1 (O2ac)\ :sup:`b`                      O1 (O2ac)\ :sup:`b`
 O1/O2v2   *wbbY* AND *wbmVW*   Na                                 O1/O2v2                           O1 (O2ac)\ :sup:`b`                      O1 (O2ac)\ :sup:`b`
 O1/O2v3   *wbbY* AND *wbmVW*   Na                                 O1/O2v3                           O1 (O2ac)\ :sup:`b`                      O1 (O2ac)\ :sup:`b`
-========= ==================== ================================== ================================= ======================================== ================================== ==
+========= ==================== ================================== ================================= ======================================== ==================================
 
 
 - :sup:`a` as reported in the ‘Best match locus’ column in the Kaptive output.
