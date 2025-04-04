@@ -247,24 +247,24 @@ Kaptive therefore looks for these genes to predict antigen (sub)types.
 ========================== ===================================================== =============================================== ==============================================
 New serotype designation   Required genes/loci (implemented in Kaptive v.3.1+)   Prior Kaptive designation (v.2.0.8–v.3.0.0b6)   Prior Kaptive genes/loci (v.2.0.8–v.3.0.0b6)
 ========================== ===================================================== =============================================== ==============================================
-O1αβ,2α                    OL2α, wbbYZ                                           O1ab                                            O1/O2v1, wbbYZ
-O1α,2α                     OL2α, wbbY                                            O1a                                             O1/O2v1, wbbY
-O1αβ,2β                    OL2α, gml2β, wbbYZ                                    O1ab                                            O1/O2v2, wbbYZ
-O1α,2β                     OL2α, gml2β, wbbY                                     O1a                                             O1/O2v2, wbbY
-O1αβ,2γ                    OL2α, orf8, wbbYZ                                     O1ab                                            O1/O2v3, wbbYZ
-O2α                        OL2α                                                  O2a                                             O1/O2v1
-O2β                        OL2α, gml2β                                           O2afg                                           O1/O2v2
-O2γ                        OL2α, orf8                                            O2a                                             O1/O2v3
+O1αβ,2α                    OL2(α/β/γ), wbbYZ                                     O1ab                                            O1/O2v1, wbbYZ
+O1α,2α                     OL2(α/β/γ), wbbY                                      O1a                                             O1/O2v1, wbbY
+O1αβ,2β                    OL2(α/β/γ), gml2β, wbbYZ                              O1ab                                            O1/O2v2, wbbYZ
+O1α,2β                     OL2(α/β/γ), gml2β, wbbY                               O1a                                             O1/O2v2, wbbY
+O1αβ,2γ                    OL2(α/β/γ), orf8, wbbYZ                               O1ab                                            O1/O2v3, wbbYZ
+O2α                        OL2(α/β/γ)                                            O2a                                             O1/O2v1
+O2β                        OL2(α/β/γ), gml2β                                     O2afg                                           O1/O2v2
+O2γ                        OL2(α/β/γ), orf8                                      O2a                                             O1/O2v3
 O3α + O3β                  OL3α/β                                                O3/O3a                                          O3/O3a
 O3γ                        OL3γ                                                  O3b                                             O3b
 O4                         OL4                                                   O4                                              O4
 O5                         OL5                                                   O5                                              O5
 O10                        OL10                                                  OL103                                           OL103
-O11αβ,2α                   OL2α, wbmVWX                                          O2ac                                            O1/O2v1, wbmVWX
-O11α,2α                    OL2α, wbmVW                                           O2ac                                            O1/O2v1, wbmVW
-O11αβ,2β                   OL2α, gml2β, wbmVWX                                   O2ac                                            O1/O2v2, wbmVWX
-O11α,2β                    OL2α, gml2β, wbmVW                                    O2ac                                            O1/O2v2, wbmVW
-O11αβ,2γ                   OL2α, orf8, wbmVWX                                    O2ac                                            O1/O2v3, wbmVW
+O11αβ,2α                   OL2(α/β/γ), wbmVWX                                    O2ac                                            O1/O2v1, wbmVWX
+O11α,2α                    OL2(α/β/γ), wbmVW                                     O2ac                                            O1/O2v1, wbmVW
+O11αβ,2β                   OL2(α/β/γ), gml2β, wbmVWX                             O2ac                                            O1/O2v2, wbmVWX
+O11α,2β                    OL2(α/b/γ), gml2β, wbmVW                              O2ac                                            O1/O2v2, wbmVW
+O11αβ,2γ                   OL2(α/β/γ), orf8, wbmVWX                              O2ac                                            O1/O2v3, wbmVW
 O12                        OL12                                                  O12                                             O12
 O13                        OL13                                                  O13                                             OL13
 O14                        OL14                                                  OL102                                           OL102
