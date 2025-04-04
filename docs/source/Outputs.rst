@@ -37,7 +37,7 @@ Extra genes, details                     Gene names for the extra genes found in
  Numbers beside gene names indicate the percent identity and percent coverage of the gene in the assembly.
 
 .. note::
- You may sometimes see two copies of the same gene in the ``Expected genes in locus, details `` column.
+ You may sometimes see two copies of the same gene in the ``Expected genes in locus, details`` column.
  These represent (likely) parts of the same gene which have usually been split over contigs.
  In Kaptive v3.0.0 onwards, we adopted this behaviour to allow users to see where locus splitting as occurred,
  and determine the total percent identity of a gene that has been split.

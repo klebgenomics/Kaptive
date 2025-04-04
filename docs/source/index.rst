@@ -12,15 +12,20 @@
    Outputs
    Interpreting-the-results
    Databases
+   Legacy
    FAQs
 
 ########################
 Introducing Kaptive 3
 ########################
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.11257262.svg
-    :target: https://doi.org/10.5281/zenodo.11257262
-    :alt: DOI
+.. image:: http://img.shields.io/badge/DOI-10.1101/2025.02.05.636613-B31B1B.svg
+    :target: https://doi.org/10.1101/2025.02.05.636613
+    :alt: BioRxiv
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.14000416.svg
+    :target: https://doi.org/10.5281/zenodo.14000416
+    :alt: Zenodo
 
 .. image:: https://img.shields.io/github/stars/klebgenomics/Kaptive
    :alt: GitHub Repo stars
@@ -61,7 +66,8 @@ Kaptive can be found:
 
 Citation
 ==========
-* If you use Kaptive and the *Klebsiella* K or O locus databases in your research, please cite [#kaptive]_ and [#kaptive2]_.
+* If you use Kaptive in your research, please cite [#kaptive3]_.
+* If you use the *Klebsiella* K or O locus databases, please cite [#kaptive]_ and [#kaptive2]_.
 * If you use `Kaptive Web <https://kaptive-web.erc.monash.edu/>`_, please cite [#kaptiveweb]_.
 * If you use the *A. baumannii* K or OC locus database(s) in your research please cite [#aci]_ and [#aciupdate]_.
 * Lists of papers describing each of the individual *A. baumannii* reference loci can be found `here <https://github.com/katholt/Kaptive/tree/master/extras>`_.
@@ -90,11 +96,11 @@ People
 
 `Contact Kelly and Tom <kaptive.typing@gmail.com>`_ for help with Kaptive, or to report bugs or request features.
 
-
 References
 =============
 .. [#aciupdate] Cahill, S.M., Hall, R.M., Kenyon, J.J., 2022. An update to the database for *Acinetobacter baumannii* capsular polysaccharide locus typing extends the extensive and diverse repertoire of genes found at and outside the K locus. *Microbial Genomics* 8. https://doi.org/10.1099/mgen.0.000878
 .. [#kaptive2] Lam, M.M.C., Wick, R.R., Judd, L.M., Holt, K.E., Wyres, K.L., 2022. Kaptive 2.0: updated capsule and lipopolysaccharide locus typing for the *Klebsiella pneumoniae* species complex. *Microbial Genomics* 8. https://doi.org/10.1099/mgen.0.000800
+.. [#kaptive3] Stanton TD, Hetland MAK, Löhr IH, Holt KE, Wyres KL. Fast and Accurate in silico Antigen Typing with Kaptive 3 [Internet]. bioRxiv; 2025 [cited 2025 Feb 27]. p. 2025.02.05.636613. https://www.biorxiv.org/content/10.1101/2025.02.05.636613v1
 .. [#vpara] Van Der Graaf-van Bloois, L., Chen, H., Wagenaar, J.A., Zomer, A.L., 2023. Development of Kaptive databases for *Vibrio parahaemolyticus* O- and K-antigen genotyping. *Microbial Genomics* 9. https://doi.org/10.1099/mgen.0.001007
 .. [#kaptiveweb] Wick, R.R., Heinz, E., Holt, K.E., Wyres, K.L., 2018. Kaptive Web: User-Friendly Capsule and Lipopolysaccharide Serotype Prediction for *Klebsiella* Genomes. *Journal of Clinical Microbiology* 56, 10.1128/jcm.00197-18. https://doi.org/10.1128/jcm.00197-18
 .. [#aci] Wyres, K.L., Cahill, S.M., Holt, K.E., Hall, R.M., Kenyon, J.J., 2020. Identification of *Acinetobacter baumannii* loci for capsular polysaccharide (KL) and lipooligosaccharide outer core (OCL) synthesis in genome assemblies using curated reference databases compatible with Kaptive. *Microbial Genomics* 6. https://doi.org/10.1099/mgen.0.000339

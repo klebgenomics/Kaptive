@@ -7,10 +7,10 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Kaptive'
-copyright = '2024, Tom Stanton, Ryan Wick, Kathryn Holt, Kelly Wyres'
+copyright = '2025, Tom Stanton, Ryan Wick, Kathryn Holt, Kelly Wyres'
 author = 'Tom Stanton'
-release = '3.0.0'
-version = '3.0.0'
+release = '3.1.0'
+version = '3.1.0'
 
 
 # -- General configuration ---------------------------------------------------

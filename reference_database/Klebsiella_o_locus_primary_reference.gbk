@@ -1,6 +1,5 @@
 LOCUS       LT174601                8064 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: O1/O2, Variant 1.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL2α.1
 ACCESSION   LT174601
 VERSION     LT174601.1  GI:1036211075
 KEYWORDS    .
@@ -24,7 +23,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="94"
-                     /serovar="O1/O2 Variant 1"
                      /db_xref="taxon:573"
                      /note="O locus: OL2α.1"
                      /note="O type: O2α"
@@ -304,8 +302,7 @@ ORIGIN
      8041 gcgttaatca cgaggaaaat gtaa
 //
 LOCUS       LT174602                7926 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
-            gene cluster, type: O1/O2, Variant 2.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL2α.2
 ACCESSION   LT174602 REGION: 1..7926
 VERSION     LT174602.1
 KEYWORDS    .
@@ -330,7 +327,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="441"
-                     /serovar="O1/O2 Variant 2"
                      /db_xref="taxon:573"
                      /note="O locus: OL2α.2"
                      /note="O type: O2α"
@@ -603,8 +599,7 @@ ORIGIN
      7921 gactag
 //
 LOCUS       MG280710                8047 bp    DNA     linear   BCT 14-FEB-2018
-DEFINITION  Klebsiella pneumoniae strain CWK53 rfb gene cluster, complete
-            sequence.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL2α.3
 ACCESSION   MG280710 REGION: 1..8047
 VERSION     MG280710.1
 KEYWORDS    .
@@ -640,7 +635,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="CWK53"
-                     /serotype="O2aeh"
                      /note="O locus: OL2α.3"
                      /note="O type: O2α"
                      /note="Updated from O1/O2v3 by Tom Stanton in March 2025, trimmed to remove HisI and Orf8"
@@ -906,8 +900,7 @@ ORIGIN
      8041 taaataa
 //
 LOCUS       LT174603               11906 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: O3/O3a.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL3α/β
 ACCESSION   LT174603
 VERSION     LT174603.1  GI:1036211094
 KEYWORDS    .
@@ -931,9 +924,8 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="AKPRH077088"
-                     /serovar="O3/O3a"
                      /db_xref="taxon:573"
-                     /note="O locus: OL3αβ"
+                     /note="O locus: OL3α/β"
                      /note="O type: O3αβ"
                      /note="annotation edited from original by K. Wyres Jan
                      2018"
@@ -1315,8 +1307,7 @@ ORIGIN
     11881 ctacgctgct ggaaagcaaa tcctga
 //
 LOCUS       LT174604               11838 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: O3b.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL3γ
 ACCESSION   LT174604
 VERSION     LT174604.1  GI:1036211103
 KEYWORDS    .
@@ -1340,9 +1331,8 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="539"
-                     /serovar="O3b"
                      /db_xref="taxon:573"
-                     /note="O locus: O3γ"
+                     /note="O locus: OL3γ"
                      /note="O type: O3γ"
                      /note="annotation edited from original by K. Wyres Jan
                      2018"
@@ -1368,7 +1358,7 @@ FEATURES             Location/Qualifiers
                      VKKAVEFLKQNQRSEYKRHREIYRPWGRCDVVVQTPRFNVNRITVKPGGAFSMQMHHHR
                      AEHWVILAGTGQVTVNGKQFLLTENQSTFIPIGAEHSLENPGRIPLEVLEIQSGSYLGE
                      DDIIRIKDQYGRC"
-                     /locus_tag="O3γ_01_manC"
+                     /locus_tag=" OL3γ_01_manC"
      gene            1439..2821
                      /gene="manB"
      CDS             1439..2821
@@ -1390,7 +1380,7 @@ FEATURES             Location/Qualifiers
                      YCDSGMIPWLLVAELLCLKNSSLKSLVADRQAAFPASGEINRKLGNAAEAIARIRAQYE
                      PAAAHIDTTDGISIEYPEWRFNLRTSNTEPVVRLNVESRADTALMNEKTAELLNLLKEE
                      SL"
-                     /locus_tag="O3γ_02_manB"
+                     /locus_tag=" OL3γ_02_manB"
      gene            2827..3612
                      /gene="wzm"
      CDS             2827..3612
@@ -1407,7 +1397,7 @@ FEATURES             Location/Qualifiers
                      RICLPIIVTASAFINFLIIFGLFVLFLIVTGNFPGMIFFEIIPVLIVQMLFTLGLGIIL
                      GVLNVFVRDVGQFVNILLQFWFWFTPIVYVSKTLPEWVSGLLAYNPMATIIGSYQNVML
                      YHQSPNWLALLPVTVLSVILFLFAWRLFKKHAADIVDEI"
-                     /locus_tag="O3γ_03_wzm"
+                     /locus_tag=" OL3γ_03_wzm"
      gene            3615..4910
                      /gene="wzt"
      CDS             3615..4910
@@ -1428,7 +1418,7 @@ FEATURES             Location/Qualifiers
                      EEYRWGQGGAKIIDYHIQSAGVDFPPSLTGNQQTDFLMKVVFEYDFDCVVPGLLIKTLD
                      GLFLYGTNSFLASEGRENISVSRGDVRVFKFSFPVDLNSGDYLLSFGISEGSPQTEMTP
                      LDRRYDSIILHVTKSMDFWGVIDLKSTFNSYK"
-                     /locus_tag="O3γ_04_wzt"
+                     /locus_tag=" OL3γ_04_wzt"
      gene            4931..6988
                      /gene="wbdD"
      CDS             4931..6988
@@ -1452,7 +1442,7 @@ FEATURES             Location/Qualifiers
                      PQDVTTNVQPRIEIEQSKAVDSEEIMRLHTQLNDAQQEIENLRHEIAKIHYSRSWKMTK
                      WYRYAGLQYYLLRQYGFKQRFKHLLKRVLSNVIYFLRAHPRLKQKVINLLRTIGIYDFA
                      YRMHRRMNPGSHNPYPNDPQYQSQTEKQILHPELLPPEVNSIFSELKNKR"
-                     /locus_tag="O3γ_05_wbdD"
+                     /locus_tag=" OL3γ_05_wbdD"
      gene            6999..9521
                      /gene="wbdA"
      CDS             6999..9521
@@ -1480,7 +1470,7 @@ FEATURES             Location/Qualifiers
                      LFIIGKQGWHVDDLCERLRHHPQLNKKLFWLQNISDEFLTKLYSQSSALIFASLGEGFG
                      LPLIEAAQKKLPVIIRDIPVFKEIAQEHAWYFSGEAPADIAKAVEDWLALYEQNAHPRS
                      ENINWLTWKQSAEFLLKNLPIIAPAAKQ"
-                     /locus_tag="O3γ_06_wbdA"
+                     /locus_tag=" OL3γ_06_wbdA"
      gene            9568..10713
                      /gene="wbdB"
      CDS             9568..10713
@@ -1500,7 +1490,7 @@ FEATURES             Location/Qualifiers
                      LLQAYQLLPMETRMRYPLILSGYRGWEDDVLWQLVERGTREGWIRYLGYVPDEDLPYLY
                      AAARTFVYPSFYEGFGLPILEAMSCGVPVVCSNVTSLPEVVGDAGLVADPNDVDAISAH
                      ILQSLQDDSWREIATARGLAQAKQFSWENCTTQTINAYKLL"
-                     /locus_tag="O3γ_07_wbdB"
+                     /locus_tag=" OL3γ_07_wbdB"
      gene            10723..11838
                      /gene="wbdC"
      CDS             10723..11838
@@ -1520,7 +1510,7 @@ FEATURES             Location/Qualifiers
                      IVGGGPLEAEVRREAQQRGLSNVVFTGMLNDEDKYILFQLCRGVVFPSHLRSEAFGITL
                      LEGARFARPLISCEIGTGTSFINQDKVNGCVIPPNDSQALVEAMNELWHNDETASRYGE
                      NSRRRFEEMFTADHMIDAYVNLYTTLLESKS"
-                     /locus_tag="O3γ_08_wbdC"
+                     /locus_tag=" OL3γ_08_wbdC"
 ORIGIN
         1 atgttgcttc ctgtgatcat ggctggtggt accggcagtc gtctctggcc gatgtctcgc
        61 gagctttacc cgaaacagtt cctccgcctg ttcgggcaga actccatgct gcaggaaacc
@@ -1722,8 +1712,7 @@ ORIGIN
     11821 ctggaaagca aatcctga
 //
 LOCUS       LT174605                9449 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: O4.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL4
 ACCESSION   LT174605
 VERSION     LT174605.1  GI:1036211112
 KEYWORDS    .
@@ -1747,9 +1736,8 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="AJ214"
-                     /serovar="O4"
                      /db_xref="taxon:573"
-                     /note="O locus: O4"
+                     /note="O locus: OL4"
                      /note="O type: O4"
                      /note="sequence manually trimmed to removed insertion
                      sequences"
@@ -2034,8 +2022,7 @@ ORIGIN
      9421 attatattct tttataagaa catttccag
 //
 LOCUS       LT174606               12084 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: O5.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL5
 ACCESSION   LT174606
 VERSION     LT174606.1  GI:1036211123
 KEYWORDS    .
@@ -2059,7 +2046,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="AKPRH1202322"
-                     /serovar="O5"
                      /db_xref="taxon:573"
                      /note="O locus: OL5"
                      /note="O type: O5"
@@ -2444,8 +2430,7 @@ ORIGIN
     12061 acgctgctgg aaagcaaatc ctga
 //
 LOCUS       LT174598                8048 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: OL10.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL10
 ACCESSION   LT174598
 VERSION     LT174598.1  GI:1036211050
 KEYWORDS    .
@@ -2469,7 +2454,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="QMP"
-                     /serovar="rfb_OL10"
                      /db_xref="taxon:573"
                      /note="O locus: OL10"
                      /note="O type: O10"
@@ -2734,8 +2718,7 @@ ORIGIN
      8041 cggaataa
 //
 LOCUS       LT174600                9797 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: O12.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL12
 ACCESSION   LT174600
 VERSION     LT174600.1  GI:1036211066
 KEYWORDS    .
@@ -2759,7 +2742,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="AKPRH094188"
-                     /serovar="O12"
                      /db_xref="taxon:573"
                      /note="O locus: OL12"
                      /note="O type: O12"
@@ -3092,8 +3074,7 @@ ORIGIN
      9781 ttaaaaagaa tcgctaa
 //
 LOCUS       LT174596               12064 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
-            gene cluster, type: O13 (formerly known as OL101).
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL13
 ACCESSION   LT174596
 VERSION     LT174596.1  GI:1036211031
 KEYWORDS    .
@@ -3514,8 +3495,7 @@ ORIGIN
     12061 tcat
 //
 LOCUS       LT174597                6874 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: OL14.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL14
 ACCESSION   LT174597
 VERSION     LT174597.1  GI:1036211041
 KEYWORDS    .
@@ -3539,7 +3519,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="K261An"
-                     /serovar="rfb_OL14"
                      /db_xref="taxon:573"
                      /note="O locus: OL14"
                      /note="O type: unknown"
@@ -3807,8 +3786,7 @@ ORIGIN
      6841 ccattacttt aaagtagata acgctcattg ctaa
 //
 LOCUS       LT174599               11834 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene
-            cluster, type: OL15.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis gene cluster OL15
 ACCESSION   LT174599
 VERSION     LT174599.1  GI:1036211057
 KEYWORDS    .
@@ -3832,7 +3810,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="D-026-I-b-1"
-                     /serovar="rfb_OL15"
                      /db_xref="taxon:573"
                      /note="O locus: OL15"
                      /note="O type: unknown"
@@ -4211,8 +4188,7 @@ ORIGIN
     11821 agcagaaacc ctga
 //
 LOCUS       MG602074                3913 bp    DNA     linear   BCT 14-FEB-2018
-DEFINITION  Klebsiella pneumoniae strain 5053 wbmVWX gene cluster, complete
-            sequence.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen modification genes wbmVWX
 ACCESSION   MG602074 REGION: 1032..4944
 VERSION     MG602074.1
 KEYWORDS    .
@@ -4247,7 +4223,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="5053"
-                     /serotype="O2ac"
                      /db_xref="taxon:573"
                      /note="sequence edited to trim to wbmVWX only, Tom Stanton, March 2025"
                      /note="Extra genes: wbmVWX"
@@ -4380,8 +4355,7 @@ ORIGIN
      3901 aatttatctt cat
 //
 LOCUS       UGMM01000004            3130 bp    DNA     linear   BCT 04-OCT-2023
-DEFINITION  Klebsiella pneumoniae strain NCTC11682 genome assembly, contig:
-            ERS670329SCcontig000004, whole genome shotgun sequence.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen modification genes wbbYZ
 ACCESSION   UGMM01000004 REGION: 4729980..4733109
 VERSION     UGMM01000004.1  GI:1440143122
 KEYWORDS    WGS.
@@ -4402,7 +4376,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="NCTC11682"
-                     /serovar="not available: to be reported later"
                      /db_xref="taxon:573"
                      /note="contig: ERS670329SCcontig000004"
                      /note="Extra genes: wbbYZ"
@@ -4506,8 +4479,7 @@ ORIGIN
      3121 GTTAAAATAA
 //
 LOCUS       LT174602                2817 bp    DNA     linear   BCT 13-JUN-2016
-DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen biosynthesis
-            gene cluster, type: O1/O2, Variant 2.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen modification genes gml2β
 ACCESSION   LT174602 REGION: complement(7996..10812)
 VERSION     LT174602.1
 KEYWORDS    .
@@ -4532,11 +4504,10 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="441"
-                     /serovar="O1/O2 Variant 2"
                      /db_xref="taxon:573"
                      /note="sequence edited to trim to gmlABC only and reverse
                      complement, Tom Stanton, March 2025"
-                     /note="Extra genes: gmlABC"
+                     /note="Extra genes: gml2β"
      gene            1..378
                      /gene="gmlA"
      CDS             1..378
@@ -4547,7 +4518,7 @@ FEATURES             Location/Qualifiers
                      /transl_table=11
                      /product="GtrA-like protein"
                      /protein_id="CZQ25303.1"
-                     /locus_tag="Extra_genes_gmlABC_01_gmlA"
+                     /locus_tag="Extra_genes_gml2β_01_gmlA"
                      /translation="MPSSGPLWQLMKYGLVGIVNTLITAVVIFLLMHLGLGIYLSNAM
                      GYVVGIVFSFIANTIFTFTQPISINRLIKFLCVCFICYVANIIVIKIFFVFMPEKIYS
                      AQILGMFTYTITGFILNKFWAMK"
@@ -4562,7 +4533,7 @@ FEATURES             Location/Qualifiers
                      /transl_table=11
                      /product="glycosyltransferase"
                      /protein_id="CZQ25302.1"
-                     /locus_tag="Extra_genes_gmlABC_02_gmlB"
+                     /locus_tag="Extra_genes_gml2β_02_gmlB"
                      /translation="MTTSTDIKSTPSLAIVVPCYNEQEAFPFCLEKLSNVLNSLIARN
                      KINNNSYLLFVDDGSRDNTWAQIKDASTAYHYVRGIKLSRNKGHQIALMAGLRSVDTD
                      VTISIDADLQDDVNCIEKMIDAYSQGYDIVYGVRGNRDSDTFFKRTTANAFYAIMSHL
@@ -4578,7 +4549,7 @@ FEATURES             Location/Qualifiers
                      /transl_table=11
                      /product="Uncharacterised protein"
                      /protein_id="CZQ25301.1"
-                     /locus_tag="Extra_genes_gmlABC_03_gmlC"
+                     /locus_tag="Extra_genes_gml2β_03_gmlC"
                      /translation="MQNLINPLAEGNKKNVYIFYFFLLMLTFSPVIFFSYAFSDDWST
                      LFDAITRNGSSFQWDVQSGRPVYAVFRYYGKMLINDISSFSYLRLFNILSLVVLSCFI
                      YNFIDSRKIFDNPVFKIIFPLLICLLPAFQVYASWATCFPFTISVLLAGISYNKCFPH
@@ -4638,8 +4609,7 @@ ORIGIN
      2761 gattgtatgg ttattaaaac gtcagatgca atgcgaaggt caacgataaa ttattag
 //
 LOCUS       MG280710                1020 bp    DNA     linear   BCT 14-FEB-2018
-DEFINITION  Klebsiella pneumoniae strain CWK53 rfb gene cluster, complete
-            sequence.
+DEFINITION  Klebsiella pneumoniae lipopolysaccharide O-antigen modification genes orf8
 ACCESSION   MG280710 REGION: 8381..9400
 VERSION     MG280710.1
 KEYWORDS    .
@@ -4675,7 +4645,6 @@ FEATURES             Location/Qualifiers
                      /organism="Klebsiella pneumoniae"
                      /mol_type="genomic DNA"
                      /strain="CWK53"
-                     /serotype="O2aeh"
                      /db_xref="taxon:573"
                      /note="sequence edited to trim to Orf8 on;y, Tom Stanton, March 2025"
                      /note="Extra genes: orf8"
