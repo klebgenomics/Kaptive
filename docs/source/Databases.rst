@@ -238,7 +238,7 @@ distinct *Klebsiella* O loci.
 
 O locus classification requires some special logic, as the O1 and O2 serotypes are associated with the same loci and
 the distinction between O1 and each of the defined O2 subtypes (2α, 2β, 2γ) is determined by the
-presence/absence of 'extra genes' (gml2β and orf*) elsewhere in the chromosome as indicated in the table below.
+presence/absence of 'extra genes' (gml2β and orf8) elsewhere in the chromosome as indicated in the table below.
 Kaptive therefore looks for these genes to predict antigen (sub)types.
 
 .. note::
