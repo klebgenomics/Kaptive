@@ -229,6 +229,9 @@ In Kaptive 3.1.0, we introduced new O-antigen nomenclature in the *Klebsiella* O
 (``Klebsiella_o_locus_primary_reference.gbk``) along wth the publication of this review:
 `O-antigen polysaccharides in Klebsiella pneumoniae: structures and molecular basis for antigenic diversity <https://journals.asm.org/doi/full/10.1128/mmbr.00090-23#T1>`_.
 
+We have also summarised the O-antigen nomenclature update on the
+`Wyres Lab website <http://wyreslab.com/klebsiella-pneumoniae-o-antigen-genetics-structural-diversity-and-nomenclature/>`_.
+
 The *Klebsiella* O locus database (``Klebsiella_o_locus_primary_reference.gbk``) contains annotated sequences for 13
 distinct *Klebsiella* O loci.
 
@@ -317,9 +320,6 @@ Database                                                      Keywords
 *Klebsiella pneumoniae* K locus primary reference database    - kpsc_k
                                                               - kp_k
                                                               - k_k
-*Klebsiella pneumoniae* K locus variant reference database    - kpsc_k_variant
-                                                              - kp_k_variant
-                                                              - k_k_variant
 *Klebsiella pneumoniae* O locus primary reference database    - kpsc_o
                                                               - kp_o
                                                               - k_o
