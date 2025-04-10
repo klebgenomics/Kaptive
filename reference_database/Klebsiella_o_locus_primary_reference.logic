@@ -1,6 +1,6 @@
 loci	genes	phenotype
 OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC	O2β
-OL2α.1;OL2α.2;OL2α.3	orf8	O2γ
+OL2α.1;OL2α.2;OL2α.3	orf8	O2αγ
 OL2α.1;OL2α.2;OL2α.3	wbbY	O1α,2α
 OL2α.1;OL2α.2;OL2α.3	wbbY;wbbZ	O1αβ,2α
 OL2α.1;OL2α.2;OL2α.3	orf8;wbbY;wbbZ	O1αβ,2γ
