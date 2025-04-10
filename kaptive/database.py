@@ -13,10 +13,10 @@ If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import os
+from itertools import chain
 from os import PathLike, path, listdir
 from functools import cached_property
 from typing import Generator, TextIO
-from itertools import chain
 import re
 from warnings import catch_warnings
 from io import TextIOBase
@@ -56,19 +56,16 @@ class DatabaseError(Exception):
 
 class Database:
     def __init__(self, name: str, loci: dict[str, Locus] = None, genes: dict[str, Gene] = None,
-                 extra_loci: dict[str, Locus] = None, extra_genes: dict[str, Gene] = None,
-                 gene_threshold: float = None):
+                 extra_genes: dict[str, Gene] = None, gene_threshold: float = None):
         self.name = name
         self.loci = loci or {}
-        self.extra_loci = extra_loci or {}
         self.genes = genes or {}
         self.extra_genes = extra_genes or {}
         self.gene_threshold = gene_threshold or _GENE_THRESHOLDS.get(self.name, 0)
         self._expected_gene_counts = None
 
     def __repr__(self):
-        return (f"{self.name} ({len(self.loci)} Loci) ({len(self.genes)} Genes) ({len(self.extra_loci)} Extra Loci) "
-                f"({len(self.extra_genes)} Extra Genes)")
+        return f"{self.name} ({len(self.loci)} Loci) ({len(self.genes)} Genes) ({len(self.extra_genes)} Extra Genes)"
 
     def __str__(self) -> str:
         return self.name
@@ -77,7 +74,7 @@ class Database:
         return len(self.loci)
 
     def __iter__(self):
-        return chain(self.loci.values(), self.extra_loci.values())
+        return iter(self.loci.values())
 
     def __getitem__(self, item: str | int) -> Locus | Gene:
         if isinstance(item, int):
@@ -85,7 +82,7 @@ class Database:
                 raise DatabaseError(f'Index {item} out of range for database {self.name}')
             return list(self.loci.values())[item]
         if not (
-        result := self.loci.get(item, self.extra_loci.get(item, self.genes.get(item, self.extra_genes.get(item))))):
+        result := self.loci.get(item, self.genes.get(item, self.extra_genes.get(item)))):
             raise DatabaseError(f'Could not find {item} in database {self.name}')
         return result
 
@@ -100,24 +97,30 @@ class Database:
         return self._expected_gene_counts
 
     def format(self, format_spec):
-        # f"##gff-version 3\n{''.join([i.as_gff_string() for i in self.loci.values()])}"
-        if format_spec in {'fna', 'ffn', 'faa'}:
-            return ''.join([locus.format(format_spec) for locus in self])
-        raise ValueError(f'Invalid format specifier: {format_spec}')
+        if format_spec in {'fna'}:
+            return ''.join([locus.format(format_spec) for locus in self.loci.values()])
+        elif format_spec in {'ffn', 'faa'}:
+            return ''.join([gene.format(format_spec) for gene in chain(self.genes.values(), self.extra_genes.values())])
+        else:
+            raise ValueError(f'Invalid format specifier: {format_spec}')
 
     def add_locus(self, locus: Locus):
         """
         Adds a locus and its genes to the database. Checks that the locus and genes don't already exist in the database.
         """
-        locus_dict, gene_dict = (self.loci, self.genes) if not locus.extra() else (self.extra_loci, self.extra_genes)
-        if locus.name in locus_dict:
-            raise DatabaseError(f'Locus {locus.name} already exists in database {self.name}.')
-        locus_dict[locus.name] = locus
-        locus.db = self
-        for gene in locus:
-            if gene.name in gene_dict:
-                raise DatabaseError(f'Gene {gene} already exists in database {self.name}.')
-            gene_dict[gene.name] = gene
+        if not locus.name.startswith('Extra_genes'):
+            if locus.name in self.loci:
+                raise DatabaseError(f'Locus {locus.name} already exists in database {self.name}.')
+            self.loci[locus.name] = locus
+            for gene in locus:
+                if gene.name in self.genes:
+                    raise DatabaseError(f'Gene {gene} already exists in database {self.name}.')
+                self.genes[gene.name] = gene
+        else:
+            for gene in locus:
+                if gene.name in self.extra_genes:
+                    raise DatabaseError(f'Gene {gene} already exists in database {self.name}.')
+                self.extra_genes[gene.name] = gene
 
     def add_phenotype(self, loci: list[str], genes: dict[str, str], phenotype: str):
         extra_genes = {(g.name, 'present') for g in self.extra_genes.values() if g.gene_name in genes}
@@ -162,16 +165,29 @@ class Locus:
         n = 1
         for feature in record.features:  # type: SeqFeature
             if feature.type == 'CDS':
-                gene = Gene.from_feature(record, feature, position_in_locus=n, locus=self)
-                if gene.name in self.genes:
-                    raise LocusError(f'Gene {gene} already exists in locus {self}')
-                if gene.locus and gene.locus != self:
-                    raise LocusError(f'Gene {gene} is from a different locus than locus {self}')
+
+                name = f"{locus_name}_{str(n).zfill(2)}" + (
+                    f"_{gene_name}" if (gene_name := feature.qualifiers.get('gene', [''])[0]) else '')
+
+                gene = Gene(
+                    name=name, gene_name=gene_name, dna_seq=feature.extract(record.seq), start=feature.location.start,
+                    end=feature.location.end, strand='+' if feature.location.strand == 1 else '-',
+                    product=feature.qualifiers.get('product', [''])[0]
+                )
+
+                if not len(gene.dna_seq) % 3 == 0:  # Check the gene is a multiple of 3 (complete CDS)
+                    # TODO: this is quite strict, but enforces the inclusion of complete CDS in Kaptive databases
+                    raise GeneError(f'DNA sequence of {name} is not a multiple of 3')
+
+                if name in self.genes:
+                    raise LocusError(f'Gene {name} already exists in locus {self}')
+
                 if extract_translations:  # Force translation of the gene
                     gene.extract_translation()
-                self.genes[gene.name] = gene
+
+                self.genes[name] = gene
                 n += 1
-        self.type_label = type_name if not self.extra() else None  # Extra genes don't have a type
+        self.type_label = type_name if not self.name.startswith('Extra_genes') else None  # Extra genes don't have a type
         return self
 
     def __hash__(self):  # TODO: Check if this is used at all
@@ -190,9 +206,6 @@ class Locus:
 
     def __iter__(self):
         return iter(self.genes.values())
-
-    def extra(self) -> bool:
-        return self.name.startswith('Extra_genes')
 
     def add_phenotype(self, genes: dict[str, str] | None, extra_genes: set[tuple[str, str]] | None, phenotype: str,
                       strict: bool = False):
@@ -228,19 +241,11 @@ class Locus:
                     with open(path.join(f, f'{self.name.replace("/", "_")}.{fmt}'), 'wt') as handle:
                         handle.write(self.format(fmt))
 
-    # def as_gff_record(self) -> GffRecord:
-    #     return GffRecord(seqid=self.name, source='Kaptive', type_='region', start=1, end=len(self), score=0,
-    #                      strand='+', phase=0, attributes={"ID": f"locus:{self.name}", "Name": self.name})
-    #
-    # def as_gff_string(self) -> str:
-    #     return str(self.as_gff_record()) + ''.join([i.as_gff_string() for i in self.genes.values()])
-
 
 class GeneError(Exception):
     pass
 
 
-# TODO: consider renaming this to CDS
 class Gene:
     """
     This class prepares and stores a CDS feature from a Kaptive reference genbank file.
@@ -248,33 +253,16 @@ class Gene:
     extract it from the record.
     """
 
-    def __init__(self, name: str = None, locus: Locus = None, position_in_locus: int | None = 0,
-                 start: int | None = 0, end: int | None = 0, strand: str = None, protein_seq: Seq = None,
-                 dna_seq: Seq = None, gene_name: str = None, product: str = None):
+    def __init__(self, name: str, start: int = 0, end: int = 0, strand: str = "+",
+                 protein_seq: Seq = None, dna_seq: Seq = None, gene_name: str = None, product: str = None):
         self.name = name or ''
-        self.locus = locus  # Keep reference to parent class for now
-        self.position_in_locus = position_in_locus
         self.start = start  # 0-based
         self.end = end
         self.strand = strand  # Either + or -
         self.gene_name = gene_name or ''
-        self.name = name or ''
         self.product = product or ''  # Can also be description
         self.dna_seq = dna_seq or Seq('')
         self.protein_seq = protein_seq or Seq('')
-
-    @classmethod
-    def from_feature(cls, record: SeqRecord, feature: SeqFeature, **kwargs):
-        self = cls(
-            start=feature.location.start, end=feature.location.end, strand='+' if feature.location.strand == 1 else '-',
-            dna_seq=feature.extract(record.seq), product=feature.qualifiers.get('product', [''])[0], **kwargs)
-        self.name = f"{self.locus.name}_{str(self.position_in_locus).zfill(2)}" + (
-            f"_{x}" if (x := feature.qualifiers.get('gene', [''])[0]) else '')
-        self.gene_name = x
-        if not len(self.dna_seq) % 3 == 0:  # Check the gene is a multiple of 3 (complete CDS)
-            # TODO: this is quite strict, but enforces the inclusion of complete CDS in Kaptive databases
-            return quit_with_error(f'DNA sequence of {self} is not a multiple of 3')
-        return self
 
     def __hash__(self):
         return hash(self.name)  # The name of the gene is unique and immutable
@@ -299,9 +287,6 @@ class Gene:
             return f'>{self.name}\n{self.protein_seq}\n'
         raise ValueError(f'Invalid format specifier: {format_spec}')
 
-    def extra(self) -> bool:
-        return self.name.startswith('Extra_genes')
-
     def extract_translation(self, **kwargs):
         """
         Extracts the protein sequence from the DNA sequence of the gene. Implemented as a method so unnecessary
@@ -321,69 +306,6 @@ class Gene:
                 #     warning(f"{i.message}: {self.__repr__()}")
             if len(self.protein_seq) == 0:
                 warning(f'No protein sequence for reference {self}')
-
-    # def as_gff_record(self, ensembl_format: bool = False) -> list[GffRecord]:
-    #     """
-    #     Returns the gene, transcript and CDS GFF Records compatible with bcftools csq.
-    #     See format specification here: https://samtools.github.io/bcftools/bcftools.html#csq
-    #     """
-    #     if ensembl_format:  # for bcftools csq
-    #         return [
-    #             GffRecord(
-    #                 seqid=self.locus.name, source='Kaptive', type_='gene', start=self.start + 1,
-    #                 end=self.end, score=0, strand=self.strand, phase=0,
-    #                 attributes={"ID": f"gene:{self.name}", "biotype": "protein_coding", "Name": self.gene_name,
-    #                             "description": self.product}),
-    #             GffRecord(
-    #                 seqid=self.locus.name, source='Kaptive', type_='transcript', start=self.start + 1,
-    #                 end=self.end, score=0, strand=self.strand, phase=0,
-    #                 attributes={"ID": f"transcript:{self.name}.t1", "Parent": f"gene:{self.name}",
-    #                             "biotype": "protein_coding"}),
-    #             GffRecord(seqid=self.locus.name, source='Kaptive', type_='CDS', start=self.start + 1,
-    #                       end=self.end, score=0, strand=self.strand, phase=0,
-    #                       attributes={"ID": f"CDS:{self.name}.cds1", "Parent": f"transcript:{self.name}.t1"})
-    #         ]
-    #     else:  # Usual NCBI format
-    #         return [
-    #             GffRecord(
-    #                 seqid=self.locus.name, source='Kaptive', type_='gene', start=self.start + 1,
-    #                 end=self.end, score=0, strand=self.strand, phase=0,
-    #                 attributes={"ID": self.name, "Name": self.gene_name, "gene": self.gene_name, "locus_tag": self.name}
-    #             ),
-    #             GffRecord(
-    #                 seqid=self.locus.name, source='Kaptive', type_='CDS', start=self.start + 1,
-    #                 end=self.end, score=0, strand=self.strand, phase=0,
-    #                 attributes={"ID": self.name, "Name": self.gene_name, "gene": self.gene_name, "Parent": self.name,
-    #                             "product": self.product, "transl_table": '11', "locus_tag": self.name}),
-    #         ]
-    #
-    # def as_gff_string(self) -> str:
-    #     return ''.join([str(i) for i in self.as_gff_record()])
-
-
-# class GffRecordError(Exception):
-#     pass
-#
-#
-# class GffRecord:
-#     def __init__(self, seqid: str= None, source: str= None,
-#                  type_: str= None, start: int= None, end: int= None, score: float | None = 0,
-#                  strand: str= None, phase: float | None = 0, attributes: dict= None):
-#         # https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
-#
-#         self.seqid = seqid or ''
-#         self.source = source or ''
-#         self.type = type_ or ''
-#         self.start = start or 0
-#         self.end = end or 0
-#         self.score = score or 0
-#         self.strand = strand or ''
-#         self.phase = phase or 0
-#         self.attributes = attributes or {}
-#
-#     def __str__(self):
-#         return f"{self.seqid}\t{self.source}\t{self.type}\t{self.start}\t{self.end}\t{self.score}\t{self.strand}\t" \
-#                f"{self.phase}\t{';'.join(f'{key}={value}' for key, value in self.attributes.items() if value)}\n"
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
@@ -467,7 +389,7 @@ def parse_database(db: str | PathLike, locus_filter: re.Pattern = None, load_loc
             locus_name, type_name = name_from_record(record, **kwargs)
             if not locus_name:
                 quit_with_error(f'Could not parse locus name from {record.id}')
-            if type_name == "unknown" or (not type_name and not locus_name.startswith('Extra')):
+            if type_name == "unknown" or (not type_name and not locus_name.startswith('Extra_genes')):
                 type_name = f'unknown ({locus_name})'  # Add the locus name to the type name if it is unknown
             if locus_filter and not locus_filter.search(locus_name):
                 continue
@@ -484,6 +406,8 @@ def load_database(argument: str | PathLike, gene_threshold: float = None, **kwar
     if not db.loci:  # Check that loci were properly loaded
         quit_with_error(f'No loci found in database {db.name}')
     if path.isfile(logic_file := f'{path.splitext(db_path)[0]}.logic'):  # Load phenotype logic
+        logic = list(parse_logic(logic_file))
+
         [db.add_phenotype(*i) for i in parse_logic(logic_file)]
     for n, locus in enumerate(db.loci.values()):
         locus.index = n

@@ -1,8 +1,13 @@
 loci	genes	phenotype
-O1/O2v1;O1/O2v2;O1/O2v3	wbbY	O1a
-O1/O2v1;O1/O2v2;O1/O2v3	wbbY;wbbZ	O1ab
-O8	wbbY	O8
-O1/O2v1;O1/O2v2;O1/O2v3;O8	wbmV;wbmW	O2ac
-O1/O2v1;O1/O2v2;O1/O2v3;O8	gmlA;gmlB;gmlD	O2aeh
-O1/O2v1;O1/O2v2;O1/O2v3;O8	wbbY;wbmV;wbmW	O1a (O2ac)
-O1/O2v1;O1/O2v2;O1/O2v3;O8	wbbY;wbbZ;wbmV;wbmW	O1ab (O2ac)
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC	O2β
+OL2α.1;OL2α.2;OL2α.3	orf8	O2αγ
+OL2α.1;OL2α.2;OL2α.3	wbbY	O1α,2α
+OL2α.1;OL2α.2;OL2α.3	wbbY;wbbZ	O1αβ,2α
+OL2α.1;OL2α.2;OL2α.3	orf8;wbbY;wbbZ	O1αβ,2γ
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbbY	O1α,2β
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbbY;wbbZ	O1αβ,2β
+OL2α.1;OL2α.2;OL2α.3	wbmV;wbmW	O11α,2α
+OL2α.1;OL2α.2;OL2α.3	wbmV;wbmW;wbmX	O11αβ,2α
+OL2α.1;OL2α.2;OL2α.3	orf8;wbmV;wbmW;wbmX	O11αβ,2γ
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbmV;wbmW	O11α,2β
+OL2α.1;OL2α.2;OL2α.3	gmlA;gmlB;gmlC;wbmV;wbmW;wbmX	O11αβ,2β

@@ -178,19 +178,25 @@ class TypingResult:
         if format_spec == 'tsv':
             return '\t'.join(
                 [
-                    self.sample_name, self.best_match.name, self.phenotype, self.confidence, self.problems,
-                    f"{self.percent_identity:.2f}%", f"{self.percent_coverage:.2f}%",
+                    self.sample_name,
+                    self.best_match.name,
+                    self.phenotype,
+                    self.confidence,
+                    self.problems,
+                    f"{self.percent_identity:.2f}%",
+                    f"{self.percent_coverage:.2f}%",
                     f"{self.__len__() - len(self.best_match)} bp" if len(self.pieces) == 1 else 'n/a',
-                    f"{(x := len({i.gene.name for i in self.expected_genes_inside_locus}))} / {(y := len(self.best_match.genes))} ({100 * x / y:.2f}%)",
-                    ';'.join(str(i) for i in x) if (x := self.expected_genes_inside_locus) else '',
-                    ';'.join(self.missing_genes), f"{len(x := self.unexpected_genes_inside_locus)}",
-                    ';'.join(str(i) for i in x) if x else '',
-                    f"{len(x := self.expected_genes_outside_locus)} / {(y := len(self.best_match.genes))} ({100 * len(x) / y:.2f}%)",
-                    ';'.join(str(i) for i in x) if x else '',
-                    f"{len(x := self.unexpected_genes_outside_locus)}",
-                    ';'.join(str(i) for i in x) if x else '',
-                    ';'.join(str(i) for i in filter(lambda z: z.phenotype == "truncated", self)),
-                    ';'.join([str(i) for i in self.extra_genes])
+                    f"{(n_inside := len({i.gene.name for i in self.expected_genes_inside_locus}))} / {(n_expected := len(self.best_match.genes))} ({100 * n_inside / n_expected:.2f}%)",
+                    ';'.join(map(str, self.expected_genes_inside_locus)),
+                    ';'.join(self.missing_genes),
+                    f"{len(self.unexpected_genes_inside_locus)}",
+                    ';'.join(map(str, self.unexpected_genes_inside_locus)),
+                    f"{(n_outside := len({i.gene.name for i in self.expected_genes_outside_locus}))} / {n_expected} ({100 * n_outside / n_expected:.2f}%)",
+                    ';'.join(map(str, self.expected_genes_outside_locus)),
+                    f"{len(self.unexpected_genes_outside_locus)}",
+                    ';'.join(map(str, self.unexpected_genes_outside_locus)),
+                    ';'.join(map(str, filter(lambda z: z.phenotype == "truncated", self))),
+                    ';'.join(map(str, self.extra_genes))
                 ]
             ) + "\n"
         if format_spec == 'fna':  # Return the nucleotide sequence of the locus
