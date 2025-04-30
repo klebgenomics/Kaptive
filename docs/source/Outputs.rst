@@ -15,8 +15,8 @@ Column name                              Description
 Assembly                                 The name of the input assembly, taken from the assembly filename.
 Best match locus                         The locus type which most closely matches the assembly.
 Best match type                          The predicted serotype/phenotype of the assembly.
-Match confidence                         A categorical measure of locus call quality (see confidence score).
-Problems                                 Characters indicating issues with the locus match (see problems).
+Match confidence                         A categorical measure of locus call quality (see `confidence score <Interpreting-the-results.html#confidence-score>`_).
+Problems                                 Characters indicating issues with the locus match (see `problems <Interpreting-the-results.html#problems>`_).
 Identity                                 Weighted percent identity of the best matching locus to the assembly.
 Coverage                                 Weighted percent coverage of the best matching locus in the assembly.
 Length discrepancy                       If the locus was found in a single piece, this is the difference between the locus length and the assembly length.
