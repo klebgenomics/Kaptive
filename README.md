@@ -12,6 +12,5 @@ A step-by-step tutorial for the most recent version is available [here](https://
 
 If you use Kaptive in your research, please cite:
 
-Stanton TD, Hetland MAK, Löhr IH, Holt KE, Wyres KL. Fast and Accurate in silico Antigen Typing with Kaptive 3 
-[Internet]. bioRxiv; 2025 [cited 2025 Feb 27]. p. 2025.02.05.636613. 
-Available from: https://www.biorxiv.org/content/10.1101/2025.02.05.636613v1
+Stanton TD, Hetland MAK, Löhr IH, Holt KE, Wyres KL. Fast and Accurate in silico Antigen Typing with Kaptive 3. 2005 _Microbial Genomics_ 11(6):001428.
+Available from: [https://doi.org/10.1099/mgen.0.001428](https://doi.org/10.1099/mgen.0.001428)
