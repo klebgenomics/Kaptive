@@ -210,6 +210,9 @@ Database versions:
   content (KL167-KL170), described in `Gorrie, C. et al. Nature Communications 2022. <https://www.nature.com/articles/s41467-022-30717-6>`_
 * Kaptive v2.0 and above include 16 novel primary *Klebsiella* K locus references defined on the basis of gene content
   (KL171-KL186) and described in `Lam, M.M.C et al. Microbial Genomics 2022. <https://doi.org/10.1099/mgen.0.000800>`_
+* Kaptive v3.11 and above introduced a re-annotation of *Klebsiella* K locus reference genes curated by Dr. Tom Stanton and
+  A/Prof Johanna Kenyon. All K-locus genes where throughly screened against curated annotations with a variety of homology detection
+  methods to provide a more accurate functional description.
 
 Changes to the *Klebsiella* K locus primary reference database:
 
