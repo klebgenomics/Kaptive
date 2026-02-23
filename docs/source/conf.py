@@ -9,8 +9,8 @@
 project = 'Kaptive'
 copyright = '2025, Tom Stanton, Ryan Wick, Kathryn Holt, Kelly Wyres'
 author = 'Tom Stanton'
-release = '3.1.0'
-version = '3.1.0'
+release = '3.2.0'
+version = '3.2.0'
 
 
 # -- General configuration ---------------------------------------------------
