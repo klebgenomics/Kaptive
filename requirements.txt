@@ -1,6 +1,0 @@
-python>=3.9
-setuptools
-numpy
-matplotlib
-biopython>=1.83
-dna_features_viewer
