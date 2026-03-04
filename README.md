@@ -1,4 +1,4 @@
-<p align="center"><img src="extras/kaptive_logo.png" alt="Kaptive" width="400"></p>
+<p align="center"><img src="docs/source/_static/logo.png" alt="Kaptive" width="400"></p>
 
 [![DOI:10.1101/22025.02.05.636613](http://img.shields.io/badge/DOI-10.1101/2025.02.05.636613-B31B1B.svg)](https://doi.org/10.1101/2025.02.05.636613)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14000416.svg)](https://doi.org/10.5281/zenodo.14000416)
