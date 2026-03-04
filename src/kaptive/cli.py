@@ -14,7 +14,6 @@ from .utils import get_logo, check_out, check_cpus, check_programs
 # Constants -----------------------------------------------------------------------------------------------------------
 _DIST = 'kaptive'
 _URL = f'https://{_DIST}.readthedocs.io/en/latest/'
-print(_DIST)
 __version__ = version(_DIST)
 
 
