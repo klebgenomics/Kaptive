@@ -12,14 +12,15 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 from __future__ import annotations
 
-import os
 from itertools import chain
 from os import PathLike, path, listdir
 from functools import cached_property
+from pathlib import Path
 from typing import Generator, TextIO
 import re
 from warnings import catch_warnings
 from io import TextIOBase
+from importlib.resources import files as resource_files
 
 import numpy as np
 
@@ -46,7 +47,9 @@ _GENE_THRESHOLDS = {
     'Acinetobacter_baumannii_k_locus_primary_reference': 85,
     'Acinetobacter_baumannii_OC_locus_primary_reference': 85
 }
-_DB_PATH = path.join(path.dirname(path.dirname(path.abspath(__file__))), "reference_database")
+
+_DIST = 'kaptive'
+_DB_PATH: Path = resource_files(_DIST) / 'data'
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
@@ -342,7 +345,7 @@ def name_from_record(record: SeqRecord, locus_regex: re.Pattern | None = _LOCUS_
     return locus_name.pop() if len(locus_name) == 1 else None, type_name.pop() if len(type_name) == 1 else None
 
 
-def parse_logic(logic_file: str | os.PathLike, verbose: bool = False
+def parse_logic(logic_file: str | PathLike, verbose: bool = False
                 ) -> Generator[tuple[list[str], dict[str, str], str], None, None]:
     log(f'Parsing logic {logic_file}', verbose=verbose)
     with open(logic_file, 'rt') as f:

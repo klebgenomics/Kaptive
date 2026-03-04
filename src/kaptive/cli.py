@@ -1,24 +1,10 @@
-#!/usr/bin/env python
-"""
-This is the main entry point for the kaptive package. It is called when the package is run as a script via entry_points.
-
-Copyright 2023 Tom Stanton (tomdstanton@gmail.com)
-https://github.com/klebgenomics/Kaptive
-
-This file is part of Kaptive. Kaptive is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version. Kaptive is distributed
-in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License along with Kaptive.
-If not, see <https://www.gnu.org/licenses/>.
-"""
 from __future__ import annotations
 
 import sys
 import re
 import argparse
 from io import TextIOWrapper
+from importlib.metadata import version
 
 from Bio import __version__ as biopython_version
 
@@ -26,14 +12,17 @@ from .log import bold, quit_with_error, log
 from .utils import get_logo, check_out, check_cpus, check_programs
 
 # Constants -----------------------------------------------------------------------------------------------------------
-_URL = 'https://kaptive.readthedocs.io/en/latest/'
+_DIST = 'kaptive'
+_URL = f'https://{_DIST}.readthedocs.io/en/latest/'
+print(_DIST)
+__version__ = version(_DIST)
 
 
 # Functions -----------------------------------------------------------------------------------------------------------
 def parse_args(a) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=get_logo('In silico serotyping'), usage="%(prog)s <command>", add_help=False,
-        prog="kaptive", formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog=_DIST, formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f'For more help, visit: {bold(_URL)}')
 
     subparsers = parser.add_subparsers(title=bold('Command'), dest='subparser_name', metavar="")
@@ -46,10 +35,13 @@ def parse_args(a) -> argparse.Namespace:
     if len(a) == 0:  # No arguments, print help message
         parser.print_help(sys.stderr)
         quit_with_error(f'Please specify a command; choose from {{assembly,extract,convert}}')
+    if any(x in a for x in {'-v', '--version'}):  # Version message
+        print(__version__)
+        sys.exit(0)
     if subparser := subparsers.choices.get(a[0], None):  # Check if the first argument is a subparser
         if len(a) == 1:  # Subparser help message
             subparser.print_help(sys.stderr)
-            quit_with_error(f'Insufficient arguments for kaptive {a[0]}')
+            quit_with_error(f'Insufficient arguments for {_DIST} {a[0]}')
         if any(x in a[1:] for x in {'-h', '--help'}):  # Subparser help message
             subparser.print_help(sys.stderr)
             sys.exit(0)
@@ -66,9 +58,9 @@ def assembly_subparser(subparsers):
     assembly_parser = subparsers.add_parser(
         'assembly', description=get_logo('In silico serotyping of assemblies'),
         epilog=f'For more help, visit: {bold(_URL)}', add_help=False, formatter_class=argparse.RawTextHelpFormatter,
-        help='In silico serotyping of assemblies', usage="kaptive assembly <db> <fasta> [<fasta> ...] [options]")
+        help='In silico serotyping of assemblies', usage=f"{_DIST} assembly <db> <fasta> [<fasta> ...] [options]")
     opts = assembly_parser.add_argument_group(bold('Inputs'), "")
-    opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
+    opts.add_argument('db', metavar='db path/keyword', help='Database path or keyword')
     opts.add_argument('input', nargs='+', metavar='fasta', help='Assemblies in fasta(.gz|.xz|.bz2) format')
     opts = assembly_parser.add_argument_group(bold('Output options'), "\nNote, text outputs accept '-' for stdout")
     # Note these are different to the convert output options as TSV is the main output and fna is the main fasta output
@@ -77,7 +69,7 @@ def assembly_subparser(subparsers):
     opts.add_argument('-f', '--fasta', metavar='', nargs='?', default=None, const='.', type=check_out,
                       help='Turn on fasta output\n'
                            'Accepts a single file or a directory (default: cwd)')
-    opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const='kaptive_results.json',
+    opts.add_argument('-j', '--json', metavar='', nargs='?', default=None, const=f'{_DIST}_results.json',
                       type=argparse.FileType('at'),
                       help='Turn on JSON lines output\n'
                            'Optionally choose file (can be existing) (default: %(const)s)')
@@ -128,12 +120,13 @@ def assembly_subparser(subparsers):
 
 def convert_subparser(subparsers):
     convert_parser = subparsers.add_parser(
-        'convert', description=get_logo('Convert Kaptive results into different formats'),
+        'convert', description=get_logo(f'Convert {_DIST} results into different formats'),
         epilog=f'For more help, visit: {bold(_URL)}', add_help=False, formatter_class=argparse.RawTextHelpFormatter,
-        help='Convert Kaptive results into different formats', usage="kaptive convert <db> <json> [formats] [options]")
+        help=f'Convert {_DIST} results into different formats',
+        usage=f"{_DIST} convert <db> <json> [formats] [options]")
     opts = convert_parser.add_argument_group(bold('Inputs'), "")
-    opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
-    opts.add_argument('input', help='Kaptive JSON lines file or - for stdin', type=argparse.FileType('rt'),
+    opts.add_argument('db', metavar='db path/keyword', help='Database path or keyword')
+    opts.add_argument('inputf', help=f'{_DIST} JSON lines file or - for stdin', type=argparse.FileType('rt'),
                       metavar='json')
     opts = convert_parser.add_argument_group(bold('Formats'), "\nNote, text outputs accept '-' for stdout")
     opts.add_argument('-t', '--tsv', metavar='', nargs='?', default=None, const='-', type=check_out,
@@ -160,11 +153,11 @@ def convert_subparser(subparsers):
 
 def extract_subparser(subparsers):
     extract_parser = subparsers.add_parser(
-        'extract', description=get_logo('Extract entries from a Kaptive database'),
+        'extract', description=get_logo(f'Extract entries from a {_DIST} database'),
         epilog=f'For more help, visit: {bold(_URL)}', add_help=False, formatter_class=argparse.RawTextHelpFormatter,
-        help='Extract entries from a Kaptive database', usage="kaptive extract <db> [formats] [options]")
+        help=f'Extract entries from a {_DIST} database', usage=f"{_DIST} extract <db> [formats] [options]")
     opts = extract_parser.add_argument_group(bold('Inputs'), "\nNote, combine with --filter to select loci")
-    opts.add_argument('db', metavar='db path/keyword', help='Kaptive database path or keyword')
+    opts.add_argument('db', metavar='db path/keyword', help='Database path or keyword')
     opts = extract_parser.add_argument_group(bold('Formats'), "\nNote, text outputs accept '-' for stdout")
     fmt_opts(opts)
     opts = extract_parser.add_argument_group(bold('Database options'), "")
@@ -191,7 +184,7 @@ def fmt_opts(opts: argparse.ArgumentParser):
 def other_fmt_opts(opts: argparse.ArgumentParser):
     """Format opts shared by convert and assembly"""
     opts.add_argument('-p', '--plot', metavar='', nargs='?', default=None, const='.', type=check_out,
-                      help='Plot results to "./{assembly}_kaptive_results.{fmt}"\n'
+                      help=f'Plot results to "./[assembly]_{_DIST}_results.[fmt]"\n'
                            'Optionally choose a directory (default: cwd)')
     opts.add_argument('--plot-fmt', default='png', metavar='png/svg', choices={'png', 'svg'},
                       help='Format for locus plots (default: %(default)s)')
@@ -207,7 +200,7 @@ def db_opts(opts: argparse.ArgumentParser):
 
 def other_opts(opts: argparse.ArgumentParser):
     opts.add_argument('-V', '--verbose', action='store_true', help='Print debug messages to stderr')
-    opts.add_argument('-v', '--version', help='Show version number and exit', metavar='', action='version')
+    opts.add_argument('-v', '--version', help='Show version number and exit', action='version')
     opts.add_argument('-h', '--help', help='Show this help message and exit', metavar='')
 
 
@@ -224,8 +217,8 @@ def cli():
     # Assembly mode ----------------------------------------------------------------------------------------------------
     if args.subparser_name == 'assembly':
         check_programs(['minimap2'], verbose=args.verbose)
-        from src.kaptive.assembly import typing_pipeline, write_headers
-        from src.kaptive.database import load_database
+        from .assembly import typing_pipeline, write_headers
+        from .database import load_database
 
         args.db = load_database(
             args.db, args.gene_threshold, locus_filter=args.filter, load_locus_seqs=True, verbose=args.verbose,
@@ -241,15 +234,15 @@ def cli():
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
-        from src.kaptive.database import parse_database
+        from .database import parse_database
         for locus in parse_database(args.db, args.filter, args.fna, args.faa, args.verbose,
                                     locus_regex=args.locus_regex, type_regex=args.type_regex):
             locus.write(args.fna, args.ffn, args.faa)
 
     # Convert mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'convert':
-        from src.kaptive.database import load_database
-        from src.kaptive.assembly import parse_result, write_headers
+        from .database import load_database
+        from .assembly import parse_result, write_headers
 
         args.db = load_database(  # Load database in memory, we don't need to load the full sequences (False)
             args.db, verbose=args.verbose, load_locus_seqs=False, extract_translations=False,
