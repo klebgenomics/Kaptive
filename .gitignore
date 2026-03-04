@@ -9,11 +9,6 @@
 __pycache__/
 *.py[cod]
 
-# BLAST databases
-*.nhr
-*.nin
-*.nsq
-
 # Distribution and packaging
 build/
 develop-eggs/
@@ -31,14 +26,3 @@ setuptools*.zip
 
 # PyCharm
 .idea/
-
-# Test Folder
-test/
-tests/
-
-# Experimental modules
-development/
-
-# Script Folder
-scripts/
-.Rproj.user

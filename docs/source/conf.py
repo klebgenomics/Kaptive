@@ -27,5 +27,5 @@ html_theme_options = {
 
 }
 html_static_path = ['_static']
-html_logo = 'https://github.com/klebgenomics/Kaptive/blob/master/extras/kaptive_logo.png?raw=true'
-html_favicon = 'https://github.com/klebgenomics/Kaptive-Web/blob/master/static/images/favicon.png?raw=true'
+html_logo = '_static/logo.png'
+html_favicon = '_static/favicon.png'

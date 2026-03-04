@@ -1,16 +1,12 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "kaptive"
 authors = [
-    {name="Tom Stanton", email="tomdstanton@gmail.com" },
+    {name="Tom Stanton", email="tomdstanton@gmail.com"},
 ]
 description = "In silico serotyping"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.9"
-dependencies = ["biopython", "numpy", "matplotlib", "dna_features_viewer"]
+dependencies = ["biopython", "numpy"]
 keywords = ["bioinformatics", "serotyping", "microbiology"]
 license = {file = "LICENSE"}
 classifiers = [
@@ -23,19 +19,39 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 
 ]
 dynamic = ["version"]
 
 [project.scripts]
-kaptive = "kaptive.__main__:main"
+kaptive = "kaptive.cli:cli"
 
-[tool.setuptools.packages.find]
-include = ["kaptive"]
-exclude = ["test", 'development']
+[project.urls]
+Homepage = "https://kaptive.readthedocs.io"
+Repository = "https://github.com/klebgenomics/Kaptive"
+Documentation = "https://kaptive.readthedocs.io"
 
-[tool.setuptools.package-data]
-kaptive = ['../reference_database/*']
+[dependency-groups]
+test = ["pytest"]
+docs = ["sphinx", "sphinx-book-theme"]
+dev = [{include-group = "test"}, {include-group = "docs"}]
 
-[tool.setuptools.dynamic]
-version = {attr = "kaptive.version.__version__"}
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-vcs"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/kaptive/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kaptive"]
+include = ["src/kaptive/data/*", ]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
+testpaths = ["tests", "src"]
