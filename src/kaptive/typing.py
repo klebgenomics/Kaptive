@@ -1,15 +1,3 @@
-"""
-Copyright 2023 Tom Stanton (tomdstanton@gmail.com)
-https://github.com/klebgenomics/Kaptive
-
-This file is part of Kaptive. Kaptive is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version. Kaptive is distributed
-in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License along with Kaptive.
-If not, see <https://www.gnu.org/licenses/>.
-"""
 from __future__ import annotations
 
 from itertools import chain
@@ -220,8 +208,7 @@ class TypingResult:
               fna: str | PathLike | TextIO = None,
               ffn: str | PathLike | TextIO = None,
               faa: str | PathLike | TextIO = None,
-              plot: str | PathLike = None,
-              plot_fmt: str = 'png'):
+              ):
         """Write the typing result to files or file handles."""
         [f.write(self.format(fmt)) for f, fmt in [(tsv, 'tsv'), (json, 'json')] if isinstance(f, TextIOBase)]
         for f, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')]:
@@ -231,11 +218,6 @@ class TypingResult:
                 elif isinstance(f, PathLike) or isinstance(f, str):
                     with open(path.join(f, f'{self.sample_name}_kaptive_results.{fmt}'), 'wt') as handle:
                         handle.write(self.format(fmt))
-        if plot:
-            ax = self.format(plot_fmt).plot(figure_width=18)[0]  # type: 'matplotlib.axes.Axes'
-            ax.set_title(f"{self.sample_name} {self.best_match} ({self.phenotype}) - {self.confidence}")
-            ax.figure.savefig(path.join(plot, f'{self.sample_name}_kaptive_results.{plot_fmt}'), bbox_inches='tight')
-            ax.figure.clear()  # TODO: Check if this is necessary
 
 
 class LocusPieceError(Exception):

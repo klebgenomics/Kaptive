@@ -1,0 +1,79 @@
+site_name: Kaptive Documentation
+repo_url: https://github.com/klebgenomics/Kaptive
+site_url: https://klebgenomics.github.io/Kaptive
+site_description: The tool for _in silico_ serotyping
+site_author: Tom Stanton
+edit_uri: edit/main/docs/
+repo_name: klebgenomics/Kaptive
+copyright: 2026, Tom Stanton, Kathryn Holt and Kelly Wyres
+watch: [mkdocs.yml, README.md, src]
+
+nav:
+  - Home: index.md
+  - Installation: Installation.md
+  - Usage: Usage.md
+  - Method: Method.md
+  - Outputs: Outputs.md
+  - Interpreting the Results: Interpreting-the-results.md
+  - Databases: Databases.md
+  - Legacy: Legacy.md
+  - FAQs: FAQs.md
+
+plugins:
+  - search
+  - termynal:
+      prompt_literal_start:
+        - "$"
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: "google"
+  - api-autonav:
+      modules: ['src/kaptive']
+      nav_section_title: "API Reference"
+  - include-markdown
+  - offline
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    - navigation.tabs
+    - toc.follow
+    - content.action.edit
+    - toc.integrate
+
+  logo: assets/logo.png
+  favicon: assets/favicon.png
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/klebgenomics/Kaptive
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/kaptive
+
+markdown_extensions:
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - footnotes

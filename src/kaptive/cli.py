@@ -182,11 +182,6 @@ def fmt_opts(opts: argparse.ArgumentParser):
 
 def other_fmt_opts(opts: argparse.ArgumentParser):
     """Format opts shared by convert and assembly"""
-    opts.add_argument('-p', '--plot', metavar='', nargs='?', default=None, const='.', type=check_out,
-                      help=f'Plot results to "./[assembly]_{_DIST}_results.[fmt]"\n'
-                           'Optionally choose a directory (default: cwd)')
-    opts.add_argument('--plot-fmt', default='png', metavar='png/svg', choices={'png', 'svg'},
-                      help='Format for locus plots (default: %(default)s)')
     opts.add_argument('--no-header', action='store_true', help='Suppress header line')
 
 
@@ -229,7 +224,7 @@ def cli():
             if result := typing_pipeline(assembly, args.db, args.threads, args.score_metric, args.weight_metric,
                                          args.min_cov, args.n_best, args.max_other_genes, args.percent_expected,
                                          args.below_threshold, args.scores, args.verbose):
-                result.write(args.out, args.json, args.fasta, None, None, args.plot, args.plot_fmt)
+                result.write(args.out, args.json, args.fasta, None, None)
 
     # Extract mode -----------------------------------------------------------------------------------------------------
     elif args.subparser_name == 'extract':
@@ -251,7 +246,7 @@ def cli():
 
         for line in args.input:
             if result := parse_result(line, args.db, args.regex, args.samples, args.loci):
-                result.write(args.tsv, args.json, args.fna, args.ffn, args.faa, args.plot, args.plot_fmt)
+                result.write(args.tsv, args.json, args.fna, args.ffn, args.faa)
 
     # Cleanup ----------------------------------------------------------------------------------------------------------
     for attr in vars(args):  # Close all open files in the args namespace if they aren't sys.stdout or sys.stdin

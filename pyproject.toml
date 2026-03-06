@@ -35,7 +35,7 @@ Documentation = "https://kaptive.readthedocs.io"
 
 [dependency-groups]
 test = ["pytest"]
-docs = ["sphinx", "sphinx-book-theme"]
+docs = ["mkdocs", "mkdocs-material", "mkdocs-api-autonav", "mkdocs-include-markdown-plugin", "termynal"]
 dev = [{include-group = "test"}, {include-group = "docs"}]
 
 [build-system]
