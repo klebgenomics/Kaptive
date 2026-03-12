@@ -84,7 +84,7 @@ After the best matching locus type has been identified, Kaptive will:
     You may see multiple entries for the same gene in the gene details
     columns. This can happen when there are multiple significant
     alignments for a gene that has been split, either over contigs or by
-    an artefact such as and insertion element. This will be evident by the
+    an artefact such as an insertion element. This will be evident by the
     low percent coverage of the entries, which should all add up to ~100%
     if they are indeed part of the same gene.
 
@@ -102,14 +102,14 @@ For each `GeneResult` object, Kaptive will:
 3.  Perform pairwise alignment to the reference gene amino acid sequence
     and calculate percent identity.
 4.  Check for **truncation** by determining if the amino acid sequence
-    length is \<95% of the reference gene protein length.
+    length is <95% of the reference gene protein length.
 5.  Determine whether the gene belongs to the biosynthetic gene cluster
     (**inside locus**) or not (**outside locus**).
 
 !!! note
     Partial genes are *not* considered for truncation. This prevents false
     positive truncation calls in fragmented assemblies which may otherwise
-    have an impact on phenotype prediction.
+    have an impact on phenotype prediction, but may result in underreporting of genuine truncations e.g. due to insertion sequence insertion.
 
 
 <a id="phenotype-prediction"></a>
