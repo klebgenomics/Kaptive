@@ -41,11 +41,11 @@ each with a single record with the following requirements:
   user can specify exactly which label to use with `--locus_label`, if
   desired.
 - The `source` feature may optionally contain a `note` qualifier which
-  begins with a label such as `K type:` that specifies the serotype
-  (phenotype) associated with the locus (is known). In cases where only
-  some loci are associated with known serotypes we recommend adding a
+  begins with a label such as `K type:` that specifies the
+  phenotype (e.g. serotype or defined polysaccharide structure name) associated with the locus (if known). In cases where only
+  some loci are associated with known phenotypes we recommend adding a
   `note` such as `K type: unknown`. If no `type` notes are specified for
-  any loci, the Kaptive will list them as `unknown` in the output.
+  any loci, Kaptive will list them as `unknown` in the output.
   (Kaptive v2.0+)
 - Any locus gene should be annotated as `CDS` features. All `CDS`
   features will be used and any other type of feature will be ignored.
@@ -74,12 +74,11 @@ following nomenclature rules:
   **OC**) followed by the letter **L** (which stands for **Locus**),
   which separates the label for the genotype from the phenotype (e.g.
   KL1 -\> K1). These letters should be in upper case.
-- Loci are numbered, first, by their corresponding antigen, and second,
+- Loci are numbered, first, by their corresponding phenotype, and second,
   in the order in which they were discovered. For example, *Klebsiella*
-  K-loci 1-79 correspond to K-types 1-79. K-loci 101 and greater
-  correspond to K-loci with unknown antigens in the order in which they
-  were discovered. We intentionally started at 101 to leave room to
-  assign phenotype-genotype pairs.
+  K-loci KL1-KL72, KL74 and KL79-KL82 correspond to the originally defined K-types K1-K72, K74 and K79-K82, respectively. K-loci 101 and greater
+  correspond to K-loci for which the phenotypes were unknown at the time of locus discovery, numbered in the order in which they
+  were discovered.
 - Locus genes are named in three parts delimited by an **underscore**
   (**\_**):
   1.  The locus the gene belongs to, e.g. `KL1_` for a gene in the `KL1`
@@ -134,12 +133,12 @@ locus:
 
 | loci | genes             | phenotype    |
 |------|-------------------|--------------|
-| ALL  | wcaJ,truncated    | Capsule null |
+| ALL  | wcaJ1,truncated   | Capsule null |
 | KL22 | KL22_17,truncated | K37          |
 
-In the first line, you can see that if *wcaJ* is truncated in any locus
+In the first line, you can see that if *wcaJ1* is truncated in any locus
 (selected with *ALL*), the phenotype will be predicted as 'Capsule
-null'. Here, any gene with the name *wcaJ* will be considered, and the
+null'. Here, any gene with the name *wcaJ1* will be considered, and the
 state of the gene is specified as *truncated*. In the last line, you can
 see that if *KL22_17* (acetyl-transferase) is truncated in locus KL22,
 the phenotype is predicted as 'K37', the non-acetylated version of the
@@ -183,22 +182,22 @@ Kaptive tabular output.
 ## Databases distributed with Kaptive
 
 Kaptive is distributed with databases for detection of *Klebsiella
-pneumoniae* species complex and *Acinetobacter baumannii* surface antigen
+pneumoniae* Species Complex (KpSC) and *Acinetobacter baumannii* surface antigen
 synthesis loci in the
 [data](https://github.com/klebgenomics/Kaptive/tree/master/src/kaptive/data)
 directory, (see details below). You can also generate your own databases
 for use with Kaptive by following these guidelines.
 
 The existing databases were developed and curated by [Kelly
-Wyres](https://holtlab.net/kelly-wyres/) (*Klebsiella*) and [Johanna
-Kenyon](https://research.qut.edu.au/infectionandimmunity/projects/bacterial-polysaccharide-research/)
+Wyres](https://wyreslab.com/research-journey-kelly-wyres/) (*Klebsiella*) and [Johanna
+Kenyon](https://experts.griffith.edu.au/45350-johanna-kenyon)
 (*A. baumannii*).
 
 A third-party Kaptive database is available for *Vibrio
 parahaemolyticus* [K and O
 loci](https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping),
 created by Aldert Zomer and team (see
-[preprint](https://doi.org/10.1101/2021.07.06.451262)). The database can
+[here](https://doi.org/10.1099/mgen.0.001007)). The database can
 be
 [downloaded](https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping)
 and used as input to command-line Kaptive, it is also available in the
@@ -215,19 +214,18 @@ page](https://github.com/katholt/Kaptive/issues) or
 Similarly, if you have identified new locus variants not currently in
 the existing databases, please let us know!
 
-### *Klebsiella* K locus databases
+### *Klebsiella pneumoniae* Species Complex (KpSC) K locus databases
 
-The *Klebsiella* K locus primary reference database
+The KpSC K locus reference database
 (`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length
 (*galF* to *ugd*) annotated sequences for each distinct *Klebsiella* K
 locus, where available:
 
-- KL1 - KL77 correspond to the loci associated with each of the 77
-  serologically defined K-type references, for which the corresponding
-  predicted serotypes are K1-K77, respectively.
+- K-loci KL1-KL72, KL74 and KL79-KL82 correspond to the originally defined K-types K1-K72, K74 and K79-K82, respectively. K-loci 101 and greater
+  correspond to K-loci for which the phenotypes were unknown at the time of locus discovery, numbered in the order in which they
+  were discovered. 
 - KL101 and above are defined from DNA sequence data on the basis of
-  gene content, and are not currently associated with any defined
-  serotypes.
+  gene content, for which no matched phenotypes were known at the time. However, the polysaccharide structures and/or serotypes corresponding to several of these loci have since been described e.g. serotypes [K102, K112, K122, K136 and K149](https://zenodo.org/records/15742130)).
 
 !!! note
     Insertion sequences (IS) are excluded from this database since we
@@ -241,18 +239,6 @@ no naturally occurring IS-free variants have been identified to date.
 !!! note
     KL156-D1 is included in the primary reference database since no
     full-length version of this locus has been identified to date.
-
-
-We recommend screening your data with the primary reference database
-first to find the best-matching K locus. If you have poor matches or are
-particularly interested in detecting variant loci you should try the
-variant database.
-
-!!! warning
-    The variants database (`Klebsiella_k_locus_variant_reference.gbk`) has
-    been retired as of `v3.0.0b6` as it's no longer actively maintained
-    and results can be misleading without additional in depth analysis.
-
 
 Database versions:
 
@@ -283,7 +269,7 @@ Database versions:
   locus reference genes curated by Dr. Tom Stanton and A/Prof Johanna
   Kenyon. All K-locus genes where throughly screened against curated
   annotations with a variety of homology detection methods to provide a
-  more accurate functional description.
+  more accurate functional description and standardised gene nomenclature.
 
 Changes to the *Klebsiella* K locus primary reference database:
 
@@ -292,6 +278,7 @@ Changes to the *Klebsiella* K locus primary reference database:
 | KL53 | Annotation update: *wcaJ* changed to *wbaP* | Error in original annotation | 21 July 2020 | v 0.7.1 |
 | KL126 | Sequence update: new sequence from isolate FF923 includes *rmlBADC* genes between *gnd* and *ugd* | Assembly scaffolding error in original sequence from isolate A-003-I-a-1 | 21 July 2020 | v 0.7.1 |
 | KL37 | Removed from the database | Locus is a deletion (atr) variant of KL22 | 22 March 2024 | v 3.0.0 |
+| All | Updated gene names and functional annotations | Database standardisation | March 2026 | v3.2.0 |
 
 ### *Klebsiella* O locus database
 
@@ -319,7 +306,7 @@ these genes to predict antigen (sub)types.
 
 !!! note
     You can find information about the *Klebsiella* O locus database in
-    Kaptive versions \<3.1.0
+    Kaptive versions <3.1.0
     [here](Legacy.md#legacy-klebsiella-o-locus-database).
 
 
@@ -351,12 +338,12 @@ these genes to predict antigen (sub)types.
 ### *Acinetobacter baunannii* K and OC locus databases
 
 The *A. baumannii* K (capsule) locus reference database
-(<span class="title-ref">Acinetobacter\*baumannii\*k\*locus\*primary_reference.gbk</span>)
+(`Acinetobacter_baumannii_k_locus_primary_reference.gbk`)
 contains annotated sequences for 241 distinct K loci.
 
 The *A. baumannii* OC (lipooligosaccharide outer core) locus reference
 database
-(<span class="title-ref">Acinetobacter\*baumannii\*OC\*locus\*primary_reference.gbk</span>)
+(`Acinetobacter_baumannii_OC_locus_primary_reference.gbk`)
 contains annotated sequences for 22 distinct OC loci.
 
 !!! warning
@@ -389,7 +376,8 @@ Database versions:
   references (OCL13-OCL22) as described in Sorbello, B. et al.
   Identification of further variation at the lipooligosaccharide outer
   core locus in *Acinetobacter baumannii* genomes and extension of the
-  OCL reference sequence database for Kaptive. *In prep*.
+  OCL reference sequence database for Kaptive. [Microbial Genomics](https://doi.org/10.1099/mgen.0.001042).
+
 
 <a id="database-keywords"></a>
 
@@ -413,8 +401,6 @@ a database distributed with Kaptive. The keywords are listed below.
 database</td>
 <td><ul>
 <li>kpsc_k</li>
-<li>kp_k</li>
-<li>k_k</li>
 </ul></td>
 </tr>
 <tr>
@@ -422,8 +408,6 @@ database</td>
 database</td>
 <td><ul>
 <li>kpsc_o</li>
-<li>kp_o</li>
-<li>k_o</li>
 </ul></td>
 </tr>
 <tr>
