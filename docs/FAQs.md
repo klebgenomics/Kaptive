@@ -43,7 +43,7 @@ sample).
 
 Kpative 3 uses a gene wise search to select the best matching locus,
 whereas Kaptive 2 uses a full length locus search. While the full length
-locus search was highly accurate for macthing loci found in one or a
+locus search was highly accurate for matching loci found in one or a
 small number of pieces in the query assembly, it was prone to errors
 when typing more fragmented loci (although these were generally marked
 with `Low` and `None` confidence and recommended to be excluded). The
