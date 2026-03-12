@@ -10,7 +10,7 @@ the rest of the chromosome, which can result in assembly fragmentation.
 This is particularly evident for draft genomes assembled from Illumina
 data generated with the Nextera XT library prep kit. These read sets may
 have little or no read coverage of parts of the K-locus, meaning it is
-impossible to fully assemble it. Unlike preior versions of Kaptive,
+impossible to fully assemble it. Unlike prior versions of Kaptive,
 Kaptive 3 selects the `Best match locus` based on gene searches rather
 than full length locus matches. It requires a match to only 50% of the
 gene to count it for locus assignment.
