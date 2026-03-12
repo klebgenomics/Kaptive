@@ -7,7 +7,7 @@
 
 <a id="legacy-klebsiella-o-locus-database"></a>
 
-## Legacy *Klebsiella* O locus database
+## Legacy *Klebsiella pneumoniae* Species Complex O locus database
 
 The *Klebsiella* O locus database
 (`Klebsiella_o_locus_primary_reference.gbk`) contains annotated
@@ -23,18 +23,18 @@ implementation of O locus typing in Kaptive (\< v2.0) distinguished O1
 and O2 but not the O2 subtypes.)
 
 Read more about the O locus and its classification here: [The diversity
-of \*Klebsiella\* pneumoniae surface
+of *Klebsiella pneumoniae* surface
 polysaccharides](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5320592/).
 
 Find out about the genetic determinants of O1 and O2 (sub)types here:
 [Molecular basis for the structural diversity in serogroup O2-antigen
-polysaccharides in \*Klebsiella
-pneumoniae\*](https://pubmed.ncbi.nlm.nih.gov/29602878/).
+polysaccharides in *Klebsiella
+pneumoniae*](https://pubmed.ncbi.nlm.nih.gov/29602878/).
 
 Find out about the O1 glycoforms and their genetic determinants here:
 [Identification of a second glycoform of the clinically prevalent O1
-antigen from \*Klebsiella
-pneumoniae\*.](https://doi.org/10.1073/pnas.2301302120)
+antigen from *Klebsiella
+pneumoniae*.](https://doi.org/10.1073/pnas.2301302120)
 
 Database versions:
 
