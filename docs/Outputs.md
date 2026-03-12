@@ -39,7 +39,7 @@ the results with the following columns:
     `Expected genes in locus, details` column. These represent (likely)
     parts of the same gene which have usually been split over contigs. In
     Kaptive v3.0.0 onwards, we adopted this behaviour to allow users to
-    see where locus splitting as occurred, and determine the total percent
+    see where locus splitting has occurred, and determine the total percent
     identity of a gene that has been split.
 
 
@@ -72,7 +72,7 @@ For example:
 
     kaptive assembly kpsc_k assembly.fasta -f
 
-This result in default behaviour which will produce one file per
+This results in default behaviour which will produce one file per
 assembly in the current directory. However, to specify a directory:
 
     kaptive assembly kpsc_k assembly.fasta -f kaptive_results/
