@@ -6,7 +6,7 @@ For each input assembly, Kaptive runs the
 `kaptive.assembly.typing_pipeline` which does the following:
 
 1.  Aligns locus gene nucleotide sequences to the assembly contig
-    sequences using minimap2.
+    sequences using [minimap2](https://github.com/lh3/minimap2).
 2.  Identifies the best matching locus type using the [scoring
     algorithm](Method.md#scoring-algorithm).
 3.  Extracts the locus gene sequences from the assembly contig
