@@ -30,7 +30,7 @@ Kaptive can be found:
   database](https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping)
   for *Vibrio parahaemolyticus*[^1].
 
-For full documentation, including install and usage instructions, click [here](https://klebgenomics.github.io/Kaptive).
+For full **documentation**, including install and usage instructions, **click [here](https://klebgenomics.github.io/Kaptive)**.
 
 ## Citation
 
