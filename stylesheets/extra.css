@@ -1,0 +1,32 @@
+:root > * {
+    /* Primary color shades */
+    --md-primary-fg-color: #98619E;
+    --md-primary-fg-color--light: #D6BBD7;
+    --md-primary-fg-color--dark: #2B1532;
+    --md-primary-bg-color: hsla(0, 0%, 100%, 1);
+    --md-primary-bg-color--light: hsla(0, 0%, 100%, 0.7);
+    --md-text-link-color: #98619E;
+    /* Accent color shades */
+    --md-accent-fg-color: #2B1532;
+    --md-accent-fg-color--transparent: hsla(189, 100%, 37%, 0.1);
+    --md-accent-bg-color: hsla(0, 0%, 100%, 1);
+    --md-accent-bg-color--light: hsla(0, 0%, 100%, 0.7);
+    /* Code block color shades */
+    --md-code-bg-color: hsla(0, 0%, 96%, 1);
+    --md-code-fg-color: hsla(200, 18%, 26%, 1);
+    /* Footer */
+    --md-footer-bg-color: #98619E;
+    --md-footer-bg-color--dark: hsla(0, 0%, 0%, 0.32);
+    --md-footer-fg-color: hsla(0, 0%, 100%, 1);
+    --md-footer-fg-color--light: hsla(0, 0%, 100%, 0.7);
+    --md-footer-fg-color--lighter: hsla(0, 0%, 100%, 0.3);
+  }
+
+  /* Expand the main content area to fill the screen */
+.md-grid {
+  max-width: none; /* You can also use 'none' for absolute edge-to-edge */
+}
+
+.md-typeset h1, .md-typeset h2 {
+  color: #98619E;;
+}

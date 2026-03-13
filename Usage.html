@@ -1,0 +1,1623 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The tool for _in silico_ serotyping">
+      
+      
+        <meta name="author" content="Tom Stanton">
+      
+      
+        <link rel="canonical" href="https://klebgenomics.github.io/Kaptive/Usage.html">
+      
+      
+        <link rel="prev" href="Installation.html">
+      
+      
+        <link rel="next" href="Method.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>Usage - Kaptive Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="https://unpkg.com/iframe-worker/shim"></script>
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="stylesheets/extra.css">
+    
+      <link rel="stylesheet" href="termynal.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="custom" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#usage" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="Kaptive Documentation" class="md-header__button md-logo" aria-label="Kaptive Documentation" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kaptive Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Usage
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="custom" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="custom" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/klebgenomics/Kaptive" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    klebgenomics/Kaptive
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="index.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Installation.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="Usage.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Usage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Method.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Method
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Outputs.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Outputs
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Interpreting-the-results.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Interpreting the Results
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Databases.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Databases
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Legacy.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Legacy
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="FAQs.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQs
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="reference/kaptive/index.html" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="Kaptive Documentation" class="md-nav__button md-logo" aria-label="Kaptive Documentation" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    Kaptive Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/klebgenomics/Kaptive" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    klebgenomics/Kaptive
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="Usage.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart-for-the-impatient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart (for the impatient)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed usage
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#kaptive-assembly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kaptive assembly
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="kaptive assembly">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kaptive-convert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kaptive convert
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="kaptive convert">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kaptive-extract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kaptive extract
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="kaptive extract">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usage_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Method.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Method
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Outputs.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Interpreting-the-results.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interpreting the Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Databases.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Legacy.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="FAQs.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_10_1" id="__nav_10_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>kaptive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_10_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>kaptive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    kaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/alignment.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/assembly.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>assembly
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/cli.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/database.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/log.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/typing.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>typing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/utils.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/klebgenomics/Kaptive/edit/main/docs/Usage.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
+<h2 id="quickstart-for-the-impatient">Quickstart (for the impatient)<a class="headerlink" href="#quickstart-for-the-impatient" title="Permanent link">&para;</a></h2>
+<p>To type polysaccharide loci from genome assemblies:</p>
+<div class="termy" data-termynal data-ty-macos data-ty-title="bash"><span data-ty="input" data-ty-prompt="$">kaptive assembly &lt;db&gt; assemblies/*.fasta &gt; results.tsv</span><span data-ty></span></div>
+
+<p>This will run <code>kaptive assembly</code> with the default parameters, and
+produce a table detailing the best match locus, predicted phenotype,
+confidence score and detailed typing information for each input genome
+assembly in the file called <code>kaptive_results.tsv</code>.</p>
+<h2 id="detailed-usage">Detailed usage<a class="headerlink" href="#detailed-usage" title="Permanent link">&para;</a></h2>
+<p>We designed Kaptive 3 to be easier to use on the command-line than
+previous versions by structuring the program as a series of sub-commands
+that follow the general pattern of <code>kaptive &lt;mode&gt; &lt;database&gt; &lt;input&gt;</code>.
+There are three modes:</p>
+<ul>
+<li><strong>assembly</strong>: <a href="Usage.html#kaptive-assembly">type assemblies</a></li>
+<li><strong>convert</strong>: <a href="Usage.html#kaptive-convert">convert</a> Kaptive results to
+  different formats</li>
+<li><strong>extract</strong>: <a href="Usage.html#kaptive-extract">extract</a> features from
+  Kaptive databases in different formats</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To see the full list of commands and options, run <code>kaptive -h/--help</code>.</p>
+</div>
+<p><a id="kaptive-assembly"></a></p>
+<h3 id="kaptive-assembly">kaptive assembly<a class="headerlink" href="#kaptive-assembly" title="Permanent link">&para;</a></h3>
+<p>Given a Kaptive database and a bacterial genome assembly,
+<code>kaptive assembly</code> will perform 3 main tasks:</p>
+<ul>
+<li>Determines the most likely locus type of the genome assembly.</li>
+<li>Reconstructs the biosynthetic gene cluster from the assembly contig
+  sequences.</li>
+<li>Predicts the corresponding serotype/phenotype of the genome assembly.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>As of version 3, Kaptive no longer supports allelic (<em>wzi</em>, <em>wzc</em>)
+typing.</p>
+</div>
+<p>To perform K locus typing on a directory of <em>Klebsiella pneumoniae</em>
+assemblies, you would run:</p>
+<div class="termy" data-termynal data-ty-macos data-ty-title="bash"><span data-ty="input" data-ty-prompt="$">kaptive assembly kpsc_k assemblies/*.fasta &gt; results.tsv</span><span data-ty></span></div>
+
+<p>Here we have told Kaptive to perform typing of assemblies with
+<code>assembly</code> and used the database keyword <code>kpsc_k</code> to specify the
+<em>Klebsiella pneumoniae</em> K locus database. All other parameters are set
+to the default.</p>
+<p><a href="Databases.html#database-keywords">Database keywords</a> are a handy
+short-cut for using the databases distributed with Kaptive and located
+in the Kaptive package data. Alternatively, you can specify
+the full path to your own database.</p>
+<p>You may also want to specify the locations and/or filenames of the
+output files using the following options:</p>
+<pre><code>Note, text outputs accept '-' for stdout
+
+-o , --out           Output file to write/append tabular results to (default: stdout)
+-f [], --fasta []    Turn on fasta output
+                     Accepts a single file or a directory (default: cwd)
+-j [], --json []     Turn on JSON lines output
+                     Optionally choose file (can be existing) (default: kaptive_results.json)
+-s [], --scores []   Dump locus score matrix to tsv (typing will not be performed!)
+                     Optionally choose file (can be existing) (default: stdout)
+--no-header          Suppress header line
+</code></pre>
+<p>Example:</p>
+<div class="termy" data-termynal data-ty-macos data-ty-title="bash"><span data-ty="input" data-ty-prompt="$">kaptive assembly kpsc_k assemblies/*.fasta \
+  -o kaptive_results.tsv -f -j</span><span data-ty></span></div>
+
+<p>This will output a tabular file called <code>kaptive_results.tsv</code>, a fasta
+file for each assembly called <code>{assembly}_kaptive_results.fna</code> and a JSON
+lines file called <code>kaptive_results.json</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is possible to write <strong>all</strong> text formats (TSV, JSON and FASTA) to
+the same file (including stdout), however this is not recommended for
+downstream analysis.</p>
+</div>
+<h4 id="advanced-options">Advanced options<a class="headerlink" href="#advanced-options" title="Permanent link">&para;</a></h4>
+<p>Advanced users may wish to customise Kaptive's scoring options (for
+picking the best match locus), confidence options (for marking matches
+as 'Typeable' or 'Untypeable') or database parsing options. We recommend
+keeping the default options for standard typing using the <em>Klebsiella</em>
+and/or <em>A. baumanii</em> databases distributed with Kaptive.</p>
+<p><a href="Method.html#scoring-algorithm">Scoring options</a>:</p>
+<pre><code>--min-cov            Minimum gene %coverage (blen/q_len*100) to be used for scoring (default: 50.0)
+--score-metric       Metric for scoring each locus (default: 0)
+                       0: AS (alignment score of genes found)
+                       1: mlen (matching bases of genes found)
+                       2: blen (aligned bases of genes found)
+                       3: q_len (query length of genes found)
+--weight-metric      Weighting for the 1st stage of the scoring algorithm (default: 3)
+                       0: No weighting
+                       1: Number of genes found
+                       2: Number of genes expected
+                       3: Proportion of genes found
+                       4: blen (aligned bases of genes found)
+                       5: q_len (query length of genes found)
+--n-best             Number of best loci from the 1st round of scoring to be
+                     fully aligned to the assembly (default: 2)
+</code></pre>
+<p><a id="confidence-options"></a></p>
+<p><a href="Interpreting-the-results.html#confidence-score">Confidence options</a>:</p>
+<pre><code>--gene-threshold     Species-level locus gene identity threshold (default: database specific)
+--max-other-genes    Typeable if &lt;= other genes (default: 1)
+--percent-expected   Typeable if &gt;= % expected genes (default: 50)
+--below-threshold    Typeable if any genes are below threshold (default: False)
+</code></pre>
+<p>See database options <a href="Databases.html#database-options">here</a> and other
+options:</p>
+<pre><code>-V, --verbose         Print debug messages to stderr
+-v , --version        Show version number and exit
+-h , --help           Show this help message and exit
+-t , --threads        Number of threads for alignment (default: maximum available CPUs / 32)
+</code></pre>
+<p><a id="kaptive-convert"></a></p>
+<h3 id="kaptive-convert">kaptive convert<a class="headerlink" href="#kaptive-convert" title="Permanent link">&para;</a></h3>
+<p>The <code>convert</code> command allows you to convert the Kaptive results JSON
+file into a range of useful formats, including:</p>
+<ul>
+<li><strong>tsv</strong>: <span class="title-ref">Tabular</span> output (tsv)</li>
+<li><strong>json</strong>: JSON lines format (same as input but optionally filtered)</li>
+<li><strong>fna</strong>: Locus nucleotide sequences in fasta format.</li>
+<li><strong>ffn</strong>: Gene nucleotide sequences in fasta format.</li>
+<li><strong>faa</strong>: Protein sequences in fasta format.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The <code>convert</code> command is only compatible with JSON files from Kaptive
+v3.0.0 onwards.</p>
+</div>
+<h4 id="usage_1">Usage<a class="headerlink" href="#usage_1" title="Permanent link">&para;</a></h4>
+<div class="termy" data-termynal data-ty-macos data-ty-title="bash"><span data-ty="input" data-ty-prompt="$">kaptive convert -h</span><span data-ty><br>...<br></span></div>
+
+<p>General usage is as follows:</p>
+<pre><code>kaptive convert &lt;db&gt; &lt;json&gt; [formats] [options]
+</code></pre>
+<p>Inputs:</p>
+<pre><code>db path/keyword       Kaptive database path or keyword
+json                  Kaptive JSON lines file or - for stdin
+</code></pre>
+<p>Formats:</p>
+<pre><code>Note, text outputs accept '-' for stdout
+
+-t [], --tsv []       Convert to tabular format in file (default: stdout)
+-j [], --json []      Convert to JSON lines format in file (default: stdout)
+--fna []              Convert to locus nucleotide sequences in fasta format
+                      Accepts a single file or a directory (default: cwd)
+--ffn []              Convert to locus gene nucleotide sequences in fasta format
+                      Accepts a single file or a directory (default: cwd)
+--faa []              Convert to locus gene protein sequences in fasta format
+                      Accepts a single file or a directory (default: cwd)
+--no-header           Suppress header line
+</code></pre>
+<p>Filter options:</p>
+<pre><code>-r , --regex          Python regular-expression to select JSON lines (default: All)
+-l  [ ...], --loci  [ ...]
+                    Space-separated list to filter locus names (default: All)
+-s  [ ...], --samples  [ ...]
+                    Space-separated list to filter sample names (default: All)
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Filters take precedence in descending order</p>
+</div>
+<p>For example, to convert the JSON file to a tabular format, run either of
+the following commands:</p>
+<pre><code>kaptive convert kpsc_k kaptive_results.json --tsv kaptive_results.tsv
+
+cat *.json | kaptive convert kpsc_k - --tsv - &gt; kaptive_results.tsv
+</code></pre>
+<p>To output multiple formats, you can run:</p>
+<pre><code>kaptive convert kpsc_k kaptive_results.json --tsv kaptive_results.tsv --fna - --faa proteins/
+</code></pre>
+<p>Where the tabular results will be written to <code>kaptive_results.tsv</code>, the
+locus nucleotide sequences will be written to stdout, and the protein
+sequences will be written to the directory <code>proteins/</code> with the
+filenames <code>{assembly}_kaptive_results.faa</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is possible to write <strong>all</strong> text formats (TSV, JSON, FNA, FAA and
+FFN) to the same file (including stdout), however this is not
+recommended for downstream analysis.</p>
+</div>
+<p><a id="kaptive-extract"></a></p>
+<h3 id="kaptive-extract">kaptive extract<a class="headerlink" href="#kaptive-extract" title="Permanent link">&para;</a></h3>
+<p>Kaptive 3.0.0 and above includes a new command-line mode <code>extract</code> that
+allows you to extract features from a Kaptive database in the following
+formats:</p>
+<ul>
+<li><strong>fna</strong>: Locus nucleotide sequences in fasta format.</li>
+<li><strong>ffn</strong>: Gene nucleotide sequences in fasta format.</li>
+<li><strong>faa</strong>: Protein sequences in fasta format.</li>
+</ul>
+<h4 id="usage_2">Usage<a class="headerlink" href="#usage_2" title="Permanent link">&para;</a></h4>
+<p>General usage is as follows:</p>
+<pre><code>kaptive extract &lt;db&gt; [formats] [options]
+</code></pre>
+<p>Formats:</p>
+<pre><code>Note, text outputs accept '-' for stdout
+
+--fna []         Convert to locus nucleotide sequences in fasta format
+                 Accepts a single file or a directory (default: cwd)
+--ffn []         Convert to locus gene nucleotide sequences in fasta format
+                 Accepts a single file or a directory (default: cwd)
+--faa []         Convert to locus gene protein sequences in fasta format
+                 Accepts a single file or a directory (default: cwd)
+</code></pre>
+<p><a id="database-options"></a></p>
+<p>Database options:</p>
+<pre><code>--locus-regex    Python regular-expression to match locus names in db source note
+--type-regex     Python regular-expression to match locus types in db source note
+--filter         Python regular-expression to select loci to include in the database
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>These options are useful for customising the database to your needs,
+for example, to include only a subset of loci or to change the way
+locus names and types are parsed from the source note.</p>
+</div>
+<p>Other options:</p>
+<pre><code>-V, --verbose    Print debug messages to stderr
+-v , --version   Show version number and exit
+-h , --help      Show this help message and exit
+</code></pre>
+<p>For example, to extract the gene nucleotide sequences from the
+<em>Klebsiella pneumoniae</em> K locus primary reference database in fasta
+format, run:</p>
+<pre><code>kaptive extract kp_k --fna k_loci.fna
+</code></pre>
+<p>To extract all protein sequences from KL1 and KL2, run either one of the
+following:</p>
+<pre><code>kaptive extract kp_k --filter "^KL(1|2)$" --faa KL1_KL2_proteins.faa
+kaptive extract kp_k --filter "^KL(1|2)$" --faa - &gt; KL1_KL2_proteins.faa
+</code></pre>
+<p>To do the same but output each locus to a separate file, run either:</p>
+<pre><code>kaptive extract kp_k --filter "^KL(1|2)$" --faa
+kaptive extract kp_k --filter "^KL(1|2)$" --faa protein_files/
+</code></pre>
+<p>Which would create two files: <code>KL1.faa</code> and <code>KL2.faa</code>.</p>
+<blockquote>
+<p>kaptive assembly kpsc_k assembly.fasta -j kaptive_results.json</p>
+</blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is possible to write <strong>all</strong> text formats (<code>fna</code>, <code>faa</code> and <code>ffn</code>)
+to the same file (including stdout), however this is not recommended
+for downstream analysis.</p>
+</div>
+<p><a id="api"></a></p>
+<h3 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h3>
+<p>Whilst Kaptive isn't designed to be a fully-fledged API, it is possible
+to use it as a module in your own Python scripts. For typing assemblies,
+you can use the <code>kaptive.assembly.typing_pipeline</code> function, which takes
+an assembly and a <code>kaptive.database.Database</code> object as input and
+returns a <code>kaptive.typing.TypingResult</code> object.</p>
+<pre><code class="language-python">from kaptive.assembly import typing_pipeline
+from kaptive.database import load_database
+from pathlib import Path
+
+db = load_database('kpsc_k')  ## Load the Klebsiella K locus database once and pass it to the typing pipeline
+for result in map(lambda a: typing_pipeline(a, db), Path('assemblies').glob('*.fna.gz')):
+    if result:  ## If the assembly was successfully typed
+        print(result.format('tsv'), end='')  ## TSV format will end in a newline, so we set end to ''
+</code></pre>
+<p>For example, if you wanted to perform K and O locus typing on a single
+assembly, you could do the following:</p>
+<pre><code class="language-python">## Here, we pass the keyword arguments for the database, they will be loaded inside the typing pipeline
+for result in map(lambda d: typing_pipeline('test/kpsc/2018-01-389.fasta', d), ['kpsc_k', 'kpsc_o']):
+    if result:  ## If the assembly was successfully typed
+        print(result.format('tsv'), end='')  ## TSV format will end in a newline, so we set end to ''
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>By default the <code>typing_pipeline</code> runs <code>minimap2</code> on a all available
+CPUs, however this can be controlled with the <code>threads</code> parameter.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      2026, Tom Stanton, Kathryn Holt and Kelly Wyres
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/klebgenomics/Kaptive" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/kaptive" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "toc.follow", "content.action.edit", "toc.integrate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="termynal.js"></script>
+      
+    
+  </body>
+</html>

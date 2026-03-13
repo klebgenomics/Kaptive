@@ -1,0 +1,1956 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The tool for _in silico_ serotyping">
+      
+      
+        <meta name="author" content="Tom Stanton">
+      
+      
+        <link rel="canonical" href="https://klebgenomics.github.io/Kaptive/Databases.html">
+      
+      
+        <link rel="prev" href="Interpreting-the-results.html">
+      
+      
+        <link rel="next" href="Legacy.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>Databases - Kaptive Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="https://unpkg.com/iframe-worker/shim"></script>
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="stylesheets/extra.css">
+    
+      <link rel="stylesheet" href="termynal.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="custom" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#databases" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="Kaptive Documentation" class="md-header__button md-logo" aria-label="Kaptive Documentation" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kaptive Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Databases
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="custom" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="custom" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/klebgenomics/Kaptive" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    klebgenomics/Kaptive
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="index.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Installation.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Usage.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Usage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Method.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Method
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Outputs.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Outputs
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Interpreting-the-results.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Interpreting the Results
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="Databases.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Databases
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="Legacy.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Legacy
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="FAQs.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQs
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="reference/kaptive/index.html" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="Kaptive Documentation" class="md-nav__button md-logo" aria-label="Kaptive Documentation" data-md-component="logo">
+      
+  <img src="assets/logo.png" alt="logo">
+
+    </a>
+    Kaptive Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/klebgenomics/Kaptive" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    klebgenomics/Kaptive
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Usage.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Method.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Method
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Outputs.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Interpreting-the-results.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interpreting the Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Databases
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="Databases.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-a-locus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is a locus?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Format">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#genbank-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Genbank file
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Genbank file">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#nomenclature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nomenclature
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phenotype-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phenotype logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#databases-distributed-with-kaptive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Databases distributed with Kaptive
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Databases distributed with Kaptive">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#klebsiella-pneumoniae-species-complex-kpsc-k-locus-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Klebsiella pneumoniae Species Complex (KpSC) K locus databases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#klebsiella-o-locus-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Klebsiella O locus database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acinetobacter-baunannii-k-and-oc-locus-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acinetobacter baunannii K and OC locus databases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database keywords
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extract
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Legacy.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="FAQs.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_10_1" id="__nav_10_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>kaptive
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_10_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>kaptive
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    kaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/alignment.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>alignment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/assembly.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>assembly
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/cli.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/database.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/log.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/typing.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>typing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/kaptive/utils.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/klebgenomics/Kaptive/edit/main/docs/Databases.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="databases">Databases<a class="headerlink" href="#databases" title="Permanent link">&para;</a></h1>
+<p><a id="locus-definition"></a></p>
+<h2 id="what-is-a-locus">What is a locus?<a class="headerlink" href="#what-is-a-locus" title="Permanent link">&para;</a></h2>
+<p>A locus in the Kaptive sense refers to a biosynthetic gene cluster that
+is responsible for the synthesis of a bacterial surface polysaccharide,
+e.g. the <em>Klebsiella pneumoniae</em> K locus is responsible for the
+synthesis of the capsular polysaccharide, also known as the K antigen.
+Each locus in the Kaptive databases has been defined based on a unique
+set of genes, with the assumption that this encodes a unique
+polysaccharide structure. In many cases, these unique structures will
+result in unique immunological serotypes.</p>
+<p>The gene translations (protein sequences) from each locus are compared
+by pairwise alignment, and must fall under a defined percent identity
+threshold to be considered 'unique'. Some genes (such as the core
+assembly machinery) will be highly similar, however the genes
+responsible for the polysaccharide structural diversity are expected to
+be more variable. The specific identity thresholds vary across species.
+The thresholds corresponding to the databases distributed with Kaptive
+are as follows:</p>
+<table>
+<thead>
+<tr>
+<th>Species</th>
+<th>Pairwise protein identity threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Klebsiella pneumoniae</em></td>
+<td>82.5%</td>
+</tr>
+<tr>
+<td><em>Acinetobacter baumannii</em></td>
+<td>85%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="format">Format<a class="headerlink" href="#format" title="Permanent link">&para;</a></h2>
+<h3 id="genbank-file">Genbank file<a class="headerlink" href="#genbank-file" title="Permanent link">&para;</a></h3>
+<p>Kaptive stores databases in Genbank format consisting of <strong>unique</strong> loci
+each with a single record with the following requirements:</p>
+<ul>
+<li>The <code>source</code> feature must contain a <code>note</code> qualifier which begins with
+  a label such as <code>K locus:</code>. Whatever follows is used as the locus name
+  reported in the Kaptive output. The label is automatically determined,
+  and any consistent label ending in a colon will work. However, the
+  user can specify exactly which label to use with <code>--locus_label</code>, if
+  desired.</li>
+<li>The <code>source</code> feature may optionally contain a <code>note</code> qualifier which
+  begins with a label such as <code>K type:</code> that specifies the
+  phenotype (e.g. serotype or defined polysaccharide structure name) associated with the locus (if known). In cases where only
+  some loci are associated with known phenotypes we recommend adding a
+  <code>note</code> such as <code>K type: unknown</code>. If no <code>type</code> notes are specified for
+  any loci, Kaptive will list them as <code>unknown</code> in the output.
+  (Kaptive v2.0+)</li>
+<li>Any locus gene should be annotated as <code>CDS</code> features. All <code>CDS</code>
+  features will be used and any other type of feature will be ignored.</li>
+<li>If the gene has a name, it should be specified in a <code>gene</code> qualifier.
+  This is not required for Kaptive to run, but if absent the gene will
+  only be named using its numbered position in the locus and it will not
+  be checked for any specific sequence variations relevant to <a href="Databases.html#phenotype-logic">phenotype
+  prediction</a>.</li>
+</ul>
+<p>Example piece of input Genbank file:</p>
+<pre><code>source          1..23877
+                /organism="Klebsiella pneumoniae"
+                /mol_type="genomic DNA"
+                /note="K locus: KL1"
+                /note="K type: K1"
+CDS             1..897
+                /gene="galF"
+</code></pre>
+<h4 id="nomenclature">Nomenclature<a class="headerlink" href="#nomenclature" title="Permanent link">&para;</a></h4>
+<p>In constructing the databases included with Kaptive, we have used the
+following nomenclature rules:</p>
+<ul>
+<li>Loci are named after their respective antigen (<strong>K</strong>, <strong>O</strong>, or
+  <strong>OC</strong>) followed by the letter <strong>L</strong> (which stands for <strong>Locus</strong>),
+  which separates the label for the genotype from the phenotype (e.g.
+  KL1 -&gt; K1). These letters should be in upper case.</li>
+<li>Loci are numbered, first, by their corresponding phenotype, and second,
+  in the order in which they were discovered. For example, <em>Klebsiella</em>
+  K-loci KL1-KL72, KL74 and KL79-KL82 correspond to the originally defined K-types K1-K72, K74 and K79-K82, respectively. K-loci 101 and greater
+  correspond to K-loci for which the phenotypes were unknown at the time of locus discovery, numbered in the order in which they
+  were discovered.</li>
+<li>Locus genes are named in three parts delimited by an <strong>underscore</strong>
+  (<strong>_</strong>):</li>
+<li>The locus the gene belongs to, e.g. <code>KL1_</code> for a gene in the <code>KL1</code>
+      locus.</li>
+<li>The position of the gene in the locus, e.g. <code>KL1_01</code> for the first
+      gene in the <code>KL1</code> locus.</li>
+<li>The name of the gene as a three-letter italicized symbol written
+      in lower case letters and usually suffixed with an italicized
+      capital letter, e.g. <code>KL1_01_galF</code> for the <em>galF</em> gene in the
+      <code>KL1</code> locus. If the gene name is unknown, this part will be blank
+      and the gene instead would be called <code>KL1_01</code>.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Databases <strong>must</strong> follow this nomenclature system for distribution
+within Kaptive.</p>
+</div>
+<p><a id="phenotype-logic"></a></p>
+<h3 id="phenotype-logic">Phenotype logic<a class="headerlink" href="#phenotype-logic" title="Permanent link">&para;</a></h3>
+<p>Phenotype logic (previously called "special logic") is a set of rules
+that Kaptive uses to predict the polysaccharide phenotype based on the
+genes it finds. This was initially implemented for the <em>Klebsiella
+pneumoniae</em> O locus, whereby additional genes outside of the locus are
+used to predict the O antigen (sub)type. This logic was extended to the
+<em>A. baumannii</em> K locus in Kaptive v2.0.2.</p>
+<p>In Kaptive 3, we thought about how we could extend this given what we
+know about truncations or other sequence variations of specific genes in
+the locus and the impact on the phenotype. For example, in the
+<em>Klebsiella pneumoniae</em> K locus, we know that a truncation of the core
+initiating glycosyltransferase (<em>wcaJ</em>) results in a capsule-null
+phenotype.</p>
+<p>The relevant sequence variations are detailed in the database logic
+files, each labelled with the same file prefix as its respective locus
+database, and marked with the extension <code>.logic</code>. Each line consists of
+three tab-separated columns and represents a phenotype rule:</p>
+<ol>
+<li><strong>loci</strong> - the loci the rule applies to (or <em>ALL</em> if the rule
+    applies to all loci in the database)</li>
+<li><strong>genes</strong> - the genes (and optional state) the rule applies to (or
+    <em>ALL</em> if the rule applies to all genes in the locus)</li>
+<li><strong>phenotype</strong> - the resulting phenotype that appears in the
+    <span class="title-ref">Type</span> column of the Kaptive tabular
+    output, replacing the default phenotype i.e. the one specified in
+    the locus genbank source identifier in the matching locus database.</li>
+</ol>
+<p>Let's look at an example of a logic file for the <em>K. pneumoniae</em> K
+locus:</p>
+<table>
+<thead>
+<tr>
+<th>loci</th>
+<th>genes</th>
+<th>phenotype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ALL</td>
+<td>wcaJ1,truncated</td>
+<td>Capsule null</td>
+</tr>
+<tr>
+<td>KL22</td>
+<td>KL22_17,truncated</td>
+<td>K37</td>
+</tr>
+</tbody>
+</table>
+<p>In the first line, you can see that if <em>wcaJ1</em> is truncated in any locus
+(selected with <em>ALL</em>), the phenotype will be predicted as 'Capsule
+null'. Here, any gene with the name <em>wcaJ1</em> will be considered, and the
+state of the gene is specified as <em>truncated</em>. In the last line, you can
+see that if <em>KL22_17</em> (acetyl-transferase) is truncated in locus KL22,
+the phenotype is predicted as 'K37', the non-acetylated version of the
+K22 capsule.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The gene name and state are delimited by a comma.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The default phenotype is the "type" label in the Genbank record (e.g.
+K1).</p>
+</div>
+<p>Let's look at an example that uses extra genes outside of the locus
+(from the <em>K. pneumoniae</em> O locus database):</p>
+<table>
+<thead>
+<tr>
+<th>loci</th>
+<th>genes</th>
+<th>phenotype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OL2α.1;OL2α.2;OL2α.3</td>
+<td>orf8</td>
+<td>O2αγ</td>
+</tr>
+</tbody>
+</table>
+<p>Here, the first line states that if <em>orf8</em> is present in a genome
+carrying any of the OL2α.1, OL2α.2 or OL2α.3 loci, the phenotype will be
+predicted as 'O2αγ'.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Each specific locus and gene is delimited by a semicolon.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Default state is 'presence'.</p>
+</div>
+<p>This logic is applied during the <a href="Method.html#phenotype-prediction">phenotype
+prediction</a> step of typing and is
+reported in the <span class="title-ref">Type</span> column of the
+Kaptive tabular output.</p>
+<p><a id="distributed-databases"></a></p>
+<h2 id="databases-distributed-with-kaptive">Databases distributed with Kaptive<a class="headerlink" href="#databases-distributed-with-kaptive" title="Permanent link">&para;</a></h2>
+<p>Kaptive is distributed with databases for detection of <em>Klebsiella
+pneumoniae</em> Species Complex (KpSC) and <em>Acinetobacter baumannii</em> surface antigen
+synthesis loci in the
+<a href="https://github.com/klebgenomics/Kaptive/tree/master/src/kaptive/data">data</a>
+directory, (see details below). You can also generate your own databases
+for use with Kaptive by following these guidelines.</p>
+<p>The existing databases were developed and curated by <a href="https://wyreslab.com/research-journey-kelly-wyres/">Kelly
+Wyres</a> (<em>Klebsiella</em>) and <a href="https://experts.griffith.edu.au/45350-johanna-kenyon">Johanna
+Kenyon</a>
+(<em>A. baumannii</em>).</p>
+<p>A third-party Kaptive database is available for <em>Vibrio
+parahaemolyticus</em> <a href="https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping">K and O
+loci</a>,
+created by Aldert Zomer and team (see
+<a href="https://doi.org/10.1099/mgen.0.001007">here</a>). The database can
+be
+<a href="https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping">downloaded</a>
+and used as input to command-line Kaptive, it is also available in the
+online tool <a href="https://kaptive-web.erc.monash.edu/">Kaptive-Web</a> along
+with our <em>Klebsiella</em> and <em>A. baumannii</em> databases.</p>
+<p>We are always keen to expand the utility of Kaptive for the research
+community, so if you have created a database that you feel will be
+useful for others and you are willing to share this resource, please get
+in touch via the <a href="https://github.com/katholt/Kaptive/issues">issues
+page</a> or
+<a href="mailto:kaptive.typing@gmail.com">email</a>.</p>
+<p>Similarly, if you have identified new locus variants not currently in
+the existing databases, please let us know!</p>
+<h3 id="klebsiella-pneumoniae-species-complex-kpsc-k-locus-databases"><em>Klebsiella pneumoniae</em> Species Complex (KpSC) K locus databases<a class="headerlink" href="#klebsiella-pneumoniae-species-complex-kpsc-k-locus-databases" title="Permanent link">&para;</a></h3>
+<p>The KpSC K locus reference database
+(<code>Klebsiella_k_locus_primary_reference.gbk</code>) comprises full-length
+(<em>galF</em> to <em>ugd</em>) annotated sequences for each distinct <em>Klebsiella</em> K
+locus, where available:</p>
+<ul>
+<li>K-loci KL1-KL72, KL74 and KL79-KL82 correspond to the originally defined K-types K1-K72, K74 and K79-K82, respectively. K-loci 101 and greater
+  correspond to K-loci for which the phenotypes were unknown at the time of locus discovery, numbered in the order in which they
+  were discovered. </li>
+<li>KL101 and above are defined from DNA sequence data on the basis of
+  gene content, for which no matched phenotypes were known at the time. However, the polysaccharide structures and/or serotypes corresponding to several of these loci have since been described e.g. serotypes <a href="https://zenodo.org/records/15742130">K102, K112, K122, K136 and K149</a>).</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Insertion sequences (IS) are excluded from this database since we
+assume that the ancestral sequence was likely IS-free and IS
+transposase genes are not specific to the K locus.</p>
+</div>
+<p>Synthetic IS-free K locus sequences were generated for K loci for which
+no naturally occurring IS-free variants have been identified to date.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>KL156-D1 is included in the primary reference database since no
+full-length version of this locus has been identified to date.</p>
+</div>
+<p>Database versions:</p>
+<ul>
+<li>Kaptive releases v0.5.1 and below include the original <em>Klebsiella</em> K
+  locus databases, as described in <a href="http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102">Wyres, K. et al. Microbial Genomics
+  2016.</a></li>
+<li>Kaptive v0.6.0 and above include four novel primary <em>Klebsiella</em> K
+  locus references defined on the basis of gene content (KL162-KL165) in
+  <a href="https://pubmed.ncbi.nlm.nih.gov/31948471/">Wyres et al. Genome Medicine
+  2020</a>.</li>
+<li>Kaptive v0.7.1 and above contain updated versions of the KL53 and
+  KL126 loci (see table below for details). The updated KL126 locus
+  sequence is described in <a href="https://pubmed.ncbi.nlm.nih.gov/34506927/">McDougall, F. et al. Research in
+  Microbiology 2021</a>.</li>
+<li>Kaptive v0.7.2 and above include a novel primary <em>Klebsiella</em> K locus
+  reference defined on the basis of gene content (KL166), described in
+  <a href="https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000827">Le, MN. et al. Microbial Genomics
+  2022</a>.</li>
+<li>Kaptive v0.7.3 and above include four novel primary <em>Klebsiella</em> K
+  locus references defined on the basis of gene content (KL167-KL170),
+  described in <a href="https://www.nature.com/articles/s41467-022-30717-6">Gorrie, C. et al. Nature Communications
+  2022.</a></li>
+<li>Kaptive v2.0 and above include 16 novel primary <em>Klebsiella</em> K locus
+  references defined on the basis of gene content (KL171-KL186) and
+  described in <a href="https://doi.org/10.1099/mgen.0.000800">Lam, M.M.C et al. Microbial Genomics
+  2022.</a></li>
+<li>Kaptive v3.2 and above introduced a re-annotation of <em>Klebsiella</em> K
+  locus reference genes curated by Dr. Tom Stanton and A/Prof Johanna
+  Kenyon. All K-locus genes where throughly screened against curated
+  annotations with a variety of homology detection methods to provide a
+  more accurate functional description and standardised gene nomenclature.</li>
+</ul>
+<p>Changes to the <em>Klebsiella</em> K locus primary reference database:</p>
+<table>
+<thead>
+<tr>
+<th>Locus</th>
+<th>Change</th>
+<th>Reason</th>
+<th>Date of change</th>
+<th>Kaptive version no.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KL53</td>
+<td>Annotation update: <em>wcaJ</em> changed to <em>wbaP</em></td>
+<td>Error in original annotation</td>
+<td>21 July 2020</td>
+<td>v 0.7.1</td>
+</tr>
+<tr>
+<td>KL126</td>
+<td>Sequence update: new sequence from isolate FF923 includes <em>rmlBADC</em> genes between <em>gnd</em> and <em>ugd</em></td>
+<td>Assembly scaffolding error in original sequence from isolate A-003-I-a-1</td>
+<td>21 July 2020</td>
+<td>v 0.7.1</td>
+</tr>
+<tr>
+<td>KL37</td>
+<td>Removed from the database</td>
+<td>Locus is a deletion (atr) variant of KL22</td>
+<td>22 March 2024</td>
+<td>v 3.0.0</td>
+</tr>
+<tr>
+<td>All</td>
+<td>Updated gene names and functional annotations</td>
+<td>Database standardisation</td>
+<td>March 2026</td>
+<td>v3.2.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="klebsiella-o-locus-database"><em>Klebsiella</em> O locus database<a class="headerlink" href="#klebsiella-o-locus-database" title="Permanent link">&para;</a></h3>
+<p>In Kaptive 3.1.0, we introduced new O-antigen nomenclature in the
+<em>Klebsiella</em> O locus database
+(<code>Klebsiella_o_locus_primary_reference.gbk</code>) along wth the publication
+of this review: <a href="https://journals.asm.org/doi/full/10.1128/mmbr.00090-23#T1">O-antigen polysaccharides in Klebsiella pneumoniae:
+structures and molecular basis for antigenic
+diversity</a>.</p>
+<p>We have also summarised the O-antigen nomenclature update on the <a href="http://wyreslab.com/klebsiella-pneumoniae-o-antigen-genetics-structural-diversity-and-nomenclature/">Wyres
+Lab
+website</a>.</p>
+<p>The <em>Klebsiella</em> O locus database
+(<code>Klebsiella_o_locus_primary_reference.gbk</code>) contains annotated
+sequences for 13 distinct <em>Klebsiella</em> O loci.</p>
+<p>O locus classification requires some special logic, as the O1 and O2
+serotypes are associated with the same loci and the distinction between
+O1 and each of the defined O2 subtypes (2α, 2β, 2γ) is determined by the
+presence/absence of 'extra genes' (gml2β and orf8) elsewhere in the
+chromosome as indicated in the table below. Kaptive therefore looks for
+these genes to predict antigen (sub)types.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can find information about the <em>Klebsiella</em> O locus database in
+Kaptive versions &lt;3.1.0
+<a href="Legacy.html#legacy-klebsiella-o-locus-database">here</a>.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>New serotype designation</th>
+<th>Required genes/loci (implemented in Kaptive v.3.1+)</th>
+<th>Prior Kaptive designation (v.2.0.8–v.3.0.0b6)</th>
+<th>Prior Kaptive genes/loci (v.2.0.8–v.3.0.0b6)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O1αβ,2α</td>
+<td>OL2α.(1/2/3), wbbYZ</td>
+<td>O1ab</td>
+<td>O1/O2v1, wbbYZ</td>
+</tr>
+<tr>
+<td>O1α,2α</td>
+<td>OL2α.(1/2/3), wbbY</td>
+<td>O1a</td>
+<td>O1/O2v1, wbbY</td>
+</tr>
+<tr>
+<td>O1αβ,2β</td>
+<td>OL2α.(1/2/3), gml2β, wbbYZ</td>
+<td>O1ab</td>
+<td>O1/O2v2, wbbYZ</td>
+</tr>
+<tr>
+<td>O1α,2β</td>
+<td>OL2α.(1/2/3), gml2β, wbbY</td>
+<td>O1a</td>
+<td>O1/O2v2, wbbY</td>
+</tr>
+<tr>
+<td>O1αβ,2γ</td>
+<td>OL2α.(1/2/3), orf8, wbbYZ</td>
+<td>O1ab</td>
+<td>O1/O2v3, wbbYZ</td>
+</tr>
+<tr>
+<td>O2α</td>
+<td>OL2α.(1/2/3)</td>
+<td>O2a</td>
+<td>O1/O2v1</td>
+</tr>
+<tr>
+<td>O2β</td>
+<td>OL2α.(1/2/3), gml2β</td>
+<td>O2afg</td>
+<td>O1/O2v2</td>
+</tr>
+<tr>
+<td>O2αγ</td>
+<td>OL2α.(1/2/3), orf8</td>
+<td>O2a</td>
+<td>O1/O2v3</td>
+</tr>
+<tr>
+<td>O3α + O3β</td>
+<td>OL3α/β</td>
+<td>O3/O3a</td>
+<td>O3/O3a</td>
+</tr>
+<tr>
+<td>O3γ</td>
+<td>OL3γ</td>
+<td>O3b</td>
+<td>O3b</td>
+</tr>
+<tr>
+<td>O4</td>
+<td>OL4</td>
+<td>O4</td>
+<td>O4</td>
+</tr>
+<tr>
+<td>O5</td>
+<td>OL5</td>
+<td>O5</td>
+<td>O5</td>
+</tr>
+<tr>
+<td>O10</td>
+<td>OL10</td>
+<td>OL103</td>
+<td>OL103</td>
+</tr>
+<tr>
+<td>O11αβ,2α</td>
+<td>OL2α.(1/2/3), wbmVWX</td>
+<td>O2ac</td>
+<td>O1/O2v1, wbmVWX</td>
+</tr>
+<tr>
+<td>O11α,2α</td>
+<td>OL2α.(1/2/3), wbmVW</td>
+<td>O2ac</td>
+<td>O1/O2v1, wbmVW</td>
+</tr>
+<tr>
+<td>O11αβ,2β</td>
+<td>OL2α.(1/2/3), gml2β, wbmVWX</td>
+<td>O2ac</td>
+<td>O1/O2v2, wbmVWX</td>
+</tr>
+<tr>
+<td>O11α,2β</td>
+<td>OL2α.(1/2/3), gml2β, wbmVW</td>
+<td>O2ac</td>
+<td>O1/O2v2, wbmVW</td>
+</tr>
+<tr>
+<td>O11αβ,2γ</td>
+<td>OL2α.(1/2/3), orf8, wbmVWX</td>
+<td>O2ac</td>
+<td>O1/O2v3, wbmVW</td>
+</tr>
+<tr>
+<td>O12</td>
+<td>OL12</td>
+<td>O12</td>
+<td>O12</td>
+</tr>
+<tr>
+<td>O13</td>
+<td>OL13</td>
+<td>O13</td>
+<td>OL13</td>
+</tr>
+<tr>
+<td>O14</td>
+<td>OL14</td>
+<td>OL102</td>
+<td>OL102</td>
+</tr>
+<tr>
+<td>O15</td>
+<td>OL15</td>
+<td>OL104</td>
+<td>OL104</td>
+</tr>
+</tbody>
+</table>
+<h3 id="acinetobacter-baunannii-k-and-oc-locus-databases"><em>Acinetobacter baunannii</em> K and OC locus databases<a class="headerlink" href="#acinetobacter-baunannii-k-and-oc-locus-databases" title="Permanent link">&para;</a></h3>
+<p>The <em>A. baumannii</em> K (capsule) locus reference database
+(<code>Acinetobacter_baumannii_k_locus_primary_reference.gbk</code>)
+contains annotated sequences for 241 distinct K loci.</p>
+<p>The <em>A. baumannii</em> OC (lipooligosaccharide outer core) locus reference
+database
+(<code>Acinetobacter_baumannii_OC_locus_primary_reference.gbk</code>)
+contains annotated sequences for 22 distinct OC loci.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>These databases have been developed and tested specifically for <em>A.
+baumannii</em> and may not be suitable for screening other <em>Acinetobacter</em>
+species. You can check that your assembly is a true <em>A. baumannii</em> by
+screening for the <em>oxaAB</em> gene e.g. using blastn.</p>
+</div>
+<p>Database versions:</p>
+<ul>
+<li>Kaptive v0.7.0 and above include the original <em>A. baumannii</em> K and OC
+  locus databases, as described in <a href="https://doi.org/10.1099/mgen.0.000339">Wyres, KL. et al. Microbial Genomics
+  2020</a>.</li>
+<li>Kaptive v2.0.1 and above include 149 novel primary <em>A. baumannii</em> K
+  locus references as described in Cahill, S.M. et al. 2022. An update
+  to the database for <em>Acinetobacter baumannii</em> capsular polysaccharide
+  locus typing extends the extensive and diverse repertoire of genes
+  found at and outside the K locus. <a href="https://doi.org/10.1099/mgen.0.000878">Microbial
+  Genomics</a>.</li>
+<li>Kaptive v2.0.2 and above include special logic parameters that enable
+  prediction of the capsule polysaccharide type based on KL or the
+  detected combination of a specific KL with 'extra genes' elsewhere in
+  the chromosome as indicated in the table below and described in
+  Cahill, S.M. et al. 2022. An update to the database for <em>A. baumannii</em>
+  capsular polysaccharide locus typing extends the extensive and diverse
+  repertoire of genes found at and outside the K locus. <a href="https://doi.org/10.1099/mgen.0.000878">Microbial
+  Genomics</a>.</li>
+<li>Kaptive v2.0.5 and above includes a further 10 <em>A. baumannii</em> OC locus
+  references (OCL13-OCL22) as described in Sorbello, B. et al.
+  Identification of further variation at the lipooligosaccharide outer
+  core locus in <em>Acinetobacter baumannii</em> genomes and extension of the
+  OCL reference sequence database for Kaptive. <a href="https://doi.org/10.1099/mgen.0.001042">Microbial Genomics</a>.</li>
+</ul>
+<p><a id="database-keywords"></a></p>
+<h3 id="database-keywords">Database keywords<a class="headerlink" href="#database-keywords" title="Permanent link">&para;</a></h3>
+<p>When Kaptive is installed, it may be difficult to find the databases in
+the file system. However, each <code>&lt;database&gt;</code> argument in the Kaptive CLI
+accepts either a path to a Genbank file <strong>or</strong> a keyword that refers to
+a database distributed with Kaptive. The keywords are listed below.</p>
+<table>
+<thead>
+<tr>
+<th>Database</th>
+<th>Keywords</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>Klebsiella pneumoniae</em> K locus primary reference
+database</td>
+<td><ul>
+<li>kpsc_k</li>
+</ul></td>
+</tr>
+<tr>
+<td><em>Klebsiella pneumoniae</em> O locus primary reference
+database</td>
+<td><ul>
+<li>kpsc_o</li>
+</ul></td>
+</tr>
+<tr>
+<td><em>Acinetobacter baumannii</em> K locus primary reference
+database</td>
+<td><ul>
+<li>ab_k</li>
+</ul></td>
+</tr>
+<tr>
+<td><em>Acinetobacter baumannii</em> OC locus primary reference
+database</td>
+<td><ul>
+<li>ab_o</li>
+</ul></td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="extract">Extract<a class="headerlink" href="#extract" title="Permanent link">&para;</a></h2>
+<p>Kaptive 3.0.0 and above includes a new command-line mode <code>extract</code> that
+allows you to extract features from a Kaptive database in the following
+formats:</p>
+<ul>
+<li><strong>fna</strong>: Locus nucleotide sequences in fasta format.</li>
+<li><strong>ffn</strong>: Gene nucleotide sequences in fasta format.</li>
+<li><strong>faa</strong>: Protein sequences in fasta format.</li>
+</ul>
+<p>See <a href="Usage.html#kaptive-extract">here</a> for usage instructions.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      2026, Tom Stanton, Kathryn Holt and Kelly Wyres
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/klebgenomics/Kaptive" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/kaptive" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "toc.follow", "content.action.edit", "toc.integrate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="termynal.js"></script>
+      
+    
+  </body>
+</html>
