@@ -225,6 +225,8 @@ filenames `{assembly}_kaptive_results.faa`.
     FFN) to the same file (including stdout), however this is not
     recommended for downstream analysis.
 
+<a id="kaptive-extract"></a>
+
 ### kaptive extract 
 
 Kaptive 3.0.0 and above includes a new command-line mode `extract` that
