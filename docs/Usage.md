@@ -22,10 +22,10 @@ that follow the general pattern of `kaptive <mode> <database> <input>`.
 There are three modes:
 
 - **assembly**: [type assemblies](Usage.md#kaptive-assembly)
-- **extract**: [extract](Databases.md#kaptive-extract) features from
-  Kaptive databases in different formats
 - **convert**: [convert](Usage.md#kaptive-convert) Kaptive results to
   different formats
+- **extract**: [extract](Usage.md#kaptive-extract) features from
+  Kaptive databases in different formats
 
 !!! note
     To see the full list of commands and options, run `kaptive -h/--help`.
@@ -225,8 +225,82 @@ filenames `{assembly}_kaptive_results.faa`.
     FFN) to the same file (including stdout), however this is not
     recommended for downstream analysis.
 
+### kaptive extract 
+
+Kaptive 3.0.0 and above includes a new command-line mode `extract` that
+allows you to extract features from a Kaptive database in the following
+formats:
+
+- **fna**: Locus nucleotide sequences in fasta format.
+- **ffn**: Gene nucleotide sequences in fasta format.
+- **faa**: Protein sequences in fasta format.
+
+#### Usage
+
+General usage is as follows:
+
+    kaptive extract <db> [formats] [options]
+
+Formats:
+
+    Note, text outputs accept '-' for stdout
+
+    --fna []         Convert to locus nucleotide sequences in fasta format
+                     Accepts a single file or a directory (default: cwd)
+    --ffn []         Convert to locus gene nucleotide sequences in fasta format
+                     Accepts a single file or a directory (default: cwd)
+    --faa []         Convert to locus gene protein sequences in fasta format
+                     Accepts a single file or a directory (default: cwd)
+
+<a id="database-options"></a>
+
+Database options:
+
+    --locus-regex    Python regular-expression to match locus names in db source note
+    --type-regex     Python regular-expression to match locus types in db source note
+    --filter         Python regular-expression to select loci to include in the database
+
+!!! note
+    These options are useful for customising the database to your needs,
+    for example, to include only a subset of loci or to change the way
+    locus names and types are parsed from the source note.
+
+
+Other options:
+
+    -V, --verbose    Print debug messages to stderr
+    -v , --version   Show version number and exit
+    -h , --help      Show this help message and exit
+
+For example, to extract the gene nucleotide sequences from the
+*Klebsiella pneumoniae* K locus primary reference database in fasta
+format, run:
+
+    kaptive extract kp_k --fna k_loci.fna
+
+To extract all protein sequences from KL1 and KL2, run either one of the
+following:
+
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa KL1_KL2_proteins.faa
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa - > KL1_KL2_proteins.faa
+
+To do the same but output each locus to a separate file, run either:
+
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa
+    kaptive extract kp_k --filter "^KL(1|2)$" --faa protein_files/
+
+Which would create two files: `KL1.faa` and `KL2.faa`.
+
+> kaptive assembly kpsc_k assembly.fasta -j kaptive_results.json
+
+!!! warning
+    It is possible to write **all** text formats (`fna`, `faa` and `ffn`)
+    to the same file (including stdout), however this is not recommended
+    for downstream analysis.
+
 
 <a id="api"></a>
+
 
 ### API
 
@@ -260,4 +334,6 @@ for result in map(lambda d: typing_pipeline('test/kpsc/2018-01-389.fasta', d), [
 !!! note
     By default the `typing_pipeline` runs `minimap2` on a all available
     CPUs, however this can be controlled with the `threads` parameter.
+
+
 
