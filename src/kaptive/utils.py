@@ -1,156 +1,274 @@
-from __future__ import annotations
-
+from io import IOBase
+from sys import stdout
+from typing import Union, IO, Optional
 import os
-import sys
-from zlib import decompress as gz_decompress
-from gzip import open as gz_open
-from bz2 import (decompress as bz2_decompress, open as bz2_open)
-from lzma import (decompress as xz_decompress, open as xz_open)
-from typing import Generator, TextIO, Any, BinaryIO
-from operator import itemgetter
+from functools import lru_cache
+from importlib.resources import files
+import atexit
+from json import loads as json_loads
+from zipfile import ZipFile
+from tempfile import TemporaryDirectory
+from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import urlopen, Request
+from shutil import copyfileobj
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .log import log, quit_with_error, bold_cyan, warning
-
-# Constants -----------------------------------------------------------------------------------------------------------
-_MAX_CPUS = 32
-_MAGIC_BYTES = {b'\x1f\x8b': 'gz', b'\x42\x5a': 'bz2', b'\xfd7zXZ\x00': 'xz'}
-_OPEN = {'gz': gz_open, 'bz2': bz2_open, 'xz': xz_open}
-_DECOMPRESS = {'gz': gz_decompress, 'bz2': bz2_decompress, 'xz': xz_decompress}
-_MIN_N_BYTES = max(len(i) for i in _MAGIC_BYTES)  # Minimum number of bytes to read in a file to guess the compression)
-_LOGO = r"""  _  __    _    ____ _____ _____     _______ 
- | |/ /   / \  |  _ \_   _|_ _\ \   / / ____|
- | ' /   / _ \ | |_) || |  | | \ \ / /|  _|  
- | . \  / ___ \|  __/ | |  | |  \ V / | |___ 
- |_|\_\/_/   \_\_|    |_| |___|  \_/  |_____|                                   
-"""
+import numpy as np
 
 
-# Functions -----------------------------------------------------------------------------------------------------------
-def check_programs(progs: list[str], verbose: bool = False):
-    """Check if programs are installed and executable"""
-    bins = {  # Adapted from: https://unix.stackexchange.com/a/261971/375975
-        binary: x for path in filter(
-            os.path.isdir, os.environ["PATH"].split(os.path.pathsep)
-        ) for binary in os.listdir(path) if os.access((x := os.path.join(path, binary)), os.X_OK)
-    }
-    for program in progs:
-        if program in bins:
-            log(f'{program}: {bins[program]}', verbose=verbose)
+# Classes --------------------------------------------------------------------------------------------------------------
+class _ResourceManager:
+    """
+    Manages lazy-loaded, application-wide resources.
+    Instantiated once at the module level as a singleton.
+    """
+
+    def __init__(self):
+        self.package: str = Path(__file__).parent.name
+        self.data: Path = files(self.package) / 'data'
+        self._rng: Optional[np.random.Generator] = None
+        self._executor: Optional[ThreadPoolExecutor] = None
+
+    @property
+    def rng(self) -> np.random.Generator:
+        if self._rng is None:
+            self._rng = np.random.default_rng()
+        return self._rng
+
+    @property
+    def available_cpus(self) -> int:
+        return getattr(os, 'process_cpu_count', os.cpu_count)() or 1
+
+    @property
+    def executor(self) -> ThreadPoolExecutor:
+        """Returns a shared ThreadPoolExecutor, initializing it only when first requested."""
+        if self._executor is None:
+            self._executor = ThreadPoolExecutor(min(32, self.available_cpus + 4))
+            atexit.register(self._cleanup)
+        return self._executor
+
+    def _cleanup(self):
+        """Shuts down the thread pool."""
+        if self._executor is not None:
+            self._executor.shutdown(wait=False, cancel_futures=True)
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def has_module(name: str) -> bool:
+        try:
+            __import__(name)
+            return True
+        except ImportError:
+            return False
+
+
+# Global Singleton Instance
+Resources = _ResourceManager()
+
+
+class LiteralFile(type(Path())):
+    """
+    A Path wrapper that evaluates to False if the file is missing or empty.
+    Inherits from the concrete Path type (PosixPath/WindowsPath) to ensure correct instantiation.
+    """
+    _MIN_SIZE = 1
+
+    def __bool__(self):
+        try: return self.is_file() and self.stat().st_size >= self._MIN_SIZE
+        except OSError: return False
+
+
+class Downloader:
+    """
+    High-performance downloader supporting parallel chunk retrieval.
+    """
+    # _MAX_WORKERS = (Resources.available_cpus or 1) * 4
+    _MAX_WORKERS = 32
+    _CHUNK_SIZE = 10 * 1024 * 1024
+
+    def __enter__(self):
+        self._pool = ThreadPoolExecutor(max_workers=self._MAX_WORKERS)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if hasattr(self, '_pool'):
+            self._pool.shutdown(wait=True)
+            del self._pool
+
+    def fetch(self, url: Union[str, Request], dest: Union[str, Path] = None, data=None,
+              encode_data: bool = False) -> Union[Path, bytes]:
+        if data is not None and encode_data: data = urlencode(data).encode('utf-8')
+        if not isinstance(url, Request):
+            url = Request(url, headers={'User-Agent': 'Mozilla/5.0'}, data=data)
+
+        # Fallback for POST or small files
+        if url.data is not None:
+            return self._single_thread_download(url, dest)
+
+        try:
+            size, accept_ranges, real_url = self._get_info(url)
+        except Exception:
+            return self._single_thread_download(url, dest)
+
+        if accept_ranges and size and size > self._CHUNK_SIZE:
+            return self._parallel_download(real_url, dest, size, url.headers)
+
+        return self._single_thread_download(url, dest)
+
+    @staticmethod
+    def _get_info(req: Request):
+        head_req = Request(req.full_url, headers=req.headers, method='HEAD')
+        with urlopen(head_req) as response:
+            size = int(response.headers.get('Content-Length', 0))
+            accept_ranges = response.headers.get('Accept-Ranges', 'none') == 'bytes'
+            return size, accept_ranges, response.geturl()
+
+    @staticmethod
+    def _single_thread_download(url, dest):
+        with urlopen(url) as response:
+            if dest:
+                dest = Path(dest)
+                with open(dest, 'wb') as f: copyfileobj(response, f)
+                return dest
+            return response.read()
+
+    def _parallel_download(self, url_str, dest, size, headers):
+        chunks = []
+        for i in range(0, size, self._CHUNK_SIZE):
+            start = i
+            end = min(i + self._CHUNK_SIZE - 1, size - 1)
+            chunks.append((start, end))
+
+        if dest:
+            dest = Path(dest)
+            # Create sparse file
+            with open(dest, 'wb') as f:
+                f.truncate(size)
+
+            def _worker(start, end):
+                req = Request(url_str, headers=headers)
+                req.add_header('Range', f'bytes={start}-{end}')
+                with urlopen(req) as response:
+                    data = response.read()
+                with open(dest, 'r+b') as f:
+                    f.seek(start)
+                    f.write(data)
         else:
-            quit_with_error(f'{program} not found')
+            buffer = bytearray(size)
+
+            def _worker(start, end):
+                req = Request(url_str, headers=headers)
+                req.add_header('Range', f'bytes={start}-{end}')
+                with urlopen(req) as response:
+                    data = response.read()
+                buffer[start:end + 1] = data
+
+        # Use existing pool if available (Context Manager), else create one
+        pool = getattr(self, '_pool', None)
+        if pool:
+            futures = [pool.submit(_worker, s, e) for s, e in chunks]
+            for f in as_completed(futures): f.result()
+        else:
+            with ThreadPoolExecutor(max_workers=self._MAX_WORKERS) as pool:
+                futures = [pool.submit(_worker, s, e) for s, e in chunks]
+                for f in as_completed(futures): f.result()
+
+        return dest if dest else bytes(buffer)
 
 
-def check_file(file: str | os.PathLike, panic: bool = False) -> os.PathLike | None:
-    """Checks a file exists and is non-empty and returns the absolute path"""
-    func = quit_with_error if panic else warning
-    if not os.path.exists(file):
-        return func(f'{file} does not exist')
-    if not os.path.isfile(file):
-        return func(f'{file} is not a file')
-    elif not os.path.getsize(file):
-        return func(f'{file} is empty')
-    else:
-        return os.path.abspath(file)
-
-
-def check_cpus(cpus: Any = None, max_cpus: int = _MAX_CPUS, verbose: bool = False) -> int:
-    avail_cpus = os.cpu_count() or max_cpus
-    if isinstance(cpus, str):
-        cpus = int(cpus) if cpus.isdigit() else avail_cpus
-    elif isinstance(cpus, float):
-        cpus = int(cpus)
-    else:
-        cpus = avail_cpus
-    cpus = min(cpus, avail_cpus, max_cpus)
-    log(f'Using {cpus=}', verbose)
-    return cpus
-
-
-def check_out(path: str | os.PathLike, mode: str = "at", exist_ok: bool = True) -> os.PathLike | TextIO:
+class GitRepo:
     """
-    Check if the user wants to create/append a file or directory.
-    If it looks like/is already a file (has an extension), return the file object.
-    If it looks like/is already a directory, return the directory path.
+    A context-aware class to represent a git repository.
+    Handles temporary directories automatically via the 'with' statement.
+
+    Examples:
+        >>> with GitRepo('owner', 'repo') as repo:
+        ...     print(repo.local_path)
     """
-    if path == '-':  # If the path is '-', return stdout
-        return sys.stdout
-    if os.path.splitext(path)[1]:  # If the path has an extension, it's probably a file
-        try:
-            return open(path, mode)  # Open the file
-        except Exception as e:
-            quit_with_error(f'Could not open {path}: {e}')
-    if not os.path.exists(path):  # Assume directory
-        try:
-            os.makedirs(path, exist_ok=exist_ok)  # Create the directory if it doesn't exist
-        except Exception as e:
-            quit_with_error(f'Could not create {path}: {e}')
+    _BASE_URL = 'https://api.github.com'
+    __slots__ = ('owner', 'repo', 'branch', '_api_url', '_meta_cache', '_temp_dir_obj', 'local_path')
+
+    def __init__(self, owner: str, repo: str, branch: str = 'main'):
+        self.owner = owner
+        self.repo = repo
+        self.branch = branch
+        self._api_url = f'{self._BASE_URL}/repos/{owner}/{repo}'
+        # Internal state
+        self._meta_cache = None
+        self._temp_dir_obj = None  # Holds the TemporaryDirectory object
+        self.local_path: Path | None = None
+
+    def __repr__(self):
+        return f"<GitRepo {self.owner}/{self.repo} ({self.branch})>"
+
+    @property
+    def metadata(self) -> dict:
+        """
+        Lazy-loaded property for repository metadata.
+        Only downloads from API once per instance.
+        """
+        if self._meta_cache is None: self._meta_cache = json_loads(Downloader().fetch(self._api_url))
+        return self._meta_cache
+
+    def clone(self) -> Path:
+        """
+        Downloads and extracts the repo to a temporary directory.
+        Returns the Path to the actual source code (inside the extracted folder).
+        """
+        # If already cloned, just return the path
+        if self.local_path and self.local_path.exists(): return self.local_path
+        zip_url = f'{self._api_url}/zipball/{self.branch}'
+
+        # Create the temp directory explicitly
+        self._temp_dir_obj = TemporaryDirectory()
+        base_temp_path = Path(self._temp_dir_obj.name)
+        zip_path = base_temp_path / "repo.zip"
+        with Downloader() as dl:
+            dl.fetch(zip_url, zip_path)
+
+        with ZipFile(zip_path, 'r') as zfile:
+            zfile.extractall(base_temp_path)
+            root_folder = zfile.namelist()[0].split('/')[0]
+        zip_path.unlink()
+        self.local_path = base_temp_path / root_folder
+        return self.local_path
+
+    def __enter__(self):
+        """Enter the runtime context related to this object."""
+        self.clone()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exit the runtime context and cleanup temporary directory."""
+        if self._temp_dir_obj:
+            self._temp_dir_obj.cleanup()
+            self._temp_dir_obj = None
+            self.local_path = None
+
+
+# Functions ------------------------------------------------------------------------------------------------------------
+def write_to_file_or_directory(path: Union[str, Path, IO], mode: str = 'at') -> Union[Path, IO]:
+    """
+    Writes to a file or creates a directory based on the provided path.
+
+    If the path is '-' or 'stdout', it returns stdout.
+    If the path has a suffix, it's treated as a file and opened for appending.
+    If the path has no suffix, it's treated as a directory and created if it doesn't exist.
+
+    :param path: The path to the file or directory.
+    :param mode: The mode to open the file in if it's a file.
+    :return: A file handle (IO) if a file is specified, or a Path object if a directory is specified.
+    """
+    if isinstance(path, IOBase):
+        return path
+    if path in {'-', 'stdout'}:  # If the path is '-', return stdout
+        return stdout
+    if not isinstance(path, Path):  # Coerce to Path object
+        path = Path(path)
+    if path.suffix:  # If the path has an extension, it's probably a file
+        # NB: We can't use is_file or is_dir because it may not exist yet, `open()` will create or append
+        return open(path, mode)  # Open the file
+    else:
+        path.mkdir(exist_ok=True, parents=True)  # Create the directory if it doesn't exist
     return path
-
-
-def opener(file: str | os.PathLike, verbose: bool = False, *args, **kwargs) -> TextIO | BinaryIO:
-    """
-    Opens a file with the appropriate open function based on the magic bytes at the beginning of the data
-    :param file: File to open
-    :param verbose: Print log messages to stderr
-    :return: File handle
-    """
-    try:
-        file = check_file(file)
-    except FileNotFoundError as e:
-        raise e
-    basename = os.path.basename(file)
-    with open(file, 'rb') as f:  # Open the file to read bytes
-        first_bytes = f.read(_MIN_N_BYTES)  # Get the bytes necessary to guess the compression type
-    for magic, compression in _MAGIC_BYTES.items():
-        if first_bytes.startswith(magic):
-            log(f"Assuming {basename} is compressed with {compression}", verbose=verbose)
-            try:
-                return _OPEN[compression](file, *args, **kwargs)
-            except Exception as e:
-                return warning(f"Error opening {basename} with {compression}; {first_bytes=}\n{e}")
-    log(f"Assuming {basename} is uncompressed", verbose=verbose)
-    return open(file, *args, **kwargs)
-
-
-def get_logo(message: str, width: int = 43) -> str:  # 43 is the width of the logo
-    return bold_cyan(f'{_LOGO}\n{message.center(width)}')
-
-
-def merge_ranges(ranges: list[tuple[int | float, int | float]], tolerance: int | float = 0, skip_sort: bool = False
-                 ) -> Generator[tuple[int | float, int | float], None, None]:
-    """
-    Merge overlapping ranges
-    :param ranges: List of tuples of start and end positions
-    :param tolerance: Integer or float of tolerance for merging ranges
-    :param skip_sort: Skip sorting the ranges before merging
-    :return: List of merged ranges
-    """
-    if not ranges:
-        return None
-    if len(ranges) == 1:
-        yield ranges[0]
-        return None
-    current_range = (ranges := ranges if skip_sort else sorted(ranges, key=itemgetter(0)))[0]  # Start with the first range
-    for start, end in ranges[1:]:  # Iterate through the ranges
-        if start - tolerance <= current_range[1]:  # Overlap, merge the ranges
-            current_range = (current_range[0], max(current_range[1], end))
-        else:  # No overlap, add the current range to the merged list and start a new range
-            yield current_range  # Yield the current range
-            current_range = (start, end)   # Start a new range
-    yield current_range  # Yield the last range
-
-
-def range_overlap(range1: tuple[int, int], range2: tuple[int, int], skip_sort: bool = False) -> int:
-    """
-    Returns the overlap between two ranges
-    :param range1: Tuple of start and end positions
-    :param range2: Tuple of start and end positions
-    :param skip_sort: Skip sorting each range before calculating the overlap
-    :return: Integer of overlap
-    """
-    start1, end1 = range1 if skip_sort else sorted(range1)
-    start2, end2 = range2 if skip_sort else sorted(range2)
-    overlap_start = max(start1, start2)
-    overlap_end = min(end1, end2)
-    return max(0, overlap_end - overlap_start)
-

@@ -5,6 +5,18 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/kaptive)
 [![Conda](https://img.shields.io/conda/vn/bioconda/kaptive)](https://anaconda.org/bioconda/kaptive)
 
+## Known databases
+
+| Keyword | URL |
+| --- | --- |
+| kpsc | https://github.com/klebgenomics/KpSC_surface_antigen_loci |
+| kosc | https://github.com/klebgenomics/KoSC_surface_antigen_loci |
+
+```console
+kaptive database install <keyword>
+```
+
+
 ## About
 
 Kaptive is a system for surface polysaccharide typing from bacterial

@@ -8,7 +8,7 @@ from importlib.metadata import version
 
 from Bio import __version__ as biopython_version
 
-from .log import bold, quit_with_error, log
+from .log import bold, raise RuntimeError, log
 from .utils import get_logo, check_out, check_cpus, check_programs
 
 # Constants -----------------------------------------------------------------------------------------------------------
@@ -33,14 +33,14 @@ def parse_args(a) -> argparse.Namespace:
 
     if len(a) == 0:  # No arguments, print help message
         parser.print_help(sys.stderr)
-        quit_with_error(f'Please specify a command; choose from {{assembly,extract,convert}}')
+        raise RuntimeError(f'Please specify a command; choose from {{assembly,extract,convert}}')
     if any(x in a for x in {'-v', '--version'}):  # Version message
         print(__version__)
         sys.exit(0)
     if subparser := subparsers.choices.get(a[0], None):  # Check if the first argument is a subparser
         if len(a) == 1:  # Subparser help message
             subparser.print_help(sys.stderr)
-            quit_with_error(f'Insufficient arguments for {_DIST} {a[0]}')
+            raise RuntimeError(f'Insufficient arguments for {_DIST} {a[0]}')
         if any(x in a[1:] for x in {'-h', '--help'}):  # Subparser help message
             subparser.print_help(sys.stderr)
             sys.exit(0)
@@ -49,7 +49,7 @@ def parse_args(a) -> argparse.Namespace:
         sys.exit(0)
     else:  # Unknown command
         parser.print_help(sys.stderr)
-        quit_with_error(f'Unknown command "{a[0]}"; choose from {{assembly,extract,convert}}')
+        raise RuntimeError(f'Unknown command "{a[0]}"; choose from {{assembly,extract,convert}}')
     return parser.parse_args(a)
 
 
@@ -201,10 +201,10 @@ def other_opts(opts: argparse.ArgumentParser):
 # Main -----------------------------------------------------------------------------------------------------------------
 def cli():
     if sys.version_info.major < 3 or sys.version_info.minor < 9:
-        quit_with_error(f'Python version 3.9 or greater required')
+        raise RuntimeError(f'Python version 3.9 or greater required')
 
     if int(biopython_version.split('.')[0]) < 1 or int(biopython_version.split('.')[1]) < 83:
-        quit_with_error('Biopython version 1.83 or greater required')
+        raise RuntimeError('Biopython version 1.83 or greater required')
 
     args = parse_args(sys.argv[1:])  # Parse the arguments
 

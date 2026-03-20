@@ -1,39 +1,32 @@
-from __future__ import annotations
 from typing import Iterable, Generator
 from itertools import groupby
+from dataclasses import dataclass
 
-from .utils import range_overlap
+from kaptive.interval import range_overlap
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
 class AlignmentError(Exception):
     pass
 
-
+@dataclass(slots=True, frozen=True)
 class Alignment:
     """
     Similar to `mappy.Alignment` but with additional attributes and methods.
     """
-
-    def __init__(
-            self, q: str = None, q_len: int | None = 0, q_st: int | None = 0,
-            q_en: int | None = 0, strand: str = None, ctg: str = None,
-            ctg_len: int | None = 0, r_st: int | None = 0, r_en: int | None = 0,
-            mlen: int | None = 0, blen: int | None = 0, mapq: int | None = 0,
-            tags: dict = None):
-        self.q = q or 'unknown'  # Query sequence name
-        self.q_len = q_len  # Query sequence length
-        self.q_st = q_st  # Query start coordinate (0-based)
-        self.q_en = q_en  # Query end coordinate (0-based)
-        self.strand = strand or 'unknown'  # ‘+’ if query/target on the same strand; ‘-’ if opposite
-        self.ctg = ctg or 'unknown'  # Target sequence name
-        self.ctg_len = ctg_len  # Target sequence length
-        self.r_st = r_st  # Target start coordinate on the original strand (0-based)
-        self.r_en = r_en  # Target end coordinate on the original strand (0-based)
-        self.mlen = mlen  # Number of matching bases in the alignment
-        self.blen = blen  # Number bases, including gaps, in the alignment
-        self.mapq = mapq  # Mapping quality (0-255 with 255 for missing)
-        self.tags = tags or {}  # {tag: value} pairs
+    q: str  # Query sequence name
+    q_len: int  # Query sequence length
+    q_st: int  # Query start coordinate (0-based)
+    q_en: int  # Query end coordinate (0-based)
+    strand: str  # ‘+’ if query/target on the same strand; ‘-’ if opposite
+    ctg: str # Target sequence name
+    ctg_len: int  # Target sequence length
+    r_st: int  # Target start coordinate on the original strand (0-based)
+    r_en: int  # Target end coordinate on the original strand (0-based)
+    mlen: int  # Number of matching bases in the alignment
+    blen: int  # Number bases, including gaps, in the alignment
+    mapq: int  # Mapping quality (0-255 with 255 for missing)
+    tags: dict  # {tag: value} pairs
 
     @classmethod
     def from_paf_line(cls, line: str):

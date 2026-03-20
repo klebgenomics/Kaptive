@@ -1,14 +1,11 @@
-from __future__ import annotations
-
 from itertools import chain
-from os import PathLike, path, listdir
 from functools import cached_property
 from pathlib import Path
-from typing import Generator, TextIO
+from typing import Generator, IO, Union, Optional
 import re
-from warnings import catch_warnings
+from warnings import catch_warnings, warn
 from io import TextIOBase
-from importlib.resources import files as resource_files
+from json import load as json_load
 
 import numpy as np
 
@@ -17,42 +14,88 @@ from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 
-from .log import log, quit_with_error, warning
-from .utils import check_file
+from kaptive.utils import Resources, LiteralFile, GitRepo
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _LOCUS_REGEX = re.compile(r'(?<=locus:)\w+|(?<=locus: ).*')
 _TYPE_REGEX = re.compile(r'(?<=type:)\w+|(?<=type: ).*')
-_DB_KEYWORDS = {
-    'Klebsiella_k_locus_primary_reference': ['kpsc_k', 'kp_k', 'k_k'],
-    'Klebsiella_o_locus_primary_reference': ['kpsc_o', 'kp_o', 'k_o'],
-    'Acinetobacter_baumannii_k_locus_primary_reference': ['ab_k'],
-    'Acinetobacter_baumannii_OC_locus_primary_reference': ['ab_o']
-}
-_GENE_THRESHOLDS = {
-    'Klebsiella_k_locus_primary_reference': 82.5,
-    'Klebsiella_o_locus_primary_reference': 82.5,
-    'Acinetobacter_baumannii_k_locus_primary_reference': 85,
-    'Acinetobacter_baumannii_OC_locus_primary_reference': 85
-}
 
-_DIST = 'kaptive'
-_DB_PATH: Path = resource_files(_DIST) / 'data'
+
+# Exceptions and warnings ----------------------------------------------------------------------------------------------
+class LocusError(Exception): pass
+class PhenotypeError(Exception): pass
+class DatabaseError(Exception): pass
+class DatabaseManagerError(Exception): pass
 
 
 # Classes -------------------------------------------------------------------------------------------------------------
-class DatabaseError(Exception):
-    pass
+class DatabaseManager:
+    __slots__ = ('_databases', '_metadata', '_keywords', '_database_files', '_unit_files', '_metadata_files', '_logic_files')
+    def __init__(self):
+        self._databases: list[str] = []
+        self._metadata: dict[str, dict] = {}
+        self._keywords: dict[str, str] = {}
+        self._database_files: dict[str, Path] = {}
+        self._unit_files: dict[str, Path] = {}
+        self._metadata_files: dict[str, Path] = {}
+        self._logic_files: dict[str, Path] = {}
+        for args in self._scan(self._PATH): self._load(*args)
 
+    def __len__(self): return len(self._databases)
+    def __iter__(self): return iter(self._databases)
+    def __contains__(self, name: str): return name in self._databases or name in self._keywords
+    def __getitem__(self, name_or_kwd: str) -> 'Database':
+        """Load an installed database using its name or keyword"""
+        name = self._keywords.get(name_or_kwd, name_or_kwd)
+        if name not in self._database_files:
+            raise DatabaseError(f'Invalid database name or keyword: {name_or_kwd}')
+        db = Database.from_file(self._database_files[name], self._logic_files.get(name), self._unit_files.get(name))
+        db._metadata = self._metadata[name]
+        return db
+
+    @staticmethod
+    def _scan(path: Path) -> Generator[tuple[Path, Path, Optional[Path], Optional[Path]], None, None]:
+        if not path or not path.is_dir(): raise DatabaseManagerError('Path must be a directory')
+        for database_file in path.glob('*.gbk'):
+            if (metadata_file := database_file.with_suffix('.json')) is None:
+                raise FileNotFoundError(f'No metadata file found for {database_file}')
+            if not (logic_file := database_file.with_suffix('.logic')).is_file(): logic_file = None
+            if not (unit_file := database_file.with_suffix('.units')).is_file(): unit_file = None
+            yield database_file, metadata_file, logic_file, unit_file
+
+    def _load(self, database_file: Path, metadata_file: Path, logic_file: Path = None,
+              unit_file: Path = None, add_to_package: bool = False):
+            self._databases.append(database := database_file.stem)
+            if add_to_package:
+                database_file = self._add_to_package(database_file)
+                metadata_file = self._add_to_package(metadata_file)
+                logic_file = self._add_to_package(logic_file)
+                unit_file = self._add_to_package(unit_file)
+            self._database_files[database] = database_file
+            self._metadata_files[database] = metadata_file
+            if logic_file: self._logic_files[database] = logic_file
+            if unit_file: self._unit_files[database] = unit_file
+            self._metadata[database] = (metadata := json_load(metadata_file.open('r', encoding='utf-8')))
+            for keyword in metadata['keywords']: self._keywords[keyword] = database
+
+    def _add_to_package(self, path: Path = None) -> Optional[Path]:
+        if path is None: return None
+        new_path = self._PATH / path.name
+        new_path.write_text(path.read_text(encoding='utf-8'), encoding='utf-8')
+        return new_path
+
+    def fetch(self, repo: GitRepo, add_to_package: bool = False):
+        """Fetches databases from a GitHub repository, optionally adding them to the package"""
+        for args in self._scan(repo.local_path): self._load(*args, add_to_package=add_to_package)
 
 class Database:
     def __init__(self, name: str, loci: dict[str, Locus] = None, genes: dict[str, Gene] = None,
-                 extra_genes: dict[str, Gene] = None, gene_threshold: float = None):
+                 extra_genes: dict[str, Gene] = None, gene_threshold: float = 0):
         self.name = name
         self.loci = loci or {}
         self.genes = genes or {}
         self.extra_genes = extra_genes or {}
-        self.gene_threshold = gene_threshold or _GENE_THRESHOLDS.get(self.name, 0)
+        self.gene_threshold = gene_threshold
         self._expected_gene_counts = None
 
     def __repr__(self):
@@ -125,16 +168,8 @@ class Database:
             #     raise PhenotypeError(f'Could not find {locus} in database {self.name}')
 
 
-class LocusError(Exception):
-    pass
-
-
-class PhenotypeError(Exception):
-    pass
-
-
 class Locus:
-    def __init__(self, name: str = None, seq: Seq | None = Seq(''), genes: dict[str: Gene] = None,
+    def __init__(self, name: str = None, seq: Seq | None = Seq(''), genes: dict[str, Gene] = None,
                  type_label: str = None, phenotypes: list[tuple[set[tuple[str, str]], str]] = None,
                  index: int | None = 0):
         self.name = name or ''
@@ -198,7 +233,7 @@ class Locus:
     def __iter__(self):
         return iter(self.genes.values())
 
-    def add_phenotype(self, genes: dict[str, str] | None, extra_genes: set[tuple[str, str]] | None, phenotype: str,
+    def add_phenotype(self, genes: dict[str, str], extra_genes: set[tuple[str, str]], phenotype: str,
                       strict: bool = False):
         if extra_genes:
             self.phenotypes = sorted(self.phenotypes + [(extra_genes, phenotype)], key=lambda x: len(x[0]),
@@ -214,23 +249,22 @@ class Locus:
     def format(self, format_spec):
         if format_spec == 'fna':
             if len(self.seq) == 0:
-                warning(f'No DNA sequence for {self}')
+                warn(f'No DNA sequence for {self}', UserWarning)
                 return ""
             return f'>{self.name}\n{self.seq}\n'
         if format_spec in {'ffn', 'faa'}:
             return ''.join([gene.format(format_spec) for gene in self])
         raise ValueError(f'Invalid format specifier: {format_spec}')
 
-    def write(self, fna: str | PathLike | TextIO = None, ffn: str | PathLike | TextIO = None,
-              faa: str | PathLike | TextIO = None):
+    def write(self, fna: Union[str, Path, IO[str]] = None, ffn: Union[str, Path, IO[str]] = None,
+              faa: Union[str, Path, IO[str]] = None):
         """Write the typing result to files or file handles."""
         for f, fmt in [(fna, 'fna'), (ffn, 'ffn'), (faa, 'faa')]:
             if f:
                 if isinstance(f, TextIOBase):
                     f.write(self.format(fmt))
-                elif isinstance(f, PathLike) or isinstance(f, str):
-                    with open(path.join(f, f'{self.name.replace("/", "_")}.{fmt}'), 'wt') as handle:
-                        handle.write(self.format(fmt))
+                elif isinstance(f, (Path, str)):
+                    Path(f / f'{self.name.replace("/", "_")}.{fmt}').write_text(self.format(fmt))
 
 
 class GeneError(Exception):
@@ -267,13 +301,13 @@ class Gene:
     def format(self, format_spec):
         if format_spec == 'ffn':
             if len(self.dna_seq) == 0:
-                warning(f'No DNA sequence for {self}')
+                warn(f'No DNA sequence for {self}', UserWarning)
                 return ""
             return f'>{self.name}\n{self.dna_seq}\n'
         if format_spec == 'faa':
             self.extract_translation()
             if len(self.protein_seq) == 0:
-                warning(f'No protein sequence for {self.__repr__()}')
+                warn(f'No protein sequence for {self.__repr__()}', UserWarning)
                 return ""
             return f'>{self.name}\n{self.protein_seq}\n'
         raise ValueError(f'Invalid format specifier: {format_spec}')
@@ -296,12 +330,12 @@ class Gene:
                 # for i in w:
                 #     warning(f"{i.message}: {self.__repr__()}")
             if len(self.protein_seq) == 0:
-                warning(f'No protein sequence for reference {self}')
+                warn(f'No protein sequence for reference {self}', UserWarning)
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
-def name_from_record(record: SeqRecord, locus_regex: re.Pattern | None = _LOCUS_REGEX,
-                     type_regex: re.Pattern | None = _TYPE_REGEX) -> tuple[str | None, str | None]:
+def name_from_record(record: SeqRecord, locus_regex: re.Pattern = _LOCUS_REGEX,
+                     type_regex: re.Pattern = _TYPE_REGEX) -> tuple[Optional[str], Optional[str]]:
     """
     This function extracts the locus and type names from a genbank record using regular expressions.
     If the locus_regex or type_regex are not provided, the default regexes are used.
@@ -311,9 +345,9 @@ def name_from_record(record: SeqRecord, locus_regex: re.Pattern | None = _LOCUS_
     locus_name, type_name = set(), set()
 
     if not (source := next((f for f in record.features if f.type == 'source'), None)):
-        quit_with_error(f'Could not find source feature in genbank record: {record.id}')
+        raise RuntimeError(f'Could not find source feature in genbank record: {record.id}')
     if "note" not in source.qualifiers:
-        quit_with_error(f'Could not find note qualifier in source feature of genbank record: {record.id}')
+        raise RuntimeError(f'Could not find note qualifier in source feature of genbank record: {record.id}')
 
     for note in source.qualifiers['note']:
         if type_regex and (match := type_regex.search(note)):
@@ -326,76 +360,74 @@ def name_from_record(record: SeqRecord, locus_regex: re.Pattern | None = _LOCUS_
             locus_name.add(match.group())
 
     if len(locus_name) > 1:
-        quit_with_error(f'Found multiple locus names in record: {record.id}\n\tNote: {source.qualifiers["note"]}')
+        raise RuntimeError(f'Found multiple locus names in record: {record.id}\n\tNote: {source.qualifiers["note"]}')
     if len(type_name) > 1:
-        quit_with_error(f'Found multiple type names in record: {record.id}\n\tNote: {source.qualifiers["note"]}')
+        raise RuntimeError(f'Found multiple type names in record: {record.id}\n\tNote: {source.qualifiers["note"]}')
 
     return locus_name.pop() if len(locus_name) == 1 else None, type_name.pop() if len(type_name) == 1 else None
 
 
-def parse_logic(logic_file: str | PathLike, verbose: bool = False
-                ) -> Generator[tuple[list[str], dict[str, str], str], None, None]:
-    log(f'Parsing logic {logic_file}', verbose=verbose)
+def parse_logic(logic_file: Union[str, Path]) -> Generator[tuple[list[str], dict[str, str], str], None, None]:
     with open(logic_file, 'rt') as f:
         if (line := f.readline()) != 'loci\tgenes\tphenotype\n':
-            quit_with_error(f'Logic file {logic_file} has invalid header: {line}')
+            raise RuntimeError(f'Logic file {logic_file} has invalid header: {line}')
         for line in f:
             loci, genes, phenotype = line.strip().split('\t')
             yield loci.split(';'), dict(
                 gene.split(",", 1) if "," in gene else (gene, 'present') for gene in genes.split(';')), phenotype
 
 
-def get_database(argument: str | PathLike) -> tuple[str, PathLike]:
+def get_database(argument: Union[str, Path]) -> tuple[str, Path]:
     """
     Returns the path to the database file.
     If an existing file is passed, it is returned, otherwise it will be treated as a keyword and used to
     find the respective database in the kaptive package.
     """
-    if path.isfile(argument):
-        return path.splitext(path.basename(argument))[0], check_file(argument)
+    
+    if path := LiteralFile(argument):
+        return path.stem, path
 
-    if not (dbs_in_package := [i for i in listdir(_DB_PATH) if i.endswith('.gbk')]):
-        quit_with_error(f'No databases found in expected path: {_DB_PATH}')
+    if not (dbs_in_package := list(Resources.data.glob('*.gbk'))):
+        raise RuntimeError(f'No databases found in expected path: {Resources.data}')
 
     # Check keywords
     for db in dbs_in_package:
         db_stem, _ = path.splitext(db)
         if argument == db_stem or argument in _DB_KEYWORDS[db_stem]:
-            return db_stem, check_file(path.join(_DB_PATH, db))
+            return db_stem, LiteralFile(path.join(Resources.data, db))
 
-    quit_with_error(f'No database found for {argument}\n'
+    raise RuntimeError(f'No database found for {argument}\n'
                     f'Available databases: {", ".join(dbs_in_package)}\n'
                     f'Valid keywords: {", ".join([i for x in _DB_KEYWORDS.values() for i in x])}')
 
 
-def parse_database(db: str | PathLike, locus_filter: re.Pattern = None, load_locus_seqs: bool = True,
+def parse_database(db: Union[str, Path], locus_filter: re.Pattern = None, load_locus_seqs: bool = True,
                    extract_translations: bool = False, verbose: bool = False, **kwargs) -> Generator[Locus, None, None]:
     """
     Wrapper around SeqIO.parse to parse a Kaptive database genbank file and return a generator of Locus objects
     """
     db_name, db_path = get_database(db)
-    log(f'Parsing {db_name}', verbose=verbose)
     try:
         for record in SeqIO.parse(db_path, 'genbank'):
             locus_name, type_name = name_from_record(record, **kwargs)
             if not locus_name:
-                quit_with_error(f'Could not parse locus name from {record.id}')
+                raise RuntimeError(f'Could not parse locus name from {record.id}')
             if type_name == "unknown" or (not type_name and not locus_name.startswith('Extra_genes')):
                 type_name = f'unknown ({locus_name})'  # Add the locus name to the type name if it is unknown
             if locus_filter and not locus_filter.search(locus_name):
                 continue
             yield Locus.from_seqrecord(record, locus_name, type_name, load_locus_seqs, extract_translations)
     except Exception as e:
-        quit_with_error(f'Could not parse database {db_name}: {e}')
+        raise RuntimeError(f'Could not parse database {db_name}: {e}')
 
 
-def load_database(argument: str | PathLike, gene_threshold: float = None, **kwargs) -> Database:
+def load_database(argument: Union[str, Path], gene_threshold: float = None, **kwargs) -> Database:
     db_name, db_path = get_database(argument)
     db = Database(db_name, gene_threshold=gene_threshold)
     for locus in parse_database(db_path, **kwargs):
         db.add_locus(locus)
     if not db.loci:  # Check that loci were properly loaded
-        quit_with_error(f'No loci found in database {db.name}')
+        raise RuntimeError(f'No loci found in database {db.name}')
     if path.isfile(logic_file := f'{path.splitext(db_path)[0]}.logic'):  # Load phenotype logic
         logic = list(parse_logic(logic_file))
 

@@ -1,11 +1,12 @@
-from __future__ import annotations
-
+from pathlib import Path
 from itertools import chain
 from json import loads
 from subprocess import Popen, PIPE
-from typing import TextIO, Pattern, Generator
-from re import compile
-from os import fstat, PathLike, path
+from typing import TextIO, Pattern, Generator, Union, Optional
+from re import compile as re_compile
+from os import fstat
+from gzip import open as gzip_open
+from warnings import warn
 
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
@@ -13,15 +14,16 @@ import numpy as np
 
 np.seterr(divide='ignore', invalid='ignore')  # Ignore divide by zero and invalid value errors
 
-from .typing import TypingResult, LocusPiece, GeneResult
-from .database import Database, load_database
-from .alignment import Alignment, group_alns, cull_filtered
-from .utils import opener, merge_ranges, range_overlap, check_cpus, check_file
-from .log import log, warning
+from kaptive.typing import TypingResult, LocusPiece, GeneResult
+from kaptive.database import Database, load_database
+from kaptive.alignment import Alignment, group_alns, cull_filtered
+from kaptive.utils import Resources, LiteralFile
+from kaptive.interval import range_overlap, merge_ranges
+
 
 # Constants -----------------------------------------------------------------------------------------------------------
 # _ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz|\.bz2|\.xz)?$')
-_ASSEMBLY_FASTA_REGEX = compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
+_ASSEMBLY_FASTA_REGEX = re_compile(r'\.(fasta|fa|fna|ffn)(\.gz)?$')
 _ASSEMBLY_HEADER = ('Assembly\tBest match locus\tBest match type\tMatch confidence\tProblems\tIdentity\tCoverage\t'
                     'Length discrepancy\tExpected genes in locus\tExpected genes in locus, details\t'
                     'Missing expected genes\tOther genes in locus\tOther genes in locus, details\t'
@@ -31,44 +33,12 @@ _ASSEMBLY_HEADER = ('Assembly\tBest match locus\tBest match type\tMatch confiden
 _SCORES_HEADER = 'Assembly\tLocus\tAS\tmlen\tblen\tq_len\tgenes_found\tgenes_expected\n'
 
 
-# Classes -------------------------------------------------------------------------------------------------------------
-class AssemblyError(Exception):
+# Exceptions and warnings ----------------------------------------------------------------------------------------------
+class TyperWarning(UserWarning):
     pass
 
 
-class Assembly:
-    def __init__(self, path_: PathLike = None, name: str = None,
-                 contigs: dict[str: Contig] = None):
-        self.path = path_
-        self.name = name
-        self.contigs = contigs or {}
-
-    def __repr__(self):
-        return self.name
-
-    def __len__(self):
-        return sum(len(i) for i in self.contigs.values())
-
-    def seq(self, ctg: str, start: int, end: int, strand: str = "+") -> Seq:
-        return self.contigs[ctg].seq[start:end] if strand == "+" else self.contigs[ctg].seq[
-                                                                      start:end].reverse_complement()
-
-    def map(self, query: str, threads: int, extra_args: str = '', verbose: bool = False
-            ) -> Generator[Alignment, None, None]:
-        cmd = "minimap2 -c " + (f"{extra_args} " if extra_args else '') + f'-t {threads} "{self.path}" -'
-        log(f"{cmd=}", verbose=verbose)
-        stdout, stderr = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True,
-                               shell=True).communicate(query)
-        if not stdout and stderr:  # No alignments, maybe an error with minimap2
-            return warning(stderr)
-        for line in stdout.splitlines():
-            yield Alignment.from_paf_line(line)
-
-
-class ContigError(Exception):
-    pass
-
-
+# Classes --------------------------------------------------------------------------------------------------------------
 class Contig(object):
     """
     This class describes a contig in an assembly: the name, length, and sequence.
@@ -86,34 +56,56 @@ class Contig(object):
         return len(self.seq)
 
 
+class Assembly:
+    def __init__(self, path_: Path, name: str, contigs: dict[str, Contig] = None):
+        self.path = path_
+        self.name = name
+        self.contigs = contigs or {}
+
+    def __repr__(self):
+        return self.name
+
+    def __len__(self):
+        return sum(len(i) for i in self.contigs.values())
+
+    def seq(self, ctg: str, start: int, end: int, strand: str = "+") -> Seq:
+        return self.contigs[ctg].seq[start:end] if strand == "+" else self.contigs[ctg].seq[
+                                                                      start:end].reverse_complement()
+
+    def map(self, query: str, threads: int, extra_args: str = '') -> Generator[Alignment, None, None]:
+        cmd = "minimap2 -c " + (f"{extra_args} " if extra_args else '') + f'-t {threads} "{self.path}" -'
+        stdout, stderr = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True,
+                               shell=True).communicate(query)
+        for line in stdout.splitlines():
+            yield Alignment.from_paf_line(line)
+
+
 # Functions -----------------------------------------------------------------------------------------------------------
-def parse_assembly(file: PathLike | str, verbose: bool = False) -> Assembly | None:
+def parse_assembly(path: Union[str, Path]) -> Optional[Assembly]:
     """Parse an assembly file and return an Assembly object"""
-    if file := check_file(file):  # Check the file exists, warn if not (instead of quitting)
-        if match := _ASSEMBLY_FASTA_REGEX.search(basename := path.basename(file)):
-            log(f'Assuming {basename} is in fasta format', verbose=verbose)
-            assembly = Assembly(file, basename.rstrip(match.group()))
-            try:
-                with opener(file, verbose=verbose, mode='rt') as f:
-                    for header, seq in SimpleFastaParser(f):
-                        header = header.split(maxsplit=1)
-                        name, description = header if len(header) == 2 else (header[0], '')
-                        assembly.contigs[name] = Contig(name, description, Seq(seq))
-            except Exception as e:
-                return warning(f"Error parsing {basename}\n{e}")
-            return assembly
-        return warning(f"File extension must match {_ASSEMBLY_FASTA_REGEX.pattern}: {basename}")
+    path = LiteralFile(path)
+    if match := _ASSEMBLY_FASTA_REGEX.search(path.name):
+        assembly = Assembly(path, path.name.rstrip(match.group()))
+        try:
+            with (gzip_open if path.suffix == '.gz' else open)(path, mode='rt') as f:
+                for header, seq in SimpleFastaParser(f):
+                    header = header.split(maxsplit=1)
+                    name, description = header if len(header) == 2 else (header[0], '')
+                    assembly.contigs[name] = Contig(name, description, Seq(seq))
+        except Exception as e:
+            raise RuntimeError(f"Error parsing {path}") from e
+        return assembly
+    raise RuntimeError(f"File extension must match {_ASSEMBLY_FASTA_REGEX.pattern}: {path}")
 
 
 def parse_result(line: str, db: Database, regex: Pattern = None, samples: set[str] = None,
-                 loci: set[str] = None) -> TypingResult | None:
+                 loci: set[str] = None) -> Optional[TypingResult]:
     if regex and not regex.search(line):
         return None
     try:
         d = loads(line)
     except Exception as e:
-        warning(f"Error parsing JSON line: {e}\n{line}")
-        return None
+        raise RuntimeError(f"Error parsing JSON line") from e
     if samples and d['sample_name'] not in samples:
         return None
     if loci and d['best_match'] not in loci:
@@ -121,8 +113,7 @@ def parse_result(line: str, db: Database, regex: Pattern = None, samples: set[st
     try:
         return TypingResult.from_dict(d, db)
     except Exception as e:
-        warning(f"Error converting JSON line to TypingResult: {e}")
-        return None
+        raise RuntimeError(f"Error converting JSON line to TypingResult") from e
 
 
 def write_headers(tsv: TextIO = None, no_header: bool = False, scores: bool = False) -> int:
@@ -132,10 +123,10 @@ def write_headers(tsv: TextIO = None, no_header: bool = False, scores: bool = Fa
 
 
 def typing_pipeline(
-        assembly: str | PathLike | Assembly, db: str | PathLike | Database, threads: int = 0,
+        assembly: Union[str, Path, Assembly], db: Union[str, Path, Database], threads: int = 1,
         score_metric: int = 0, weight_metric: int = 3, min_cov: float = 50, n_best: int = 2,
         max_other_genes: int = 1, percent_expected_genes: float = 50, allow_below_threshold: bool = False,
-        score_file: TextIO = None, verbose: bool = False) -> TypingResult | None:
+        score_file: TextIO = None) -> Optional[TypingResult]:
     """
     Performs *in silico* serotyping on a bacterial genome assembly using a database of known loci.
     :param assembly: Path to the assembly file or Assembly object
@@ -149,20 +140,19 @@ def typing_pipeline(
     :param percent_expected_genes: Percent of expected genes required to be considered Typeable
     :param allow_below_threshold: Allow genes below the threshold to be considered Typeable
     :param score_file: File handle to write the scores to, will not type the assembly if provided
-    :param verbose: Print progress to stderr
     :return: TypingResult object or None
     """
     # CHECK ARGS -------------------------------------------------------------------------------------------------------
-    if not isinstance(db, Database) and not (db := load_database(db, verbose=verbose)):
+    if not isinstance(db, Database) and not (db := load_database(db)):
         return None
-    if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly, verbose=verbose)):
+    if not isinstance(assembly, Assembly) and not (assembly := parse_assembly(assembly)):
         return None
-    threads = threads if threads else check_cpus(threads, verbose=verbose)
+
     # ALIGN GENES ------------------------------------------------------------------------------------------------------
     # Init scores array with 6 columns: AS, mlen, blen, q_len, genes_found, genes_expected
     scores, alignments = np.zeros((len(db), 6)), []
     # Group alignments by query gene (Alignment.q)
-    for q, alns in group_alns(assembly.map(db.format('ffn'), threads, verbose=verbose)):
+    for q, alns in group_alns(assembly.map(db.format('ffn'), threads)):
         if q.startswith("Extra_genes"):
             alignments.append(max(alns, key=lambda x: x.mlen))  # Add the best alignment for extra genes
         else:
@@ -174,8 +164,8 @@ def typing_pipeline(
             # For each gene, add: AS, mlen, blen, q_len, genes_found (1), genes_expected (0 but will update later)
 
     if scores.max() == 0:  # If no gene alignments were found, return None so pipeline can continue
-        return warning(f'No gene alignments sufficient for typing {assembly}\n'
-                       f'Have you used the appropriate database for your species?')
+        return warn(f'No gene alignments sufficient for typing {assembly}\n'
+                       f'Have you used the appropriate database for your species?', TyperWarning)
 
     # SCORE LOCI -------------------------------------------------------------------------------------------------------
     scores[:, 5] = db.expected_gene_counts  # Add expected genes to the 6th column (0-based) score matrix
@@ -184,7 +174,7 @@ def typing_pipeline(
         score_file.write(  # Write the scores to the file
             ''.join([f"{assembly}\t{k}\t" + '\t'.join(map(str, v)) + '\n' for k, v in zip(db.loci.keys(), scores)])
         )
-        return log(f"Finished scoring {assembly}", verbose=verbose)  # Return without typing the assembly
+        return None
 
     # Process the scores to get the best loci to fully align, this collapses the matrix to a 1D array
     if weight_metric:  # If we are using a weighted score
@@ -206,7 +196,7 @@ def typing_pipeline(
     scores, idx = np.zeros((len(best_loci), 4)), {l.name: i for i, l in enumerate(best_loci)}  # Init scores and index
     locus_alignments = {l.name: [] for l in best_loci}  # Init dict to store alignments for each locus
     # Group alignments by locus
-    for locus, alns in group_alns(assembly.map(''.join(i.format('fna') for i in best_loci), threads, verbose=verbose)):
+    for locus, alns in group_alns(assembly.map(''.join(i.format('fna') for i in best_loci), threads)):
         for a in alns:  # For each alignment of the locus
             scores[idx[locus]] += [a.tags['AS'], a.mlen, a.blen, a.q_len]  # Add alignment metrics to the scores
             locus_alignments[locus].append(a)  # Add the alignment to the locus alignments
@@ -263,5 +253,4 @@ def typing_pipeline(
         i.gene.name for i in chain(result.expected_genes_inside_locus, result.expected_genes_outside_locus)
     })
     result.get_confidence(allow_below_threshold, max_other_genes, percent_expected_genes)
-    log(f"Finished typing {result}", verbose=verbose)
     return result

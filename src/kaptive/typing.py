@@ -1,17 +1,15 @@
-from __future__ import annotations
-
+from pathlib import Path
 from itertools import chain
-from warnings import catch_warnings
+from warnings import catch_warnings, warn
 from json import dumps
-from typing import TextIO
+from typing import TextIO, Union, IO
 from io import TextIOBase
-from os import PathLike, path
 
 from Bio.Seq import Seq
 from Bio.Align import PairwiseAligner
 
-from .database import Database, Locus, Gene
-from .log import warning
+from kaptive.database import Database, Locus, Gene
+
 
 # Constants -----------------------------------------------------------------------------------------------------------
 _PROTEIN_ALIGNER = PairwiseAligner(scoring='blastp', mode='local')
@@ -31,7 +29,7 @@ class TypingResult:
     """
 
     def __init__(
-            self, sample_name: str | None, db: Database | None, best_match: Locus = None,
+            self, sample_name: str = None, db: Database = None, best_match: Locus = None,
             pieces: list[LocusPiece] = None, expected_genes_inside_locus: list[GeneResult] = None,
             expected_genes_outside_locus: list[GeneResult] = None, missing_genes: list[str] = None,
             unexpected_genes_inside_locus: list[GeneResult] = None,
@@ -158,7 +156,7 @@ class TypingResult:
             self.add_gene_result(gene_result)
         return self
 
-    def format(self, format_spec) -> str | dict:
+    def format(self, format_spec) -> Union[str, dict]:
         if format_spec == 'tsv':
             return '\t'.join(
                 [
@@ -205,9 +203,9 @@ class TypingResult:
     def write(self,
               tsv: TextIO = None,
               json: TextIO = None,
-              fna: str | PathLike | TextIO = None,
-              ffn: str | PathLike | TextIO = None,
-              faa: str | PathLike | TextIO = None,
+              fna: Union[str, Path, IO[str]] = None,
+              ffn: Union[str, Path, IO[str]] = None,
+              faa: Union[str, Path, IO[str]] = None,
               ):
         """Write the typing result to files or file handles."""
         [f.write(self.format(fmt)) for f, fmt in [(tsv, 'tsv'), (json, 'json')] if isinstance(f, TextIOBase)]
@@ -215,18 +213,13 @@ class TypingResult:
             if f:
                 if isinstance(f, TextIOBase):
                     f.write(self.format(fmt))
-                elif isinstance(f, PathLike) or isinstance(f, str):
-                    with open(path.join(f, f'{self.sample_name}_kaptive_results.{fmt}'), 'wt') as handle:
-                        handle.write(self.format(fmt))
-
-
-class LocusPieceError(Exception):
-    pass
+                elif isinstance(f, (Path, str)):
+                    Path(f / f'{self.sample_name}_kaptive_results.{fmt}').write_text(self.format(fmt))
 
 
 class LocusPiece:
-    def __init__(self, id: str = None, result: TypingResult = None, start: int | None = 0,
-                 end: int | None = 0, strand: str = None, sequence: Seq = None,
+    def __init__(self, id: str = None, result: TypingResult = None, start: int = 0,
+                 end: int = 0, strand: str = None, sequence: Seq = None,
                  expected_genes: list[GeneResult] = None, unexpected_genes: list[GeneResult] = None,
                  extra_genes: list[GeneResult] = None):
         self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
@@ -256,7 +249,7 @@ class LocusPiece:
         return cls(id=d['id'], start=int(d['start']), end=int(d['end']), strand=d['strand'],
                    sequence=Seq(d['sequence']), **kwargs)
 
-    def format(self, format_spec, relative_start: int = 0) -> str | dict:
+    def format(self, format_spec) -> Union[str, dict]:
         if format_spec == 'fna':
             return f">{self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n{self.sequence}\n"
         if format_spec == 'json':
@@ -282,10 +275,10 @@ class GeneResult:
     """
 
     def __init__(self, id: str, gene: Gene, result: TypingResult = None,
-                 piece: LocusPiece = None, start: int | None = 0, end: int | None = 0, strand: str = None,
-                 dna_seq: Seq | None = Seq(""), protein_seq: Seq | None = Seq(""), below_threshold: bool | None = False,
-                 phenotype: str | None = "present", gene_type: str = None, partial: bool | None = False,
-                 percent_identity: float | None = 0, percent_coverage: float | None = 0):
+                 piece: LocusPiece = None, start: int = 0, end: int = 0, strand: str = None,
+                 dna_seq: Seq = Seq(""), protein_seq: Seq = Seq(""), below_threshold: bool = False,
+                 phenotype: str = "present", gene_type: str = None, partial: bool = False,
+                 percent_identity: float = 0, percent_coverage: float = 0):
         self.id = id or ''  # TODO: rename as seq_id for clarity, actual id is self.__repr__()
         self.gene = gene
         self.result = result  # TODO: replace with sample_name (only TypingResult attribute used, needed for fa headers)
@@ -324,16 +317,16 @@ class GeneResult:
             percent_identity=float(d['percent_identity']), percent_coverage=float(d['percent_coverage']), **kwargs
         )
 
-    def format(self, format_spec, relative_start: int = 0) -> str | dict:
+    def format(self, format_spec) -> Union[str, dict]:
         if format_spec == 'ffn':
             if len(self.dna_seq) == 0:
-                warning(f'No DNA sequence for {self}')
+                warn(f'No DNA sequence for {self}')
                 return ""
             return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
                     f'{self.dna_seq}\n')
         if format_spec == 'faa':
             if len(self.protein_seq) == 0:
-                warning(f'No protein sequence for {self.__repr__()}')
+                warn(f'No protein sequence for {self.__repr__()}')
                 return ""
             return (f'>{self.gene.name} {self.result.sample_name}|{self.id}:{self.start}-{self.end}{self.strand}\n'
                     f'{self.protein_seq}\n')
@@ -360,7 +353,7 @@ class GeneResult:
         frame, self.protein_seq = max(enumerate(protein_seqs), key=lambda x: len(x[1]))  # Get the longest translation
         self.start += frame  # Update the start position to the frame with the longest translation
         if len(self.protein_seq) <= 1:  # If the protein sequence is still empty, raise a warning
-            warning(f'No protein sequence for {self.__repr__()}')
+            warn(f'No protein sequence for {self.__repr__()}')
         elif len(self.gene.protein_seq) > 1:  # If both sequences are not empty
             if alignments := _PROTEIN_ALIGNER.align(self.gene.protein_seq, self.protein_seq):  # Align the sequences
                 alignment = max(alignments, key=lambda x: x.score)  # Get the best alignment
@@ -371,4 +364,4 @@ class GeneResult:
                         not self.partial and not (self.gene_type == "unexpected_genes" and not self.piece)):
                     self.phenotype = "truncated"  # Set the phenotype to truncated
             else:
-                warning(f'Error aligning {self.__repr__()}')
+                warn(f'Error aligning {self.__repr__()}')
