@@ -1,10 +1,6 @@
 from io import IOBase
 from sys import stdout
 from typing import Union, IO, Optional
-import os
-from functools import lru_cache
-from importlib.resources import files
-import atexit
 from json import loads as json_loads
 from zipfile import ZipFile
 from tempfile import TemporaryDirectory
@@ -14,69 +10,18 @@ from urllib.request import urlopen, Request
 from shutil import copyfileobj
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import numpy as np
-
 
 # Classes --------------------------------------------------------------------------------------------------------------
-class _ResourceManager:
-    """
-    Manages lazy-loaded, application-wide resources.
-    Instantiated once at the module level as a singleton.
-    """
-
-    def __init__(self):
-        self.package: str = Path(__file__).parent.name
-        self.data: Path = files(self.package) / 'data'
-        self._rng: Optional[np.random.Generator] = None
-        self._executor: Optional[ThreadPoolExecutor] = None
-
-    @property
-    def rng(self) -> np.random.Generator:
-        if self._rng is None:
-            self._rng = np.random.default_rng()
-        return self._rng
-
-    @property
-    def available_cpus(self) -> int:
-        return getattr(os, 'process_cpu_count', os.cpu_count)() or 1
-
-    @property
-    def executor(self) -> ThreadPoolExecutor:
-        """Returns a shared ThreadPoolExecutor, initializing it only when first requested."""
-        if self._executor is None:
-            self._executor = ThreadPoolExecutor(min(32, self.available_cpus + 4))
-            atexit.register(self._cleanup)
-        return self._executor
-
-    def _cleanup(self):
-        """Shuts down the thread pool."""
-        if self._executor is not None:
-            self._executor.shutdown(wait=False, cancel_futures=True)
-
-    @staticmethod
-    @lru_cache(maxsize=None)
-    def has_module(name: str) -> bool:
-        try:
-            __import__(name)
-            return True
-        except ImportError:
-            return False
-
-
-# Global Singleton Instance
-Resources = _ResourceManager()
-
-
-class LiteralFile(type(Path())):
-    """
-    A Path wrapper that evaluates to False if the file is missing or empty.
-    Inherits from the concrete Path type (PosixPath/WindowsPath) to ensure correct instantiation.
-    """
-    _MIN_SIZE = 1
-
-    def __bool__(self):
-        try: return self.is_file() and self.stat().st_size >= self._MIN_SIZE
-        except OSError: return False
+# class LiteralFile(type(Path())):
+#     """
+#     A Path wrapper that evaluates to False if the file is missing or empty.
+#     Inherits from the concrete Path type (PosixPath/WindowsPath) to ensure correct instantiation.
+#     """
+#     _MIN_SIZE = 1
+#
+#     def __bool__(self):
+#         try: return self.is_file() and self.stat().st_size >= self._MIN_SIZE
+#         except OSError: return False
 
 
 class Downloader:
@@ -197,10 +142,28 @@ class GitRepo:
         # Internal state
         self._meta_cache = None
         self._temp_dir_obj = None  # Holds the TemporaryDirectory object
-        self.local_path: Path | None = None
+        self.local_path: Optional[Path] = None
 
     def __repr__(self):
         return f"<GitRepo {self.owner}/{self.repo} ({self.branch})>"
+
+    def fetch(self, filename: str):
+        url = f'{self._api_url}/contents/{filename}?ref={self.branch}'
+        req = Request(url, headers={'Accept': 'application/vnd.github.v3.raw'})
+        try:
+            with urlopen(req) as response:
+                return response.read()
+        except Exception as e:
+            raise e
+
+    def fetch_many(self, filenames: list[str]) -> dict[str, bytes]:
+        """Fetch multiple files from the repository concurrently."""
+        results = {}
+        with ThreadPoolExecutor(max_workers=min(len(filenames), 10)) as pool:
+            future_to_name = {pool.submit(self.fetch, name): name for name in filenames}
+            for f in as_completed(future_to_name):
+                results[future_to_name[f]] = f.result()
+        return results
 
     @property
     def metadata(self) -> dict:
@@ -208,7 +171,10 @@ class GitRepo:
         Lazy-loaded property for repository metadata.
         Only downloads from API once per instance.
         """
-        if self._meta_cache is None: self._meta_cache = json_loads(Downloader().fetch(self._api_url))
+        if self._meta_cache is None:
+            req = Request(self._api_url, headers={'Accept': 'application/vnd.github.v3+json'})
+            with urlopen(req) as response:
+                self._meta_cache = json_loads(response.read())
         return self._meta_cache
 
     def clone(self) -> Path:
@@ -234,6 +200,12 @@ class GitRepo:
         self.local_path = base_temp_path / root_folder
         return self.local_path
 
+    def cleanup(self):
+        if self._temp_dir_obj:
+            self._temp_dir_obj.cleanup()
+            self._temp_dir_obj = None
+            self.local_path = None
+
     def __enter__(self):
         """Enter the runtime context related to this object."""
         self.clone()
@@ -241,13 +213,20 @@ class GitRepo:
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Exit the runtime context and cleanup temporary directory."""
-        if self._temp_dir_obj:
-            self._temp_dir_obj.cleanup()
-            self._temp_dir_obj = None
-            self.local_path = None
+        self.cleanup()
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
+def check_file(file: str | Path, min_size: int = 1) -> Path:
+    if isinstance(file, str):
+        file = Path(file)
+
+    if file.is_file() and file.stat().st_size >= min_size:
+        return file
+
+    raise FileNotFoundError(file)
+
+
 def write_to_file_or_directory(path: Union[str, Path, IO], mode: str = 'at') -> Union[Path, IO]:
     """
     Writes to a file or creates a directory based on the provided path.

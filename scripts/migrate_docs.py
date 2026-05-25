@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Imports --------------------------------------------------------------------------------------------------------------
-from typing import Match
+from serotyping import Match
 from re import MULTILINE, compile as regex
 from subprocess import run
 from pathlib import Path
