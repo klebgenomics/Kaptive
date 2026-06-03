@@ -1,0 +1,101 @@
+name: Central Database CI/CD Pipeline
+
+on:
+  workflow_call: # This tells GitHub this workflow can be called by other repos
+
+jobs:
+  auto-version-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Caller Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python Deps
+        run: pip install semver tomlkit
+
+      - name: Fetch Versioning Script
+        run: curl -O https://raw.githubusercontent.com/klebgenomics/Kaptive/main/scripts/bump_db_version.py
+
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v42
+        with:
+          files: |
+            *.gbk
+            *.logic
+            *.units
+
+      - name: Bump TOMLs, Generate Changelog, and Tag
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if [[ "$MSG" == *"feat!"* ]] || [[ "$MSG" == *"[major]"* ]]; then 
+            BUMP="major"
+          elif [[ "$MSG" == *"feat:"* ]] || [[ "$MSG" == *"feat("* ]] || [[ "$MSG" == *"[minor]"* ]]; then 
+            BUMP="minor"
+          else 
+            BUMP="patch"
+          fi
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          BUMPED_DBS=""
+          
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            DB_NAME=$(basename "$file" | cut -d. -f1)
+            TOML_FILE="${DB_NAME}.toml"
+            CHANGELOG_FILE="${DB_NAME}_CHANGELOG.md"
+          
+            if [[ -f "$TOML_FILE" ]] && [[ ! "$BUMPED_DBS" == *"$DB_NAME"* ]]; then
+          
+              # 1. Bump the TOML version
+              NEW_VER=$(python bump_version.py "$TOML_FILE" "$BUMP")
+              echo "Bumped $DB_NAME to v$NEW_VER"
+          
+              # 2. CHANGELOG GENERATION
+              # Find the previous tag for THIS specific database
+              LAST_TAG=$(git describe --tags --match "${DB_NAME}-v*" --abbrev=0 2>/dev/null || echo "")
+          
+              # Extract commits that touched this database's files since the last tag
+              if [ -z "$LAST_TAG" ]; then
+                # First release ever: get all commits for these files
+                LOGS=$(git log --pretty=format:"* %s (%h)" -- ${DB_NAME}.*)
+              else
+                # Subsequent releases: get commits since the last tag
+                LOGS=$(git log ${LAST_TAG}..HEAD --pretty=format:"* %s (%h)" -- ${DB_NAME}.*)
+              fi
+          
+              # Format the new changelog entry
+              DATE=$(date +%Y-%m-%d)
+              ENTRY="## [v${NEW_VER}] - ${DATE}\n${LOGS}\n\n"
+          
+              # Prepend the new entry to the Changelog file
+              if [ -f "$CHANGELOG_FILE" ]; then
+                echo -e "$ENTRY$(cat $CHANGELOG_FILE)" > $CHANGELOG_FILE
+              else
+                echo -e "# Changelog: ${DB_NAME}\n\n$ENTRY" > $CHANGELOG_FILE
+              fi
+          
+              # 3. Stage the files and create the tag
+              git add "$TOML_FILE" "$CHANGELOG_FILE"
+              BUMPED_DBS="$BUMPED_DBS $DB_NAME"
+              git tag "${DB_NAME}-v${NEW_VER}"
+            fi
+          done
+          
+          # 4. Commit and Push everything
+          if [[ -n $(git status -s) ]]; then
+            git commit -m "chore: auto-bump and update changelogs [skip ci]"
+            git push origin main
+            git push --tags
+          fi
