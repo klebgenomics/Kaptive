@@ -23,7 +23,7 @@ jobs:
         run: pip install semver tomlkit
 
       - name: Fetch Versioning Script
-        run: curl -O https://raw.githubusercontent.com/klebgenomics/Kaptive/main/scripts/bump_db_version.py
+        run: curl -O https://raw.githubusercontent.com/klebgenomics/Kaptive/refs/heads/master/scripts/bump_db_version.py
 
       - name: Get Changed Files
         id: changed-files
