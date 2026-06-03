@@ -58,7 +58,7 @@ jobs:
             if [[ -f "$TOML_FILE" ]] && [[ ! "$BUMPED_DBS" == *"$DB_NAME"* ]]; then
           
               # 1. Bump the TOML version
-              NEW_VER=$(python bump_version.py "$TOML_FILE" "$BUMP")
+              NEW_VER=$(python bump_db_version.py "$TOML_FILE" "$BUMP")
               echo "Bumped $DB_NAME to v$NEW_VER"
           
               # 2. CHANGELOG GENERATION
