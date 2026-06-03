@@ -31,8 +31,7 @@ jobs:
         with:
           files: |
             *.gbk
-            *.logic
-            *.units
+            *.toml
 
       - name: Bump TOMLs, Generate Changelog, and Tag
         if: steps.changed-files.outputs.any_changed == 'true'
