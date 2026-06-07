@@ -167,8 +167,8 @@ class ConfidenceEvaluator:
         if result.metrics.completeness[best_idx] < self.min_completeness:
             return False
             
-        # 2. Novel genes (physically inside the locus but not expected or known extra genes)
-        novel_count = np.sum(genes.is_inside & ~genes.is_expected & ~genes.is_extra)
+        # 2. Novel genes (physically inside the locus that fall below the pident threshold)
+        novel_count = np.sum(genes.is_inside & (genes.states == GeneState.BELOW_THRESHOLD))
         if novel_count > self.max_other_genes:
             return False
             
@@ -329,18 +329,9 @@ class Serotyper:
         best_mask = (culled_locus_indices == best_locus_idx) if len(locus_hits) > 0 else np.zeros(0, dtype=bool)
         best_hits = locus_hits.filter(best_mask)
 
-        is_fragmented = metrics.contig_counts[best_locus_idx] > 1
-        expand_dist = self._db.max_locus_length if is_fragmented else 0
-
         locus_boundaries: dict[str, Intervals] = {}
         for ctg, batch in best_hits.split(by_query=False):
-            itv = batch.to_intervals(by_query=False).sort().merge(tolerance=self._db.max_locus_length)
-            if is_fragmented:
-                ctg_idx = genome.id_map[ctg]
-                ctg_len = genome.contigs.lengths[ctg_idx]
-                itv = itv.expand(np.full(len(itv), expand_dist, dtype=np.int32), 
-                                 np.full(len(itv), expand_dist, dtype=np.int32), 
-                                 clip_lengths=np.full(len(itv), ctg_len, dtype=np.int32))
+            itv = batch.expand().to_intervals(by_query=False).sort().merge(tolerance=self._db.max_locus_length)
             locus_boundaries[ctg] = itv
 
         # Calculate locus coverage as the physical length of the locus boundaries on the contigs
@@ -473,8 +464,8 @@ class Serotyper:
         if not expected_clusters.issubset(found_expected):
             problems |= SerotypingProblem.MISSING_GENES
             
-        # Novel genes: Anything physically inside the locus that isn't expected or a known extra gene
-        novel_mask = genes.is_inside & ~genes.is_expected & ~genes.is_extra
+        # Novel genes: Anything physically inside the locus that falls below the pident threshold
+        novel_mask = genes.is_inside & (genes.states == GeneState.BELOW_THRESHOLD)
         if np.any(novel_mask):
             problems |= SerotypingProblem.NOVEL_GENES
 
