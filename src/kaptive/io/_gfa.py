@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 from kaptive.core.seq import SeqRecord
 from kaptive.core.interval import Strand
-from kaptive.core.graph import Edge
+from kaptive.core.genome import Edge
 from kaptive.core.alignment import parse_cigar_string, CigarOp
 
 

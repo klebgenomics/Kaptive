@@ -16,11 +16,11 @@ from numba import njit
 from mappy import Aligner, ThreadBuffer
 
 from kaptive.db import Database
-from kaptive.core.alignment import AlignmentBatch
-from kaptive.core.interval import IntervalBatch
+from kaptive.core.alignment import Alignments
+from kaptive.core.interval import Intervals
 from kaptive.core.genome import GenomeAssembly
-from kaptive.core.seq import SeqBatch
-from kaptive.align import PairwiseAligner, PairwiseAlignmentBatch
+from kaptive.core.seq import Sequences
+from kaptive.core.pairwise import PairwiseAligner, PairwiseAlignments
 
 
 # Enums ----------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class GeneHitBatch:
     def __len__(self) -> int:
         return len(self.gene_indices)
 
-    def extract_sequences(self, genome: 'GenomeAssembly', db: Database) -> tuple[SeqBatch, npt.NDArray[np.int32], 'GeneHitBatch']:
+    def extract_sequences(self, genome: 'GenomeAssembly', db: Database) -> tuple[Sequences, npt.NDArray[np.int32], 'GeneHitBatch']:
         """
         Extracts the full expected gene sequences by projecting the local alignment 
         boundaries outwards to capture the start and stop codons.
@@ -74,8 +74,8 @@ class GeneHitBatch:
         proj_left = np.where(self.strands == 1, self.q_starts, q_lengths - self.q_ends)
         proj_right = np.where(self.strands == 1, q_lengths - self.q_ends, self.q_starts)
 
-        # Centralize coordinate projection and clipping inside IntervalBatch
-        intervals = IntervalBatch(self.t_starts, self.t_ends, self.strands, self.gene_indices)
+        # Centralize coordinate projection and clipping inside Intervals
+        intervals = Intervals(self.t_starts, self.t_ends, self.strands, self.gene_indices)
         intervals = intervals.expand(proj_left, proj_right, clip_lengths=ctg_lengths)
 
         actual_proj_left = self.t_starts - intervals.starts
@@ -114,13 +114,13 @@ class SerotyperResult:
     best_match_score: float
     best_match_zscore: float
     genes: GeneHitBatch
-    locus_boundaries: dict[str, IntervalBatch]
+    locus_boundaries: dict[str, Intervals]
     metrics: 'LocusScoreBatch'
-    gene_seqs: SeqBatch
-    protein_seqs: SeqBatch
+    gene_seqs: Sequences
+    protein_seqs: Sequences
     percent_identity: float
     percent_coverage: float
-    protein_alignments: PairwiseAlignmentBatch
+    protein_alignments: PairwiseAlignments
     phenotype: str
     problems: SerotypingProblem
     is_typeable: bool
@@ -189,7 +189,7 @@ class Serotyper:
     """
     __slots__ = (
         '_db', '_executor', '_gene_aligner', '_thread_local',
-        '_max_workers', '_protein_aligner', '_indexing_threads', '_confidence_evaluator'
+        '_max_workers', '_protein_aligner', '_indexing_threads', '_confidence_evaluator', '_gene_weights'
     )
     def __init__(self, db: Database, confidence_evaluator: ConfidenceEvaluator | None = None,
                  max_workers: int | None = None, indexing_threads: int | None = None):
@@ -199,6 +199,12 @@ class Serotyper:
         self._thread_local = ThreadLocal()
         self._protein_aligner = PairwiseAligner()
         self._confidence_evaluator = confidence_evaluator or ConfidenceEvaluator()
+        
+        # Calculate custom weights for locus-defining genes
+        self._gene_weights = np.ones(len(self._db.genes), dtype=np.float64)
+        for i, name in enumerate(self._db.genes.ids):
+            if 'wzx' in name or 'wzy' in name:
+                self._gene_weights[i] = 100.0
         # Initialise mappy index by writing the genes to a temporary fasta
         with NamedTemporaryFile(mode="wb", suffix=".fasta", delete=False) as tmp:
             # We use the gene index for the header to act as array pointers later
@@ -227,13 +233,13 @@ class Serotyper:
             self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
         return self._executor
 
-    def _process_contig_chunk(self, ctg_id: str, ctg_len: int, seq: str, offset: int) -> AlignmentBatch | None:
+    def _process_contig_chunk(self, ctg_id: str, ctg_len: int, seq: str, offset: int) -> Alignments | None:
         if not hasattr(self._thread_local, "buf"):
             self._thread_local.buf = ThreadBuffer()
 
         if alns := list(self._gene_aligner.map(seq, buf=self._thread_local.buf)):
             # The length of the query string given to from_mappy is ctg_len
-            batch = AlignmentBatch.from_mappy(ctg_id, ctg_len, alns)
+            batch = Alignments.from_mappy(ctg_id, ctg_len, alns)
             return batch.shift_query(offset)
 
         return None
@@ -261,7 +267,7 @@ class Serotyper:
             return None  # Comment out during testing
 
         # Concatenate all alignment-per-contig into a single batch for vectorization
-        alignments = AlignmentBatch.concat(alignments).swap_sides()
+        alignments = Alignments.concat(alignments).swap_sides()
 
         # TODO: Implement graph stitching logic
         # Use available graph for resolving alignments split over contigs
@@ -286,6 +292,7 @@ class Serotyper:
             
             # Completeness calculation
             global_gene_scores = np.maximum(0, np.bincount(culled_gene_indices, weights=locus_hits.scores, minlength=len(self._db.genes)))
+            global_gene_scores = global_gene_scores * self._gene_weights
             gene_coverage = np.clip(global_gene_scores / np.maximum(1, self._db.genes.lengths), 0.0, 1.0)
             
             _, contig_indices = np.unique(locus_hits.t_names, return_inverse=True)
@@ -325,11 +332,11 @@ class Serotyper:
         is_fragmented = metrics.contig_counts[best_locus_idx] > 1
         expand_dist = self._db.max_locus_length if is_fragmented else 0
 
-        locus_boundaries: dict[str, IntervalBatch] = {}
+        locus_boundaries: dict[str, Intervals] = {}
         for ctg, batch in best_hits.split(by_query=False):
             itv = batch.to_intervals(by_query=False).sort().merge(tolerance=self._db.max_locus_length)
             if is_fragmented:
-                ctg_idx = genome._id_map[ctg]
+                ctg_idx = genome.id_map[ctg]
                 ctg_len = genome.contigs.lengths[ctg_idx]
                 itv = itv.expand(np.full(len(itv), expand_dist, dtype=np.int32), 
                                  np.full(len(itv), expand_dist, dtype=np.int32), 
@@ -365,11 +372,11 @@ class Serotyper:
             if not np.any(ctg_mask := (global_culled.t_names == ctg)):
                 continue
 
-            # Query overlaps effortlessly via IntervalBatch!
+            # Query overlaps effortlessly via Intervals!
             ctg_itv = global_itv[ctg_mask]
             is_inside[ctg_mask] = ctg_itv.overlaps_with(boundary_batch)
 
-        culled_t_indices = np.array([genome._id_map[n] for n in global_culled.t_names], dtype=np.uint32)
+        culled_t_indices = np.array([genome.id_map[n] for n in global_culled.t_names], dtype=np.uint32)
 
         genes = GeneHitBatch(
             gene_indices=culled_gene_indices,

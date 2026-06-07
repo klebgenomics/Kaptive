@@ -19,13 +19,11 @@
 # # Subparsers --
 
 
-
-
 # def extract_subparser(subparsers):
 #     extract_parser = subparsers.add_parser(
 #         'extract', description=_bold(f'Extract entries from a {Resources.package} database'),
 #         epilog=_EPILOG, add_help=False, formatter_class=argparse.RawTextHelpFormatter,
-#         help=f'Extract entries from a {Resources.package} database', 
+#         help=f'Extract entries from a {Resources.package} database',
 #         usage=f"{Resources.package} extract <database> [formats] [options]"
 #     )
 #     opts = extract_parser.add_argument_group(_bold('Inputs'), "\nNote, combine with --filter to select loci")
@@ -76,9 +74,9 @@
 #     convert_subparser(subparsers)
 #     opts = parser.add_argument_group(_bold('Other options'), '')
 #     other_opts(opts)
-    
+
 #     args = sys.argv[1:]
-    
+
 #     if len(args) == 0:  # No arguments, print help message
 #         parser.print_help(sys.stderr)
 #         raise RuntimeError(f'Please specify a command; choose from {{assembly,extract,convert}}')
@@ -98,15 +96,15 @@
 #     else:  # Unknown command
 #         parser.print_help(sys.stderr)
 #         raise RuntimeError(f'Unknown command "{args[0]}"; choose from {{assembly,extract,convert}}')
-    
+
 #     args = parser.parse_args(args)
 
 #     # Assembly mode ----------------------------------------------------------------------------------------------------
 #     if args.subparser_name == 'assembly':
-        
+
 #         if not which('minimap2'):
 #             raise RuntimeError(f'Minimap2 not installed; please install minimap2')
-        
+
 #         from kaptive.genomeassembly import typing_pipeline, write_headers
 #         from kaptive.database import load_database
 

@@ -5,7 +5,12 @@ description = "The tool for _in silico_ serotyping"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.11"
 dynamic = ["version"]
-dependencies = ["numpy>=2.4.2", "numba", "mappy>=2.30"]
+dependencies = [
+    "numpy>=2.4",
+    "numba>=0.62",
+    "mappy>=2.3",
+    "gb-io>=0.4"
+]
 keywords = ["bioinformatics", "serotyping", "microbiology"]
 license = {file = "LICENSE"}
 classifiers = [
@@ -18,26 +23,34 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-
 ]
 
 [project.scripts]
 kaptive = "kaptive.cli:main"
 
 [project.optional-dependencies]
-build = ["scipy", "scikit-learn", "pyfgs", "gb-io>=0.4.0"]
-#plot = ["matplotlib", "plotly"]
-#plus = ["pyhmmer>=0.12.0"]
+plot = ["matplotlib", "plotly"]
+orf = [
+    "pyfgs",
+#    "pyhmmer>=0.12.0"
+]
+#build = ["kaptive[prot]", "scipy", "scikit-learn"]
 
 [project.urls]
-Homepage = "http://klebgenomics.github.io/Kaptive/"
+Homepage = "https://klebgenomics.github.io/Kaptive/"
 Repository = "https://github.com/klebgenomics/Kaptive"
-Documentation = "http://klebgenomics.github.io/Kaptive/"
+Documentation = "https://klebgenomics.github.io/Kaptive/"
 
 [dependency-groups]
-test = ["pytest", "pytest-cov"]
+test = ["pytest>=9.0.0"]
 docs = ["zensical", "mkdocstrings-python"]
-dev = ["kaptive[build]", {include-group = "test"}, {include-group = "docs"}]
+dev = [
+    "kaptive[orf,plot]",
+    "marimo",
+    "pandas",
+    {include-group = "test"},
+    {include-group = "docs"}
+]
 
 [build-system]
 build-backend = "hatchling.build"
