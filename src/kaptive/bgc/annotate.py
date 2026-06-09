@@ -67,7 +67,7 @@ class GeneClusters:
             query_indices=self.query_indices[mask],
             target_indices=self.target_indices[mask],
             contig_indices=self.contig_indices[mask],
-            intervals=self.intervals.filter(mask),
+            intervals=self.intervals[mask],
             seed_scores=self.seed_scores[mask],
             seed_coverage=self.seed_coverage[mask],
             pidents=self.pidents[mask]
@@ -429,8 +429,8 @@ class Annotator:
         hit_intervals = global_intervals[hit_genome_indices]
         hit_contigs = global_contigs[hit_genome_indices]
 
-        # First pass: Cluster the confident seed hits by interval/ORF index before alignment
-        raw_cluster_ids = hit_intervals.cluster_by_index(
+        # First pass: Cluster the confident seed hits sequentially before alignment
+        raw_cluster_ids = hit_intervals.cluster_sequential(
             tolerance=self._orf_tolerance, 
             group_by=hit_contigs, 
             enforce_strand=self._enforce_strand

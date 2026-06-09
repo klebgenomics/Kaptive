@@ -30,11 +30,7 @@ kaptive = "kaptive.cli:main"
 
 [project.optional-dependencies]
 plot = ["matplotlib", "plotly"]
-orf = [
-    "pyfgs",
-#    "pyhmmer>=0.12.0"
-]
-#build = ["kaptive[prot]", "scipy", "scikit-learn"]
+orf = ["pyfgs"]
 
 [project.urls]
 Homepage = "https://klebgenomics.github.io/Kaptive/"

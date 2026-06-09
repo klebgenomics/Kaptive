@@ -270,29 +270,25 @@ class Alignments:
     qualities: npt.NDArray[np.uint8]
     cigars: Cigars
 
+    @property
+    def scores(self):
+        return np.maximum(0, self.matches - self.mismatches)
+
+    @property
+    def length_weighted_scores(self):
+        return self.scores / self.lengths
+
+    @property
+    def query_weighted_scores(self):
+        return self.scores / self.q_lengths
+
+    @property
+    def target_weighted_scores(self):
+        return self.scores / self.t_lengths
+
     def __len__(self) -> int:
         """Returns the number of alignments in the batch."""
         return len(self.q_starts)
-
-    @property
-    def scores(self) -> np.ndarray:
-        """Calculates a linear alignment score to approximate an affine-gap model.
-
-        Because mappy does not expose the 'AS' tag, and 'NM' (stored here as 'mismatches')
-        represents the total edit distance (mismatches + gap bases), we use a strictly
-        linear reward/penalty system.
-
-        This prevents IS element insertions (large gaps) or natural sequence divergence
-        from exponentially cratering the score via PID squaring, allowing the true, long
-        locus to outcompete shorter, 100%-identical paralogs.
-
-        Returns:
-            np.ndarray: A 1D float array of alignment scores.
-        """
-        # Minimap2 AS roughly rewards matches and penalizes edits.
-        # A simple +1 / -1 ratio mimics this beautifully without exponential decay.
-        # We clip at 0 to ensure downstream argmax/sorting doesn't behave unpredictably with negatives.
-        return np.maximum(0, self.matches - self.mismatches).astype(np.float64)
 
     @classmethod
     def from_mappy(cls, q_name: str, q_length: int, alignments: Iterable['mappy.Alignment']) -> Self:
@@ -402,7 +398,7 @@ class Alignments:
                 idx=item, q_name=self.q_names[item], q_length=self.q_lengths[item],
                 q_start=self.q_starts[item], q_end=self.q_ends[item], t_name=self.t_names[item],
                 t_length=self.t_lengths[item], t_start=self.t_starts[item], t_end=self.t_ends[item],
-                strand=self.strands[item], length=self.lengths[item], match=self.matches[item],
+                strand=Strand(self.strands[item]), length=self.lengths[item], match=self.matches[item],
                 mismatch=self.mismatches[item], quality=self.qualities[item], cigar=self.cigars[item]
             )
             
@@ -414,30 +410,28 @@ class Alignments:
             qualities=self.qualities[item], cigars=self.cigars[item]
         )
 
-    def filter(self, mask: np.ndarray) -> Alignments:
-        """Returns a new batch containing only records where the boolean mask is True.
+    def best(self, by_query: bool = True) -> Alignments:
+        """Returns Alignments with the best alignment per query or target."""
+        if len(self) == 0:
+            return self
 
-        This is the primary method for selecting subsets of alignments based on vectorized conditions.
-        It is an alias for `self[mask]`.
+        names = self.q_names if by_query else self.t_names
+        scores = self.query_weighted_scores if by_query else self.target_weighted_scores
 
-        Args:
-            mask (np.ndarray): A 1D boolean array of the same length as the batch.
+        _, name_ints = np.unique(names, return_inverse=True)
 
-        Returns:
-            Alignments: A new, filtered batch.
-        """
-        return self[mask]
+        # np.lexsort sorts by the last key first.
+        # We group by name (primary) and sort by score descending (secondary).
+        order = np.lexsort((-scores, name_ints))
 
-    def filter_out(self, mask: np.ndarray) -> Alignments:
-        """Returns a new batch excluding records where the boolean mask is True.
+        # Extract the first occurrence of each name in the sorted order
+        _, first_indices = np.unique(name_ints[order], return_index=True)
+        best_indices = order[first_indices]
 
-        Args:
-            mask (np.ndarray): A 1D boolean array of the same length as the batch.
+        # Sort indices to maintain the original relative order from the batch
+        best_indices.sort()
 
-        Returns:
-            Alignments: A new batch with the masked items removed.
-        """
-        return self.filter(~mask)
+        return self[best_indices]
 
     def cull_overlaps(self, max_overlap_fraction: float = 0.1, group_by: np.ndarray | None = None,
                       priority_mask: np.ndarray | None = None, by_query: bool = True) -> Alignments:
@@ -471,17 +465,14 @@ class Alignments:
         names = self.q_names if by_query else self.t_names
         starts = self.q_starts if by_query else self.t_starts
         ends = self.q_ends if by_query else self.t_ends
+        scores = self.query_weighted_scores if by_query else self.target_weighted_scores
         
         # Map string names to integer IDs for C-level kernel processing
         _, name_ints = np.unique(names, return_inverse=True)
-        
+
         if priority_mask is not None:
-            sort_scores = (self.matches - self.mismatches).astype(np.float64) / np.maximum(1, self.lengths).astype(np.float64)
-            sort_scores[priority_mask] += 1e9
-            order = np.argsort(sort_scores, kind='stable')[::-1].astype(np.int32)
-        else:
-            sort_scores = (self.matches - self.mismatches).astype(np.float64) / np.maximum(1, self.lengths).astype(np.float64)
-            order = np.argsort(sort_scores, kind='stable')[::-1].astype(np.int32)
+            scores[priority_mask] += 1e9
+        order = np.argsort(scores, kind='stable')[::-1].astype(np.int32)
         
         if group_by is None:
             group_by = np.zeros(n, dtype=np.int32)
@@ -489,31 +480,7 @@ class Alignments:
         kept_mask = _cull_overlaps_kernel(
             order, name_ints.astype(np.int32), starts, ends, group_by, max_overlap_fraction, n
         )
-        return self.filter(kept_mask)
-
-    def shift_query(self, offset: int) -> Alignments:
-        """Returns a new batch with all query coordinates shifted by a given offset.
-
-        This is useful when alignments have been generated for a sub-region (chunk) of a larger
-        sequence and need to be translated back into the global coordinate system of the full sequence.
-
-        Args:
-            offset (int): The integer value to add to all `q_starts` and `q_ends`.
-
-        Returns:
-            Alignments: A new batch with the shifted query coordinates.
-        """
-        if offset == 0 or len(self) == 0:
-            return self
-        
-        return Alignments(
-            q_names=self.q_names, q_lengths=self.q_lengths, 
-            q_starts=self.q_starts + offset, q_ends=self.q_ends + offset, 
-            t_names=self.t_names, t_lengths=self.t_lengths,
-            t_starts=self.t_starts, t_ends=self.t_ends, strands=self.strands,
-            lengths=self.lengths, matches=self.matches, mismatches=self.mismatches,
-            qualities=self.qualities, cigars=self.cigars
-        )
+        return self[kept_mask]
 
     def swap_sides(self) -> Alignments:
         """Returns a new batch with the roles of query and target swapped.
@@ -543,21 +510,6 @@ class Alignments:
             cigars=self.cigars.swap_sides()
         )
 
-    def split(self, by_query: bool = False) -> Iterable[tuple[str, Alignments]]:
-        """Splits the batch into an iterable of smaller batches, grouped by sequence name.
-
-        Args:
-            by_query (bool, optional): If True, groups alignments by their query name (`q_name`).
-                If False, groups by their target name (`t_name`). Defaults to False.
-
-        Yields:
-            tuple[str, Alignments]: An iterable of (name, batch) tuples, where `name` is the
-                sequence name and `batch` is an `Alignments` containing all alignments for that sequence.
-        """
-        key_array = self.q_names if by_query else self.t_names
-        for key in np.unique(key_array):
-            yield key, self.filter(key_array == key)
-
     def to_intervals(self, by_query: bool = False) -> Intervals:
         """Converts the alignment coordinates into a high-performance `Intervals`.
 
@@ -583,51 +535,25 @@ class Alignments:
             # CRITICAL: Ensures we can map relational queries back to this alignment record!
             original_indices=np.arange(len(self), dtype=np.int32)
         )
-
-    def expand(self) -> Alignments:
-        """Expands alignment coordinates on the target to match the full query length.
-
-        This method projects the unaligned portions of the query sequence (soft-clipped ends) onto the
-        target sequence, effectively extending the alignment's footprint on the target to where the
-        full query *would* have mapped if it were a perfect, gapless alignment. Both query and target
-        coordinates are updated to reflect this expansion.
-
-        Returns:
-            Alignments: A new batch with expanded coordinates.
-        """
-        proj_left = np.where(self.strands == 1, self.q_starts, self.q_lengths - self.q_ends).astype(np.int32)
-        proj_right = np.where(self.strands == 1, self.q_lengths - self.q_ends, self.q_starts).astype(np.int32)
-
-        intervals = self.to_intervals(by_query=False)
-        intervals = intervals.expand(proj_left, proj_right, clip_lengths=self.t_lengths)
-
-        actual_proj_left = self.t_starts - intervals.starts
-        actual_proj_right = intervals.ends - self.t_ends
-
-        new_q_starts = np.where(self.strands == 1, 
-                                self.q_starts - actual_proj_left, 
-                                self.q_starts - actual_proj_right)
-                                
-        new_q_ends = np.where(self.strands == 1,
-                              self.q_ends + actual_proj_right,
-                              self.q_ends + actual_proj_left)
-                              
-        return Alignments(
-            q_names=self.q_names, q_lengths=self.q_lengths, q_starts=new_q_starts.astype(np.int32),
-            q_ends=new_q_ends.astype(np.int32), t_names=self.t_names, t_lengths=self.t_lengths,
-            t_starts=intervals.starts.astype(np.int32), t_ends=intervals.ends.astype(np.int32),
-            strands=self.strands, lengths=self.lengths, matches=self.matches,
-            mismatches=self.mismatches, qualities=self.qualities, cigars=self.cigars
+    
+    @property
+    def is_partial_left(self) -> np.ndarray:
+        return (self.t_starts == 0) & np.where(self.strands == 1, self.q_starts > 0, self.q_ends < self.q_lengths)
+    
+    @property
+    def is_partial_right(self):
+        return (self.t_ends == self.t_lengths) & np.where(
+            self.strands == 1, self.q_ends < self.q_lengths, self.q_starts > 0
         )
 
     @property
-    def is_partial_mask(self) -> np.ndarray:
-        """Creates a vectorized boolean mask of alignments covering less than 90% of their query sequence.
+    def is_partial(self) -> np.ndarray:
+        """Creates a vectorized boolean mask of alignments where the query start/end hangs over the target start/end.
 
         Returns:
             np.ndarray: A 1D boolean array where `True` indicates a partial alignment.
         """
-        return self.lengths < (self.q_lengths * 0.9)
+        return self.is_partial_left | self.is_partial_right
 
     @classmethod
     def from_records(cls, records: Iterable[Alignment]) -> Alignments:
@@ -744,6 +670,8 @@ def parse_cigar_string(cigar_str: str) -> npt.NDArray[np.uint32]:
                 op = 8
             elif char == 'B':
                 op = 9
+            else:
+                continue
 
             out[idx] = (np.uint32(current_len) << 4) | np.uint32(op)
             idx += 1

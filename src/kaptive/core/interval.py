@@ -464,23 +464,6 @@ class Intervals:
             self.original_indices[order]
         )
 
-    def filter(self, mask: IntervalLike) -> 'Intervals':
-        """Returns a new collection containing only intervals matched by the mask.
-
-        This is a convenience wrapper around `__getitem__` for clarity.
-
-        Args:
-            mask (IntervalLike): A slice, list of indices, or boolean array.
-
-        Returns:
-            Intervals: A new, filtered collection.
-        """
-        if isinstance(mask, (slice, int, np.integer)):
-            if isinstance(mask, (int, np.integer)):
-                mask = [mask]
-            return self[mask]
-        return self[np.asarray(mask)]
-
     @property
     def envelope(self) -> Interval | None:
         """Returns a single bounding `Interval` encompassing the absolute min and max coordinates of the batch.
@@ -638,7 +621,7 @@ class Intervals:
                    (other.starts[None, :] < self.ends[:, None])
         return overlaps.any(axis=1)
 
-    def cluster(self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.int32]:
+    def cluster_spatial(self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.int32]:
         """Clusters intervals that are within a spatial tolerance of one another.
 
         This performs a highly optimized 1D single-linkage clustering. It is ideal for
@@ -666,8 +649,8 @@ class Intervals:
         order = np.lexsort((self.ends, self.starts, group_by)).astype(np.int32)
         return _cluster_kernel(self.starts, self.ends, group_by, tolerance, order)
 
-    def cluster_by_index(self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None,
-                         enforce_strand: bool = False) -> npt.NDArray[np.int32]:
+    def cluster_sequential(self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None,
+                           enforce_strand: bool = False) -> npt.NDArray[np.int32]:
         """Clusters intervals based on their sequential index rather than physical distance.
 
         This performs 1D single-linkage clustering using the `original_indices` of the batch.

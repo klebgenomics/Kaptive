@@ -253,8 +253,7 @@ class GenomeAssembly:
             Alignments: An updated batch with fragmented alignments stitched into longer ones.
         """
         # 1. Vectorized identification of partials (Instant)
-        partial_mask = alignments.is_partial_mask
-        partial_indices = np.where(partial_mask)[0]
+        partial_indices = np.where(alignments.is_partial)[0]
 
         if len(partial_indices) == 0:
             return alignments  # Nothing to stitch!
@@ -335,7 +334,7 @@ class GenomeAssembly:
         if used_indices:
             keep_mask[list(used_indices)] = False
 
-        intact_batch = alignments.filter(keep_mask)
+        intact_batch = alignments[keep_mask]
 
         # Convert the newly stitched paths back into an Alignments
         # We flatten the list of lists into a single list of synthetic AlignmentRecords
@@ -573,10 +572,6 @@ class Edges:
             self.v_strands[item],
             self.overlaps[item]
         )
-
-    def filter(self, mask: np.ndarray) -> Edges:
-        """Returns a new batch containing only elements where mask is True. (Alias for self[mask])"""
-        return self[mask]
 
     def reverse(self) -> Edges:
         """Returns a new Edges collection representing the reverse traversal of all edges (v -> u)."""
