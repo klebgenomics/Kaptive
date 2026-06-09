@@ -11,7 +11,7 @@ from ._pipeline import SerotypingResult, GeneState
 # Enums ----------------------------------------------------------------------------------------------------------------
 class SerotypingProblem(IntFlag):
     NONE = 0
-    FRAGMENTED = auto()  # Locus is broken up over peices across the same/multiple contig(s)
+    FRAGMENTED = auto()  # Locus is broken up over pieces across the same/multiple contig(s)
     UNEXPECTED_GENES = auto()  # Unexpected genes from other loci inside the locus boundary
     MISSING_GENES = auto()  # Expected genes from the best match locus missing inside the locus boundary
     NOVEL_GENES = auto()  # Genes inside the locus boundary that fall below the pairwise amino acid identity threshold
@@ -20,8 +20,11 @@ class SerotypingProblem(IntFlag):
     @classmethod
     def evaluate(cls, result: SerotypingResult) -> int:
         problems = cls.NONE
-        if result.scores.best_contig_count > 1:
+        if len(result.locus_pieces) > 1:
             problems |= cls.FRAGMENTED
+        if np.any(result.genes.is_inside & result.genes.is_expected):
+            problems |= cls.UNEXPECTED_GENES
+
 
         # if np.any(genes.is_expected & (genes.states == GeneState.TRUNCATED)):
         #     problems |= self.TRUNCATED_GENES
@@ -41,7 +44,6 @@ class SerotypingProblem(IntFlag):
         # if np.any(novel_mask):
         #     problems |= self.NOVEL_GENES
         return problems
-
 
 
 # Classes --------------------------------------------------------------------------------------------------------------

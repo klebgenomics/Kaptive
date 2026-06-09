@@ -112,7 +112,10 @@ class SerotypingResult:
     database_name: str
     database_version: str
     genome: str
-    best_match_locus: str
+    best_locus_idx: int
+    best_locus_name: str
+    best_locus_score: float
+    best_locus_completeness: float
     genes: GeneHits
     states: npt.NDArray[np.int8]
     locus_pieces: dict[str, Intervals]
@@ -140,6 +143,8 @@ class Serotyper:
         self._protein_aligner = PairwiseAligner()
         self._indexing_threads = indexing_threads or cpu_count()
         cluster_counts = np.bincount(db.gene_cluster_ids)
+        # safe_counts = np.maximum(cluster_counts, 1)  # Prevent division by zero
+        # idf_weights = np.log2(len(db.loci) / safe_counts) + 1.0
         self._gene_entropy_weights: npt.NDArray[np.float64] = (1.0 / cluster_counts)[db.gene_cluster_ids]
         self._expected_gene_counts = np.array([len(i) for i in self._db.locus_intervals], dtype=np.uint8)
         # Initialise mappy index by writing the genes to a temporary fasta
@@ -188,45 +193,38 @@ class Serotyper:
 
         # Scoring phase ------------------------------------------------------------------------------------------------
         best_gene_alns = gene_alns.best()  # We take the best alignment per gene
-        
         # Convert stringified FASTA headers from mappy directly back to global gene indices
         best_gene_aln_indices = best_gene_alns.q_names.astype(np.int32)
-        best_gene_aln_scores = best_gene_alns.query_weighted_scores * self._gene_entropy_weights[best_gene_aln_indices]
-        
+        best_gene_aln_scores = best_gene_alns.query_weighted_scores #* self._gene_entropy_weights[best_gene_aln_indices]
         # Filter out extra genes using the database's pre-computed boolean mask
         core_mask = ~self._db.extra_genes[best_gene_aln_indices]
-        
         # Map each alignment to its corresponding locus index instantly
         best_aln_locus_indices = self._db.gene_locus_indices[best_gene_aln_indices]
-        
         # Single-pass, zero-allocation accumulation of counts and core scores via Numba
         locus_counts, locus_core_scores = _accumulate_locus_metrics(
             best_aln_locus_indices, best_gene_aln_scores, core_mask, len(self._db.loci)
         )
-
-        locus_completeness = locus_counts / np.maximum(1, self._expected_gene_counts)
+        locus_completeness = locus_counts / self._expected_gene_counts
         locus_scores = locus_core_scores * locus_completeness
         best_locus_idx = np.argmax(locus_scores)
         best_locus_name = self._db.loci.ids[best_locus_idx]
+        best_locus_completeness = locus_completeness[best_locus_idx]
+        best_locus_score = locus_scores[best_locus_idx]
 
         # Reconstruction phase -----------------------------------------------------------------------------------------
         # Cull alignments, prioritizing genes belonging to the best match locus
         gene_indices = gene_alns.q_names.astype(np.int32)
         priority_mask = self._db.gene_locus_indices[gene_indices] == best_locus_idx
         culled_alns = gene_alns.cull_overlaps(by_query=False, priority_mask=priority_mask)
-
         # Re-extract arrays for the culled batch
         culled_gene_indices = culled_alns.q_names.astype(np.int32)
         t_indices = np.array([genome.id_map[n] for n in culled_alns.t_names], dtype=np.uint32)
-
         # Cluster intervals by contig using max_locus_length as tolerance
         culled_intervals = culled_alns.to_intervals(by_query=False)
         cluster_ids = culled_intervals.cluster_spatial(tolerance=self._db.max_locus_length, group_by=t_indices)
-
         # Identify expected genes and the clusters they fall into
         is_expected = (self._db.gene_locus_indices[culled_gene_indices] == best_locus_idx) & ~self._db.extra_genes[culled_gene_indices]
         valid_cluster_ids = np.unique(cluster_ids[is_expected])
-        
         is_inside = np.isin(cluster_ids, valid_cluster_ids)
         is_extra = self._db.extra_genes[culled_gene_indices]
 
@@ -234,13 +232,12 @@ class Serotyper:
         locus_pieces = {}
         for ctg_idx in np.unique(t_indices[is_inside]):
             ctg_mask = is_inside & (t_indices == ctg_idx)
-
             ctg_name = genome.contigs.ids[ctg_idx]
             # Use the heavily optimized SoA merge instead of manual looping and appending
             merged_intervals = culled_intervals[ctg_mask].sort().merge(tolerance=self._db.max_locus_length)
             # Force unstranded (0) for locus pieces as per original logic
-            locus_pieces[ctg_name] = Intervals(merged_intervals.starts, merged_intervals.ends, np.zeros(len(merged_intervals), dtype=np.int8))
-
+            locus_pieces[ctg_name] = Intervals(merged_intervals.starts, merged_intervals.ends,
+                                               np.zeros(len(merged_intervals), dtype=np.int8))
         genes = GeneHits(
             gene_indices=culled_gene_indices,
             q_starts=culled_alns.q_starts,
@@ -257,69 +254,34 @@ class Serotyper:
         # Gene state phase ---------------------------------------------------------------------------------------------
         # Extract gene nucleotides from their contigs
         gene_seqs = genome.contigs.extract_intervals(genes.t_indices, genes.t_intervals)
-        
         # Translate nucleotides to amino acids, compensating for the reading frames of the alignments
         protein_seqs = gene_seqs.translate(frames=genes.frames)
-        
         # Initialize states
         states = np.full(len(genes), GeneState.NORMAL.value, dtype=np.int8)
-        
         is_partial = culled_alns.is_partial
         db_gene_lengths = self._db.genes.lengths[genes.gene_indices]
-        
         # A partial gene colliding with a contig edge is excluded from being truncated
         is_truncated = (~is_partial) & (genes.query_lengths < (db_gene_lengths * 0.90))
-        
         states[is_partial] = GeneState.PARTIAL.value
         states[is_truncated] = GeneState.TRUNCATED.value
-        
-        # Align only the normal (full) genes to their references
-        to_align_mask = states == GeneState.NORMAL.value
-        db_proteins = self._db.translations[genes.gene_indices[to_align_mask]]
-        query_proteins = protein_seqs[to_align_mask]
-        
-        sub_alns = self._protein_aligner(query_proteins, db_proteins)
-        
-        # Reconstruct the full PairwiseAlignments batch safely mapped to all genes
-        full_scores = np.zeros(len(genes), dtype=np.int32)
-        full_matches = np.zeros(len(genes), dtype=np.int32)
-        full_mismatches = np.zeros(len(genes), dtype=np.int32)
-        full_gaps = np.zeros(len(genes), dtype=np.int32)
-        full_q_starts = np.zeros(len(genes), dtype=np.int32)
-        full_q_ends = np.zeros(len(genes), dtype=np.int32)
-        full_t_starts = np.zeros(len(genes), dtype=np.int32)
-        full_t_ends = np.zeros(len(genes), dtype=np.int32)
-        
-        if np.any(to_align_mask):
-            full_scores[to_align_mask] = sub_alns.scores
-            full_matches[to_align_mask] = sub_alns.matches
-            full_mismatches[to_align_mask] = sub_alns.mismatches
-            full_gaps[to_align_mask] = sub_alns.gaps
-            full_q_starts[to_align_mask] = sub_alns.q_starts
-            full_q_ends[to_align_mask] = sub_alns.q_ends
-            full_t_starts[to_align_mask] = sub_alns.t_starts
-            full_t_ends[to_align_mask] = sub_alns.t_ends
-            
-        protein_alignments = PairwiseAlignments(
-            full_scores, full_matches, full_mismatches, full_gaps,
-            full_q_starts, full_q_ends, full_t_starts, full_t_ends
-        )
-        
+        protein_alns = self._protein_aligner(protein_seqs, self._db.translations[genes.gene_indices])
         # Normal genes that fall below the identity threshold are considered NOVEL
-        id_threshold = self._db.metadata.id_threshold
-        below_threshold = to_align_mask & (protein_alignments.pidents < id_threshold)
+        below_threshold = (states == GeneState.NORMAL.value) & (protein_alns.pidents < self._db.metadata.id_threshold)
         states[below_threshold] = GeneState.NOVEL.value
 
-        valid_pidents = protein_alignments.pidents[states == GeneState.NORMAL.value]
+        valid_pidents = protein_alns.pidents[states == GeneState.NORMAL.value]
         percent_identity = float(np.mean(valid_pidents)) if valid_pidents.size > 0 else 0.0
-        percent_coverage = float(locus_completeness[best_locus_idx] * 100.0)
+        percent_coverage = float(best_locus_completeness * 100.0)
 
         return SerotypingResult(
             kaptive_version=__version__,
             database_name=self._db.metadata.name,
             database_version=self._db.metadata.version,
             genome=genome.id,
-            best_match_locus=best_locus_name,
+            best_locus_idx=best_locus_idx,
+            best_locus_name=best_locus_name,
+            best_locus_score=best_locus_score,
+            best_locus_completeness=best_locus_completeness,
             genes=genes,
             states=states,
             locus_pieces=locus_pieces,
@@ -327,7 +289,7 @@ class Serotyper:
             protein_seqs=protein_seqs,
             percent_identity=percent_identity,
             percent_coverage=percent_coverage,
-            protein_alignments=protein_alignments,
+            protein_alignments=protein_alns,
             phenotype="Unknown"
         )
 

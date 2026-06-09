@@ -25,6 +25,15 @@ class GfaReader(Iterator):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._handle.close()
 
+    def __del__(self):
+        self._handle.close()
+
+    def __iter__(self) -> Iterator[SeqRecord | Edge]:
+        return self
+
+    def __next__(self) -> SeqRecord | Edge:
+        return next(self._generator)
+
     @staticmethod
     def _parse_tags(parts: list[bytes]) -> Generator[tuple[str, Any], None, None]:
         for item in parts:
@@ -39,11 +48,11 @@ class GfaReader(Iterator):
             yield tag.decode(), val_parsed
 
     @classmethod
-    def _parse_segment(cls, parts: list[bytes]) -> tuple[SeqRecord, list[tuple[str, Any]]]:
-        return SeqRecord(seq=parts[1], id=parts[0].decode()), list(cls._parse_tags(parts[2:]))
+    def _parse_segment(cls, parts: list[bytes]) -> SeqRecord:
+        return SeqRecord(seq=parts[1], id=parts[0].decode())  #, list(cls._parse_tags(parts[2:]))
 
     @staticmethod
-    def _parse_link(parts: list[str]):
+    def _parse_link(parts: list[str]) -> Edge:
         u = parts[0]
         u_strand = Strand(parts[1])
         v = parts[2]
@@ -63,13 +72,7 @@ class GfaReader(Iterator):
         else:
             return None
 
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return next(self._generator)
-
-    def _parse_records(self):
+    def _parse_records(self) -> Iterator[SeqRecord | Edge]:
         for line in self._handle:
             if (parsed := self._parse_line(line)) is not None:
                 yield parsed

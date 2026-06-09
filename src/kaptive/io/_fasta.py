@@ -22,13 +22,16 @@ class FastaReader(Iterator):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._handle.close()
-        
+
+    def __del__(self):
+        self._handle.close()
+
     def __iter__(self) -> Iterator[SeqRecord]:
         return self
 
     def __next__(self) -> SeqRecord:
         return next(self._generator)
-    
+
     def _parse_records(self) -> Iterator[SeqRecord]:
         header: str = ""
         seq_chunks: list[bytes] = []
@@ -49,7 +52,7 @@ class FastaReader(Iterator):
                     yield SeqRecord(seq=join_bytes(seq_chunks), id=header)
 
                 seq_chunks.clear()
-                
+
                 # Decode the header and split into ID and description
                 decoded_line = line[1:].decode("utf-8", errors="replace")
                 header, _, description = decoded_line.partition(" ")
