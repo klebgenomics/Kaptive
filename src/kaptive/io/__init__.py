@@ -1,4 +1,4 @@
-from ._fasta import FastaReader
-from ._gfa import GfaReader
+from .fasta import FastaReader
+from .gfa import GfaReader
 
 __all__ = ['FastaReader', 'GfaReader']

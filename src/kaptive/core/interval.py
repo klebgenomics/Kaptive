@@ -3,8 +3,8 @@ Genomic interval representation with strand and context, plus batched interval o
 """
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Self, Union, Match
-from enum import IntEnum, auto
+from typing import Union, Match
+from enum import IntEnum
 
 import numpy as np
 import numpy.typing as npt
@@ -37,21 +37,6 @@ class Strand(IntEnum):
         if self == Strand.FORWARD: return '+'
         if self == Strand.REVERSE: return '-'
         return '.'
-
-
-class Context(IntEnum):
-    """
-    Spatial relationship between two genomic intervals.
-
-    Used to describe the position of a 'passenger' or 'flank' gene relative
-    to a primary target (e.g. a mobile element insertion site).
-    """
-    UPSTREAM = auto()
-    DOWNSTREAM = auto()
-    INSIDE = auto()
-    OVERLAPPING = auto()
-    OVERLAPPING_START = auto()
-    OVERLAPPING_END = auto()
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -178,23 +163,6 @@ class Interval:
             length = self.end
         return Interval(length - self.end, length - self.start, self.strand * -1)
 
-    def relate(self, other: IntervalLike) -> Context:
-        """Calculates the spatial relationship between this interval and another.
-
-        This method determines how two intervals are positioned relative to each other, considering strand.
-        For example, it can identify if another interval is upstream, downstream, overlapping, or contained within
-        this one.
-
-        Args:
-            other (IntervalLike): The other interval to compare against.
-
-        Returns:
-            Context: A `Context` enum value (e.g., UPSTREAM, INSIDE, OVERLAPPING_5_PRIME) describing
-                the relationship.
-        """
-        other = Interval.from_item(other)
-        return Context(_core_relate(self.start, self.end, self.strand, other.start, other.end))
-
     @classmethod
     def from_match(cls, item: Match, strand: Strand = Strand.UNSTRANDED) -> 'Interval':
         """Creates an Interval from a regular expression `Match` object.
@@ -317,7 +285,7 @@ class Intervals:
             object.__setattr__(self, 'original_indices', np.arange(len(self.starts), dtype=np.int32))
 
     @classmethod
-    def empty(cls) -> Self:
+    def empty(cls) -> Intervals:
         """Creates an empty Intervals object with correctly typed, zero-length arrays.
 
         Returns:
@@ -331,7 +299,7 @@ class Intervals:
         )
 
     @classmethod
-    def from_intervals(cls, intervals: Iterable[Interval]) -> Self:
+    def from_intervals(cls, intervals: Iterable[Interval]) -> Intervals:
         """Creates an Intervals object from an iterable of individual `Interval` objects.
 
         Args:
@@ -352,14 +320,6 @@ class Intervals:
             np.array(st, dtype=np.int8)
         )
 
-    def max_len(self) -> int:
-        """Returns the length of the longest interval in the batch.
-
-        Returns:
-            int: The maximum length, or 0 if the batch is empty.
-        """
-        return np.max(self.ends - self.starts) if len(self) > 0 else 0
-
     def __len__(self) -> int:
         """Returns the number of intervals in the batch."""
         return len(self.starts)
@@ -369,7 +329,7 @@ class Intervals:
         return {'starts': self.starts.tolist(), 'ends': self.ends.tolist(), 'strands': self.strands.tolist()}
 
     @classmethod
-    def from_dict(cls, d: dict) -> 'Intervals':
+    def from_dict(cls, d: dict) -> Intervals:
         """Deserializes intervals from a dictionary."""
         return cls(
             np.array(d['starts'], dtype=np.int32),
@@ -407,21 +367,8 @@ class Intervals:
             self.original_indices[item]
         )
 
-    def copy(self):
-        """Creates a deep copy, including all underlying NumPy arrays.
-
-        Returns:
-            Intervals: A new `Intervals` object with copied data.
-        """
-        return Intervals(
-            self.starts.copy(),
-            self.ends.copy(),
-            self.strands.copy(),
-            self.original_indices.copy()
-        )
-
     @classmethod
-    def concat(cls, batches: Iterable[Self]) -> Self:
+    def concat(cls, batches: Iterable[Intervals]) -> Intervals:
         """Concatenates multiple Intervals objects into a single, larger collection.
 
         Args:
@@ -443,7 +390,7 @@ class Intervals:
             np.concatenate([b.original_indices for b in batches])
         )
 
-    def sort(self) -> 'Intervals':
+    def sort(self) -> Intervals:
         """Returns a new collection sorted by start coordinate, then end coordinate.
 
         This is a prerequisite for many efficient spatial algorithms (e.g., merging, sweeping).
@@ -464,56 +411,7 @@ class Intervals:
             self.original_indices[order]
         )
 
-    @property
-    def envelope(self) -> Interval | None:
-        """Returns a single bounding `Interval` encompassing the absolute min and max coordinates of the batch.
-        
-        Returns None if the batch is empty.
-        """
-        if len(self) == 0:
-            return None
-        
-        # Assumes all intervals are on the same sequence/contig
-        return Interval(int(np.min(self.starts)), int(np.max(self.ends)))
-
-    @property
-    def centers(self) -> npt.NDArray:
-        """Vectorized calculation of all interval midpoints.
-
-        Returns:
-            npt.NDArray: A float array of the midpoints.
-        """
-        return (self.starts + self.ends) / 2
-
-    @property
-    def lengths(self) -> npt.NDArray[np.int32]:
-        """Vectorized calculation of all interval lengths.
-
-        Returns:
-            npt.NDArray[np.int32]: An integer array of the lengths.
-        """
-        return self.ends - self.starts
-
-    def query(self, start: int, end: int) -> npt.NDArray[np.int32]:
-        """Finds indices of all intervals in the batch that overlap with a given query range.
-
-        This method uses a highly optimized, Numba-jitted kernel. It first performs a binary
-        search (`searchsorted`) to narrow down the potential candidates and then iterates backward
-        to check for overlaps. This is significantly faster than a linear scan for large batches.
-        The batch should ideally be sorted for best performance.
-
-        Args:
-            start (int): The start of the query range.
-            end (int): The end of the query range.
-
-        Returns:
-            np.ndarray: A 1D integer array of the indices of overlapping intervals.
-        """
-        if len(self) == 0:
-            return np.empty(0, dtype=np.int32)
-        return _query_kernel(self.starts, self.ends, start, end, self.max_len())
-
-    def merge(self, tolerance: int = 0) -> 'Intervals':
+    def merge(self, tolerance: int = 0) -> Intervals:
         """Merges overlapping or adjacent intervals into single bounding boxes.
 
         This method collapses all intervals that overlap or are within `tolerance` base pairs of
@@ -531,97 +429,10 @@ class Intervals:
         if len(self) == 0:
             return self
         out = _merge_kernel(self.starts, self.ends, self.strands, tolerance)
-        return type(self)(out[0], out[1], out[2])
+        return Intervals(out[0], out[1], out[2])
 
-    def expand(self, left: int | npt.NDArray, right: int | npt.NDArray, 
-               clip_lengths: int | npt.NDArray | None = None) -> 'Intervals':
-        """Vectorized expansion (or shrinkage) of all intervals in the collection.
-
-        This method applies an expansion to every interval simultaneously. The `left` and `right`
-        parameters can be single integers (applied to all) or NumPy arrays of the same length
-        as the batch for per-interval adjustments.
-
-        Args:
-            left (int | npt.NDArray): Amount to expand the start of each interval.
-            right (int | npt.NDArray): Amount to expand the end of each interval.
-            clip_lengths (int | npt.NDArray | None, optional): Maximum length(s) to clip the
-                end coordinates against. Can be a single int or an array. Defaults to None.
-
-        Returns:
-            Intervals: A new collection with the expanded intervals.
-        """
-        new_starts = np.maximum(0, self.starts - left)
-        new_ends = self.ends + right
-        
-        if clip_lengths is not None:
-            new_ends = np.minimum(new_ends, clip_lengths)
-            
-        return Intervals(
-            starts=new_starts.astype(self.starts.dtype),
-            ends=new_ends.astype(self.ends.dtype),
-            strands=self.strands.copy(),
-            original_indices=self.original_indices.copy()
-        )
-
-    def project(self, shift: int, flip_length: int | None = None) -> 'Intervals':
-        """Applies a coordinate transformation to all intervals in the collection.
-
-        This is a vectorized version of `Interval.shift` and `Interval.reverse_complement`. It can
-        shift all intervals and optionally mirror them within a given length, which is useful for
-        projecting coordinates between different reference frames (e.g., from a gene to a contig,
-        or from a contig's forward strand to its reverse strand).
-
-        Args:
-            shift (int): The distance to add to all start and end coordinates.
-            flip_length (int, optional): If provided, coordinates are mirrored within this length
-                (e.g., `new_start = flip_length - old_end`) and strands are inverted. This is
-                used for reverse-complementation. Defaults to None.
-
-        Returns:
-            Intervals: A new collection with the transformed coordinates.
-        """
-        if flip_length is not None:
-            new_starts = (flip_length - self.ends).astype(self.starts.dtype)
-            new_ends = (flip_length - self.starts).astype(self.ends.dtype)
-            new_strands = (-self.strands).astype(self.strands.dtype)
-        else:
-            new_starts = self.starts.copy()
-            new_ends = self.ends.copy()
-            new_strands = self.strands.copy()
-
-        new_starts += shift
-        new_ends += shift
-
-        return Intervals(
-            starts=new_starts,
-            ends=new_ends,
-            strands=new_strands,
-            original_indices=self.original_indices.copy()
-        )
-
-    def overlaps_with(self, other: 'Intervals') -> np.ndarray:
-        """Performs a vectorized, many-to-many overlap check between this collection and another.
-
-        This method constructs a 2D boolean matrix where `matrix[i, j]` is true if `self[i]`
-        overlaps with `other[j]`. It then reduces this matrix along the `other` axis (`axis=1`)
-        to produce a 1D boolean mask indicating which intervals in `self` overlap with *any*
-        interval in `other`. This is highly efficient for checking overlaps between two large sets.
-
-        Args:
-            other (Intervals): The other collection to check for overlaps against.
-
-        Returns:
-            np.ndarray: A 1D boolean array of the same length as `self`, where `True` at index `i`
-                means `self[i]` overlaps with at least one interval in `other`.
-        """
-        if len(self) == 0 or len(other) == 0:
-            return np.zeros(len(self), dtype=bool)
-
-        overlaps = (self.starts[:, None] < other.ends[None, :]) & \
-                   (other.starts[None, :] < self.ends[:, None])
-        return overlaps.any(axis=1)
-
-    def cluster_spatial(self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.int32]:
+    def cluster_spatial(self, tolerance: int = 0,
+                        group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.int32]:
         """Clusters intervals that are within a spatial tolerance of one another.
 
         This performs a highly optimized 1D single-linkage clustering. It is ideal for
@@ -689,30 +500,6 @@ class Intervals:
 
 # Kernels --------------------------------------------------------------------------------------------------------------
 @njit(cache=True, nogil=True)
-def _query_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32], q_start: int, q_end: int, max_len: int):
-    """Numba-accelerated spatial overlap query."""
-    limit = np.searchsorted(starts, q_end, side='left')
-    count = 0
-    min_start_check = q_start - max_len
-
-    for i in range(limit - 1, -1, -1):
-        if starts[i] < min_start_check:
-            break
-        if ends[i] > q_start:
-            count += 1
-
-    out = np.empty(count, dtype=np.int32)
-    idx = 0
-    for i in range(limit - 1, -1, -1):
-        if starts[i] < min_start_check:
-            break
-        if ends[i] > q_start:
-            out[idx] = i
-            idx += 1
-
-    return out[::-1]
-
-@njit(cache=True, nogil=True)
 def _merge_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32], strands: npt.NDArray[np.int8],
                   tolerance: int) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int8]]:
     """Numba-accelerated interval merging."""
@@ -768,22 +555,6 @@ def _is_sorted_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32]
         if starts[i] == starts[i + 1] and ends[i] > ends[i + 1]:
             return False
     return True
-
-
-@njit(cache=True, nogil=True, inline='always')
-def _core_relate(s_a, e_a, st_a, s_b, e_b) -> int:
-    """Core logic for determining spatial relationship between two intervals."""
-    if e_b <= s_a:
-        return 1 if st_a >= 0 else 2
-    if s_b >= e_a:
-        return 2 if st_a >= 0 else 1
-    if s_b >= s_a and e_b <= e_a:
-        return 3
-    if s_b < s_a:
-        if e_b > e_a:
-            return 4
-        return 5 if st_a >= 0 else 6
-    return 6 if st_a >= 0 else 5
 
 
 @njit(cache=True, nogil=True)

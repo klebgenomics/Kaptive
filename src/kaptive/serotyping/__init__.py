@@ -1,3 +1,2 @@
-from ._pipeline import Serotyper, SerotypingResult, GeneState
-from ._io import ConfidenceEvaluator, SerotypingProblem
+from .serotyper import Serotyper, SerotypingResult, GeneState, ConfidenceEvaluator, SerotypingProblem
 __all__ = ['Serotyper', 'SerotypingResult', 'GeneState', 'ConfidenceEvaluator', 'SerotypingProblem']

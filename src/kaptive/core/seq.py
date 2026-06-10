@@ -313,8 +313,7 @@ class Sequences:
         """
         if len(indices) == 0:
             return self.empty()
-            
-        new_ids = new_ids or tuple(str(i) for i in range(len(indices)))
+        new_ids = new_ids or tuple(f'{self.ids[i]}_{x}_{y}_{z}' for i, x, y, z in zip(indices, starts, ends, strands))
         out_seqs, offsets, lengths = _extract_ragged_kernel(
             self.seqs, self.offsets, indices, starts, ends, strands, BacterialTranslationTable._COMP_MAP
         )

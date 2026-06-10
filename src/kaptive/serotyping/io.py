@@ -1,66 +1,11 @@
 from abc import ABC, abstractmethod
-from enum import IntEnum, IntFlag, auto
 from dataclasses import dataclass
 from typing import Self
 
-import numpy as np
-
-from ._pipeline import SerotypingResult, GeneState
-
-
-# Enums ----------------------------------------------------------------------------------------------------------------
-class SerotypingProblem(IntFlag):
-    NONE = 0
-    FRAGMENTED = auto()  # Locus is broken up over pieces across the same/multiple contig(s)
-    UNEXPECTED_GENES = auto()  # Unexpected genes from other loci inside the locus boundary
-    MISSING_GENES = auto()  # Expected genes from the best match locus missing inside the locus boundary
-    NOVEL_GENES = auto()  # Genes inside the locus boundary that fall below the pairwise amino acid identity threshold
-    TRUNCATED_GENES = auto()  # Genes inside the locus boundary that do not form complete amino acid sequences
-
-    @classmethod
-    def evaluate(cls, result: SerotypingResult) -> int:
-        problems = cls.NONE
-        if len(result.locus_pieces) > 1:
-            problems |= cls.FRAGMENTED
-        if np.any(result.genes.is_inside & result.genes.is_expected):
-            problems |= cls.UNEXPECTED_GENES
-
-
-        # if np.any(genes.is_expected & (genes.states == GeneState.TRUNCATED)):
-        #     problems |= self.TRUNCATED_GENES
-        #
-        # if np.any(active_extra):
-        #     problems |= self.UNEXPECTED_GENES
-        #
-        # # Missing genes: Are any expected clusters absent from the active expected hits?
-        # locus_slice = self._db.locus_gene_slices[best_locus_idx]
-        # expected_clusters = set(self._db.gene_cluster_ids[locus_slice])
-        # found_expected = set(self._db.gene_cluster_ids[genes.gene_indices[active_expected]])
-        # if not expected_clusters.issubset(found_expected):
-        #     problems |= self.MISSING_GENES
-        #
-        # # Novel genes: Anything physically inside the locus that falls below the pident threshold
-        # novel_mask = genes.is_inside & (genes.states == GeneState.NOVEL)
-        # if np.any(novel_mask):
-        #     problems |= self.NOVEL_GENES
-        return problems
+from .serotyper import SerotypingResult, ConfidenceEvaluator
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
-@dataclass(slots=True, frozen=True)
-class ConfidenceEvaluator:
-    """
-    Evaluates the final SerotyperResult to determine if the match is trustworthy.
-    """
-    max_other_genes: int = 1
-    min_completeness: float = 0.5  # Replaced prop_expected_genes for SoA clarity
-    allow_below_threshold: bool = False
-    min_zscore: float | None = None
-
-    def __call__(self, result: SerotypingResult) -> bool:
-        pass
-
-
 @dataclass(slots=True, frozen=True)
 class ReportRow(ABC):
     """Base class for representing an in silico serotyping report for a single sample in a TSV row.

@@ -30,7 +30,6 @@ kaptive = "kaptive.cli:main"
 
 [project.optional-dependencies]
 plot = ["matplotlib", "plotly"]
-orf = ["pyfgs"]
 
 [project.urls]
 Homepage = "https://klebgenomics.github.io/Kaptive/"
@@ -41,7 +40,7 @@ Documentation = "https://klebgenomics.github.io/Kaptive/"
 test = ["pytest>=9.0.0"]
 docs = ["zensical", "mkdocstrings-python"]
 dev = [
-    "kaptive[orf,plot]",
+    "kaptive[plot]",
     "marimo",
     "pandas",
     {include-group = "test"},
