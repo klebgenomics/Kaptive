@@ -9,19 +9,18 @@ import pickle
 import tomllib
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.request import urlopen, Request
 
 import numpy as np
 import numpy.typing as npt
 
 from kaptive.core.seq import SeqRecord, Sequences
 from kaptive.core.interval import Intervals
-from kaptive.utils import GitRepo, check_file
 
 
 # Exceptions and warnings ----------------------------------------------------------------------------------------------
 class DatabaseError(Exception):
     pass
-
 
 # Data Models ----------------------------------------------------------------------------------------------------------
 @dataclass(frozen=True, slots=True)
@@ -235,6 +234,16 @@ class Database:
 
         return Phenotype(id_, set(loci), set(extra), set(inactive), data.get('priority', 50))
 
+    @staticmethod
+    def _check_file(file: str | Path, min_size: int = 1) -> Path:
+        """Validates that a file exists and meets a minimum size requirement."""
+        if isinstance(file, str):
+            file = Path(file)
+
+        if file.is_file() and file.stat().st_size >= min_size:
+            return file
+        raise FileNotFoundError(file)
+
     @classmethod
     def load(cls, file_or_keyword: str | Path) -> Database:
         """Loads a Database from a file path (Genbank or Pickle) or a known database keyword.
@@ -260,7 +269,7 @@ class Database:
                 by the DatabaseManager.
         """
         try:
-            file = check_file(file_or_keyword)
+            file = cls._check_file(file_or_keyword)
             if file.suffix == '.gbk':
                 return cls.from_genbank(file)
             elif file.suffix == '.pkl':
@@ -286,7 +295,7 @@ class Database:
         Returns:
             Database: The unpickled Database object.
         """
-        return pickle.loads(check_file(file).read_bytes())
+        return pickle.loads(cls._check_file(file).read_bytes())
 
     @classmethod
     def from_genbank(cls, file: str | Path) -> Database:
@@ -317,7 +326,7 @@ class Database:
             DatabaseError: If loci lack required qualifiers ('note', 'locus'), or if the associated
                 `.toml` metadata file is missing.
         """
-        file = check_file(file)
+        file = cls._check_file(file)
         from gb_io import iter as GenbankIterator
         _LOCUS_REGEX = re_compile(r'locus:\s?(.*)$')
         _SEROTYPE_REGEX = re_compile(r'type:\s?(.*)$')
@@ -468,6 +477,34 @@ class Database:
             gene_positions=np.array(gene_expected_positions, dtype=np.int32),
             phenotypes=tuple(phenotypes),
         )
+
+
+# Classes --------------------------------------------------------------------------------------------------------------
+class GitRepo:
+    """
+    A minimal class to fetch raw files from a GitHub repository via the GitHub API.
+    """
+    _BASE_URL = 'https://api.github.com'
+    __slots__ = ('owner', 'repo', 'branch', '_api_url')
+
+    def __init__(self, owner: str, repo: str, branch: str = 'main'):
+        self.owner = owner
+        self.repo = repo
+        self.branch = branch
+        self._api_url = f'{self._BASE_URL}/repos/{owner}/{repo}'
+
+    def __repr__(self):
+        return f"<GitRepo {self.owner}/{self.repo} ({self.branch})>"
+
+    def fetch(self, filename: str) -> bytes:
+        """Fetches the raw bytes of a specific file from the repository."""
+        url = f'{self._api_url}/contents/{filename}?ref={self.branch}'
+        req = Request(url, headers={'Accept': 'application/vnd.github.v3.raw'})
+        try:
+            with urlopen(req) as response:
+                return response.read()
+        except Exception as e:
+            raise e
 
 
 class DatabaseManager:

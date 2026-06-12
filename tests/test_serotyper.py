@@ -31,14 +31,12 @@ def test_serotyper_problem_genomes(genome_file, expected_locus):
         result = serotyper(genome)
         
         assert result is not None, f"Serotyper returned no result for {genome_file}"
-        assert result.best_match_locus == expected_locus, \
-            f"For {genome_file}, expected {expected_locus} but got {result.best_match_locus}"
-
+        assert result.best_locus_name == expected_locus, \
+            f"For {genome_file}, expected {expected_locus} but got {result.best_locus_name}"
 
 
 def test():
     from pathlib import Path
-
     from kaptive.serotyping import Serotyper
     from kaptive.db import Database
     from kaptive.core.genome import GenomeAssembly
@@ -48,8 +46,10 @@ def test():
         'KP_NORM_BLD_111598_70.fasta.gz',
         'NK_H21_015_80.fasta.gz',
         'NK_H12_048_10.fasta.gz',
+        'NK_H12_048.fasta.gz',
         'NK_H17_042_10.fasta.gz',
     ]
-
-    with Serotyper(Database.load('kpsc_k')) as serotyper:
+    db = Database.load('kpsc_k')
+    with Serotyper(db) as serotyper:
         results = [serotyper(GenomeAssembly.from_file(genomes_dir / i)) for i in test_genomes]
+

@@ -2,8 +2,17 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Self
 
-from .serotyper import SerotypingResult, ConfidenceEvaluator
+from .serotyper import SerotypingResult, ConfidenceEvaluator, SerotypingProblem
 
+
+# Constants ------------------------------------------------------------------------------------------------------------
+_PROBLEM_SYMBOLS = {
+    SerotypingProblem.FRAGMENTED: '?',
+    SerotypingProblem.UNEXPECTED_GENES: '+',
+    SerotypingProblem.MISSING_GENES: '-',
+    SerotypingProblem.NOVEL_GENES: '*',
+    SerotypingProblem.TRUNCATED_GENES: '!'
+}
 
 # Classes --------------------------------------------------------------------------------------------------------------
 @dataclass(slots=True, frozen=True)
@@ -67,6 +76,9 @@ class KaptiveRow(ReportRow):
         `kaptive v3.0.0` onwards, we adopted this behavior to allow users to see where locus splitting has occurred,
         and determine the total percent identity of a gene that has been split.
     """
+    Kaptive_version: str
+    Database_name: str
+    Database_version: str
     Assembly: str
     Best_match_locus: str
     Best_match_type: str
@@ -99,6 +111,11 @@ class KaptiveRow(ReportRow):
     @classmethod
     def from_result(cls, result: SerotypingResult, evaluator: ConfidenceEvaluator):
         ...
+
+    @staticmethod
+    def format_problem(problem: SerotypingProblem) -> str:
+        """Renders the problem code for the Kaptive TSV output"""
+        return ''.join(symbol for flag, symbol in _PROBLEM_SYMBOLS.items() if problem & flag)
 
 
 @dataclass(slots=True, frozen=True)

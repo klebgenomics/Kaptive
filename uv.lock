@@ -377,9 +377,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-orf = [
-    { name = "pyfgs" },
-]
 plot = [
     { name = "matplotlib" },
     { name = "plotly" },
@@ -387,7 +384,7 @@ plot = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "kaptive", extra = ["orf", "plot"] },
+    { name = "kaptive", extra = ["plot"] },
     { name = "marimo" },
     { name = "mkdocstrings-python" },
     { name = "pandas" },
@@ -410,13 +407,12 @@ requires-dist = [
     { name = "numba", specifier = ">=0.62" },
     { name = "numpy", specifier = ">=2.4" },
     { name = "plotly", marker = "extra == 'plot'" },
-    { name = "pyfgs", marker = "extra == 'orf'" },
 ]
-provides-extras = ["orf", "plot"]
+provides-extras = ["plot"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "kaptive", extras = ["orf", "plot"] },
+    { name = "kaptive", extras = ["plot"] },
     { name = "marimo" },
     { name = "mkdocstrings-python" },
     { name = "pandas" },
@@ -1336,17 +1332,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/1b/7d/92392ff7815c21062bea51aa7b87d45576f649f16458d78b7cf94b9ab2e6/pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29", size = 103492, upload-time = "2026-01-21T14:26:51.89Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992", size = 48172, upload-time = "2026-01-21T14:26:50.693Z" },
-]
-
-[[package]]
-name = "pyfgs"
-version = "0.0.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b8/b9/424b34a65a328cb8205de402bc112db7a8b1805cbf472a97f5a0b3617c3a/pyfgs-0.0.1.tar.gz", hash = "sha256:f7e21cf32c490fd08d237035211dc1d24e8b25f85748d17b66cf10819f9a1a95", size = 94745, upload-time = "2026-03-26T00:02:39.79Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/48/dd24362d57bb586325017d8aed9e441344cc7b39a49ba54f29e9cbb23491/pyfgs-0.0.1-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:1035f9bbd2898767af407bd4aa461a76d651b9bf4e3ced9e86f756bc644c2502", size = 2149041, upload-time = "2026-03-26T00:02:34.499Z" },
-    { url = "https://files.pythonhosted.org/packages/d4/64/83327ab87aba2928df659532ab0c6254e5fb2b5bdfcab2311841e30c778d/pyfgs-0.0.1-cp312-cp312-win_amd64.whl", hash = "sha256:91061ec206b4772383807c4a8492d0154ddb916c55363f4fa5d1061946b2dc07", size = 1995798, upload-time = "2026-03-26T00:02:36.611Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/4e/a937d63fe0d1ec015292084d075a10413409d8fe7a5b3dc8a461edeb5f34/pyfgs-0.0.1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:53ed6dca46addf722e4636df2d355b543b4ae9050720aa5a4fbfdcd6413d23b6", size = 2149555, upload-time = "2026-03-26T00:02:38.127Z" },
 ]
 
 [[package]]

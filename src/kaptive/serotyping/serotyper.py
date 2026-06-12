@@ -46,25 +46,27 @@ class SerotypingProblem(IntFlag):
     @classmethod
     def evaluate(cls, result: SerotypingResult) -> int:
         problems = cls.NONE
+        
         if len(result.locus_pieces) > 1:
             problems |= cls.FRAGMENTED
-        if np.any(result.gene_hits.is_inside & result.gene_hits.is_expected):
-            problems |= cls.UNEXPECTED_GENES        
-        # TODO: Finish implementation
+            
+        # Unexpected genes from other loci (not expected and not an allowed extra gene)
+        if np.any(result.gene_hits.is_inside & ~result.gene_hits.is_expected & ~result.gene_hits.is_extra):
+            problems |= cls.UNEXPECTED_GENES
+            
+        # Missing genes: Overall completeness is not 100%, or expected genes are found but outside the locus boundary
+        if result.best_locus_completeness < 1.0 or np.any(~result.gene_hits.is_inside & result.gene_hits.is_expected):
+            problems |= cls.MISSING_GENES
+            
+        # Novel genes: inside boundary but below identity threshold
+        if np.any(result.gene_hits.is_inside & (result.gene_states == GeneState.NOVEL.value)):
+            problems |= cls.NOVEL_GENES
+            
+        # Truncated genes: inside boundary but partial or truncated
+        if np.any(result.gene_hits.is_inside & ((result.gene_states == GeneState.TRUNCATED.value) | (result.gene_states == GeneState.PARTIAL.value))):
+            problems |= cls.TRUNCATED_GENES
+            
         return problems
-
-    def as_symbols(self) -> str:
-        """Renders the problem code for the Kaptive TSV output"""
-        symbols = []
-        # TODO: Finish implementation
-        mapping = {
-            SerotypingProblem.FRAGMENTED: '?', 
-            SerotypingProblem.UNEXPECTED_GENES: '+', 
-            SerotypingProblem.MISSING_GENES: '-', 
-            SerotypingProblem.NOVEL_GENES: '*', 
-            SerotypingProblem.TRUNCATED_GENES: '!'
-        }
-        return ''.join(symbols)
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -195,6 +197,7 @@ class SerotypingResult:
     percent_coverage: float
     protein_alignments: PairwiseAlignments
     phenotype: str
+    problems: SerotypingProblem
 
 
 class Serotyper:
@@ -220,9 +223,8 @@ class Serotyper:
         # Initialise mappy index by writing the genes to a temporary fasta
         with NamedTemporaryFile(mode="wb", suffix=".fasta") as tmp:
             tmp.write(db.genes.to_fasta(use_indices=True))  # Use gene indices as headers to act as array pointers
-            tmp_name = tmp.name
-            self._gene_aligner = Aligner(fn_idx_in=tmp_name, n_threads=self._indexing_threads)
-        Path(tmp_name).unlink(missing_ok=True)  # TODO: Review if necessary, mappy might keep handle open.
+            tmp.flush()  # CRITICAL: Ensure the OS writes the buffer to disk before Mappy reads it
+            self._gene_aligner = Aligner(fn_idx_in=tmp.name, n_threads=self._indexing_threads)
 
     def __enter__(self):
         self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
@@ -337,7 +339,7 @@ class Serotyper:
 
         # Gene state phase ---------------------------------------------------------------------------------------------
         gene_seqs = genome.contigs.extract_intervals(  # Extract gene nucleotides from their contigs
-            genes.t_indices, genes.t_intervals, new_ids=tuple(self._db.genes.ids[i] for i in genes.t_indices))
+            genes.t_indices, genes.t_intervals, new_ids=tuple(self._db.genes.ids[i] for i in genes.gene_indices))
         # Translate nucleotides to amino acids, compensating for the reading frames of the alignments
         protein_seqs = gene_seqs.translate(frames=genes.frames)
         states = np.full(len(genes), GeneState.NORMAL.value, dtype=np.int8)  # Initialize states
