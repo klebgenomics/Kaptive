@@ -1,13 +1,15 @@
-from .seq import Sequences, SeqRecord
+from __future__ import annotations
+
+from .alignment import Alignment, Alignments, Cigars
+from .genome import GenomeAssembly
 from .interval import Interval, Intervals, Strand
-from .alignment import Alignments, Alignment, Cigars
-from .genome import GenomeAssembly, Edge, Edges
-from .pairwise import PairwiseAligner, RandstrobeIndex, PairwiseAlignments
+from .pairwise import PairwiseAligner, PairwiseAlignments, RandstrobeIndex
+from .seq import SeqRecord, Sequences
 
 __all__ = [
     'Sequences', 'SeqRecord',
     'Interval', 'Intervals', 'Strand',
     'Alignments', 'Alignment', 'Cigars',
-    'GenomeAssembly', 'Edge', 'Edges',
+    'GenomeAssembly',
     'PairwiseAligner', 'RandstrobeIndex', 'PairwiseAlignments'
 ]

@@ -1,11 +1,12 @@
+from collections.abc import Generator, Iterable
 from dataclasses import dataclass
-from typing import Generator, Iterable
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
 from numba import njit, prange
 
-from kaptive.core.interval import Strand, Interval, IntervalLike, Intervals
+from kaptive.core.interval import Interval, IntervalLike, Intervals, Strand
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -99,17 +100,17 @@ class Sequences:
         """Returns the total number of sequences in the batch."""
         return len(self.ids)
     
-    def __dict__(self) -> dict:
-        """Serializes the batch into a dictionary, converting the sequence array to an ASCII string."""
+    def to_dict(self) -> dict:
+        """Returns a dictionary containing the SoA arrays for orjson serialization."""
         return {
             'ids': self.ids,
             'seqs': self.seqs.tobytes().decode('ascii'),
-            'offsets': self.offsets.tolist(),
-            'lengths': self.lengths.tolist()
+            'offsets': self.offsets,
+            'lengths': self.lengths
         }
         
     @classmethod
-    def from_dict(cls, data: dict) -> Sequences:
+    def from_dict(cls, data: dict) -> 'Sequences':
         """Deserializes a Sequences object from a dictionary representation."""
         return cls(
             ids=tuple(data['ids']),
@@ -147,7 +148,7 @@ class Sequences:
             ])
 
     @classmethod
-    def empty(cls) -> Sequences:
+    def empty(cls) -> 'Sequences':
         """Creates an empty Sequences object with correctly typed, zero-length arrays."""
         return cls(
             (),
@@ -157,7 +158,7 @@ class Sequences:
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Sequences]) -> Sequences:
+    def concat(cls, batches: Iterable[Self]) -> 'Sequences':
         """Concatenates multiple Sequences objects into a single, larger collection.
 
         Args:
@@ -192,7 +193,7 @@ class Sequences:
         """
         return _internal_stops_kernel(self.seqs, self.offsets, self.lengths)
 
-    def unique(self) -> Sequences:
+    def unique(self) -> 'Sequences':
         """Returns a new Sequences container containing only unique sequences.
         
         Uses a Numba-accelerated 64-bit FNV-1a hash to rapidly identify unique sequences.
@@ -223,7 +224,8 @@ class Sequences:
             IndexError: If an integer index is out of range.
         """
         if isinstance(item, (int, np.integer)):
-            if item < 0: item += len(self)
+            if item < 0:
+                item += len(self)
             if item < 0 or item >= len(self): raise IndexError("Index out of range")
             s = self.offsets[item]
             l = self.lengths[item]
@@ -239,7 +241,8 @@ class Sequences:
         starts = np.zeros(len(indices), dtype=np.int32)
         ends = self.lengths[indices].astype(np.int32)
         strands = np.ones(len(indices), dtype=np.int8)
-        return self.extract(indices.astype(np.int32), starts, ends, strands, new_ids=tuple(self.ids[i] for i in indices))
+        return self.extract(indices.astype(np.int32), starts, ends, strands,
+                            new_ids=tuple(self.ids[i] for i in indices))
 
     def __iter__(self) -> Generator[SeqRecord, None, None]:
         """Iterates over the batch, yielding a single `SeqRecord` at a time.
@@ -253,7 +256,7 @@ class Sequences:
             yield SeqRecord(self.ids[i], self.seqs[s:s + l].tobytes())
 
     @classmethod
-    def from_bytes(cls, seqs: list[bytes], ids: tuple[str, ...] | None = None) -> Sequences:
+    def from_bytes(cls, seqs: list[bytes], ids: tuple[str, ...] | None = None) -> 'Sequences':
         """Constructs Sequences from a list of byte strings.
 
         Args:
@@ -268,7 +271,7 @@ class Sequences:
         return cls.from_records([SeqRecord(i, s) for i, s in zip(ids, seqs)])
 
     @classmethod
-    def from_records(cls, records: list[SeqRecord]) -> Sequences:
+    def from_records(cls, records: list[SeqRecord]) -> 'Sequences':
         """Constructs Sequences from a list of `SeqRecord` objects.
 
         This method handles flattening the individual byte sequences into the contiguous
@@ -293,7 +296,7 @@ class Sequences:
 
     def extract(self, indices: npt.NDArray[np.int32], starts: npt.NDArray[np.int32],
                 ends: npt.NDArray[np.int32], strands: npt.NDArray[np.int8],
-                new_ids: tuple[str, ...] | None = None) -> Sequences:
+                new_ids: tuple[str, ...] | None = None) -> 'Sequences':
         """Vectorized sub-sequence extraction from the batch.
 
         This is a highly optimized method for extracting many regions from the sequences in the batch
@@ -320,7 +323,7 @@ class Sequences:
         return Sequences(new_ids, out_seqs, offsets, lengths)
 
     def extract_intervals(self, indices: npt.NDArray[np.integer], intervals: Intervals,
-                          new_ids: tuple[str, ...] | None = None) -> Sequences:
+                          new_ids: tuple[str, ...] | None = None) -> 'Sequences':
         """Convenience wrapper around `extract` that takes an `Intervals` object directly.
 
         Args:
@@ -339,7 +342,7 @@ class Sequences:
             new_ids=new_ids
         )
 
-    def translate(self, frames: npt.NDArray[np.int8] | None = None) -> Sequences:
+    def translate(self, frames: npt.NDArray[np.int8] | None = None) -> 'Sequences':
         """Vectorized translation of nucleotide sequences into protein sequences.
 
         This method uses a highly optimized Numba kernel and lookup tables to translate
@@ -405,7 +408,7 @@ class BacterialTranslationTable:
     _COMP_MAP.flags.writeable = False
 
     @classmethod
-    def translate(cls, seq: bytes | bytearray | memoryview | npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
+    def translate(cls, seq: bytes | bytearray | memoryview | npt.NDArray[np.uint8]) -> 'npt.NDArray[np.uint8]':
         if len(seq) < 3:
             return np.array([], dtype=np.uint8)
 
@@ -415,80 +418,10 @@ class BacterialTranslationTable:
         return _translate_kernel(seq, cls._CHAR_MAP, cls._CODON_MAP)
 
     @classmethod
-    def is_coding(cls, seq: bytes) -> bool:
+    def is_coding(cls, seq: bytes) -> 'bool':
         if len(seq) < 3:
             return False
         return seq[:3] in cls._START_CODONS and seq[-3:] in cls._STOP_CODONS
-
-
-# class SeqEncoder:
-#     __slots__ = ('_lut', 'alphabet_size')
-#
-#     def __init__(self, mapping: dict[bytes, int], unknown_int: int | None = None):
-#         # Map unknowns to the next available integer to keep the alphabet contiguous
-#         if unknown_int is None:
-#             unknown_int = max(mapping.values()) + 1
-#
-#         self.alphabet_size = unknown_int + 1
-#
-#         # Pre-fill the 256-byte lookup table with unknown_int
-#         lut = bytearray([unknown_int] * 256)
-#
-#         # Map both uppercase and lowercase source characters directly
-#         for source_byte, target_int in mapping.items():
-#             lut[source_byte[0]] = target_int
-#             lut[source_byte.lower()[0]] = target_int
-#
-#         # Store as immutable bytes for optimal C-level .translate() performance
-#         self._lut = bytes(lut)
-#
-#     def encode(self, seq: bytes) -> bytes:
-#         return seq.translate(self._lut)
-#
-#     @classmethod
-#     @cache
-#     def dayhoff(cls) -> 'SeqEncoder':
-#         return cls(
-#             {
-#                 b'C': 0,
-#                 b'A': 1, b'G': 1, b'P': 1, b'S': 1, b'T': 1,
-#                 b'D': 2, b'E': 2, b'N': 2, b'Q': 2,
-#                 b'H': 3, b'K': 3, b'R': 3,
-#                 b'I': 4, b'L': 4, b'M': 4, b'V': 4,
-#                 b'F': 5, b'W': 5, b'Y': 5
-#             }
-#         )
-#
-#     @classmethod
-#     @cache
-#     def hydrophobic(cls) -> 'SeqEncoder':
-#         return cls(
-#             {
-#                 b'A': 0, b'C': 0, b'F': 0, b'I': 0, b'L': 0, b'M': 0, b'V': 0, b'W': 0, b'Y': 0,
-#                 b'R': 1, b'N': 1, b'D': 1, b'E': 1, b'Q': 1, b'G': 1, b'H': 1, b'K': 1, b'P': 1, b'S': 1, b'T': 1
-#             }
-#         )
-#
-#     @classmethod
-#     @cache
-#     def mmseqs12(cls) -> 'SeqEncoder':
-#         return cls(
-#             {
-#                 b'A': 0, b'S': 0, b'T': 0,
-#                 b'L': 1, b'M': 1,
-#                 b'I': 2, b'V': 2,
-#                 b'K': 3, b'R': 3,
-#                 b'E': 4, b'Q': 4,
-#                 b'N': 5, b'D': 5,
-#                 b'F': 6, b'Y': 6,
-#                 b'C': 7,
-#                 b'G': 8,
-#                 b'H': 9,
-#                 b'P': 10,
-#                 b'W': 11
-#             }
-#         )
-
 
 
 # Kernels --------------------------------------------------------------------------------------------------------------

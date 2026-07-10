@@ -3,8 +3,9 @@ Genomic interval representation with strand and context, plus batched interval o
 """
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Union, Match
 from enum import IntEnum
+from re import Match
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
@@ -34,8 +35,10 @@ class Strand(IntEnum):
         return Strand.UNSTRANDED
 
     def __str__(self):
-        if self == Strand.FORWARD: return '+'
-        if self == Strand.REVERSE: return '-'
+        if self == Strand.FORWARD:
+            return '+'
+        if self == Strand.REVERSE:
+            return '-'
         return '.'
 
 
@@ -285,7 +288,7 @@ class Intervals:
             object.__setattr__(self, 'original_indices', np.arange(len(self.starts), dtype=np.int32))
 
     @classmethod
-    def empty(cls) -> Intervals:
+    def empty(cls) -> 'Intervals':
         """Creates an empty Intervals object with correctly typed, zero-length arrays.
 
         Returns:
@@ -299,7 +302,7 @@ class Intervals:
         )
 
     @classmethod
-    def from_intervals(cls, intervals: Iterable[Interval]) -> Intervals:
+    def from_intervals(cls, intervals: Iterable[Interval]) -> 'Intervals':
         """Creates an Intervals object from an iterable of individual `Interval` objects.
 
         Args:
@@ -329,7 +332,7 @@ class Intervals:
         return {'starts': self.starts.tolist(), 'ends': self.ends.tolist(), 'strands': self.strands.tolist()}
 
     @classmethod
-    def from_dict(cls, d: dict) -> Intervals:
+    def from_dict(cls, d: dict) -> 'Intervals':
         """Deserializes intervals from a dictionary."""
         return cls(
             np.array(d['starts'], dtype=np.int32),
@@ -368,7 +371,7 @@ class Intervals:
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Intervals]) -> Intervals:
+    def concat(cls, batches: Iterable['Intervals']) -> 'Intervals':
         """Concatenates multiple Intervals objects into a single, larger collection.
 
         Args:
@@ -390,46 +393,28 @@ class Intervals:
             np.concatenate([b.original_indices for b in batches])
         )
 
-    def sort(self) -> Intervals:
-        """Returns a new collection sorted by start coordinate, then end coordinate.
-
-        This is a prerequisite for many efficient spatial algorithms (e.g., merging, sweeping).
-        The implementation includes a fast Numba-jitted check to skip sorting if the batch is
-        already sorted.
-
-        Returns:
-            Intervals: A new, sorted `Intervals` collection.
-        """
-        if len(self) < 2 or _is_sorted_kernel(self.starts, self.ends):
-            return self
-
-        order = np.lexsort((self.ends, self.starts))
-        return Intervals(
-            self.starts[order],
-            self.ends[order],
-            self.strands[order],
-            self.original_indices[order]
-        )
-
-    def merge(self, tolerance: int = 0) -> Intervals:
-        """Merges overlapping or adjacent intervals into single bounding boxes.
-
-        This method collapses all intervals that overlap or are within `tolerance` base pairs of
-        each other into a single, minimal bounding interval. The batch must be sorted first.
-        The operation is performed by a fast Numba-jitted kernel.
-
+    def shift(self, x: int | npt.NDArray[np.int32], y: int | npt.NDArray[np.int32] | None = None) -> 'Intervals':
+        """Shifts all intervals in the collection by a given offset.
+        
         Args:
-            tolerance (int, optional): The maximum gap between intervals to be considered
-                for merging. Defaults to 0.
-
+            x (int | NDArray): The distance to shift the starts.
+            y (int | NDArray, optional): The distance to shift the ends. If None, uses x.
+            
         Returns:
-            Intervals: A new collection with the merged intervals. Note that `original_indices`
-                are not preserved in the merged output as they become ambiguous.
+            Intervals: A new Intervals collection with shifted coordinates.
         """
         if len(self) == 0:
             return self
-        out = _merge_kernel(self.starts, self.ends, self.strands, tolerance)
-        return Intervals(out[0], out[1], out[2])
+            
+        new_starts = self.starts + x
+        new_ends = self.ends + (y if y is not None else x)
+        
+        return Intervals(
+            np.asarray(new_starts, dtype=np.int32),
+            np.asarray(new_ends, dtype=np.int32),
+            self.strands,
+            self.original_indices
+        )
 
     def cluster_spatial(self, tolerance: int = 0,
                         group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.int32]:
@@ -497,66 +482,69 @@ class Intervals:
         return _cluster_by_index_kernel(self.original_indices, group_by, self.strands, 
                                         tolerance, enforce_strand, order)
 
+    def arrange(self, indices: npt.NDArray[np.integer],
+                order: npt.NDArray[np.integer],
+                starts: npt.NDArray[np.int32],
+                ends: npt.NDArray[np.int32],
+                strands: npt.NDArray[np.int8],
+                gap: int = 500) -> 'Intervals':
+        """Arranges interval coordinates across multiple disjoint pieces (e.g., contigs).
+        
+        Args:
+            indices: Array mapping each interval to its piece index (0 to N-1).
+            order: Array defining the layout order of the pieces.
+            starts: Start coordinate of each piece.
+            ends: End coordinate of each piece.
+            strands: Orientation of each piece (1 for forward, -1 for reverse-complement).
+            gap: Base pairs to insert between pieces.
+            
+        Returns:
+            A new Intervals object with 1D arranged coordinates.
+        """
+        if len(self) == 0:
+            return self
+
+        n_pieces = len(starts)
+        piece_plot_starts = np.zeros(n_pieces, dtype=np.int32)
+        
+        current_x = 0
+        for i in order:
+            p_len = ends[i] - starts[i]
+            piece_plot_starts[i] = current_x
+            current_x += p_len + gap
+
+        new_starts = np.zeros(len(self), dtype=np.int32)
+        new_ends = np.zeros(len(self), dtype=np.int32)
+        new_strands = np.zeros(len(self), dtype=np.int8)
+
+        # Vectorized coordinate transformation
+        for i in range(n_pieces):
+            mask = indices == i
+            if not np.any(mask):
+                continue
+                
+            p_s = starts[i]
+            p_e = ends[i]
+            orient = strands[i]
+            offset = piece_plot_starts[i]
+            
+            g_s = self.starts[mask]
+            g_e = self.ends[mask]
+            g_str = self.strands[mask]
+            
+            if orient >= 0:
+                new_starts[mask] = offset + (g_s - p_s)
+                new_ends[mask] = offset + (g_e - p_s)
+                new_strands[mask] = g_str
+            else:
+                new_starts[mask] = offset + (p_e - g_e)
+                new_ends[mask] = offset + (p_e - g_s)
+                new_strands[mask] = -g_str
+
+        return Intervals(new_starts, new_ends, new_strands, self.original_indices)
+
 
 # Kernels --------------------------------------------------------------------------------------------------------------
-@njit(cache=True, nogil=True)
-def _merge_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32], strands: npt.NDArray[np.int8],
-                  tolerance: int) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32], npt.NDArray[np.int8]]:
-    """Numba-accelerated interval merging."""
-    n = len(starts)
-    if n == 0:
-        return (np.empty(0, dtype=starts.dtype),
-                np.empty(0, dtype=ends.dtype),
-                np.empty(0, dtype=strands.dtype))
-
-    temp_s = np.empty(n, dtype=starts.dtype)
-    temp_e = np.empty(n, dtype=ends.dtype)
-    temp_st = np.empty(n, dtype=strands.dtype)
-
-    curr_s = starts[0]
-    curr_e = ends[0]
-    curr_st = strands[0]
-    out_idx = 0
-
-    for i in range(1, n):
-        s = starts[i]
-        e = ends[i]
-        st = strands[i]
-
-        if s <= curr_e + tolerance:
-            curr_e = max(curr_e, e)
-            if curr_st != st:
-                curr_st = 0
-        else:
-            temp_s[out_idx] = curr_s
-            temp_e[out_idx] = curr_e
-            temp_st[out_idx] = curr_st
-            out_idx += 1
-
-            curr_s = s
-            curr_e = e
-            curr_st = st
-
-    temp_s[out_idx] = curr_s
-    temp_e[out_idx] = curr_e
-    temp_st[out_idx] = curr_st
-    out_idx += 1
-
-    return temp_s[:out_idx], temp_e[:out_idx], temp_st[:out_idx]
-
-
-@njit(cache=True, nogil=True)
-def _is_sorted_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32]) -> bool:
-    """Numba-accelerated check for sortedness."""
-    n = len(starts)
-    for i in range(n - 1):
-        if starts[i] > starts[i + 1]:
-            return False
-        if starts[i] == starts[i + 1] and ends[i] > ends[i + 1]:
-            return False
-    return True
-
-
 @njit(cache=True, nogil=True)
 def _cluster_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32],
                     groups: npt.NDArray[np.int32], tolerance: int,

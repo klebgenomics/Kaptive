@@ -1,4 +1,4 @@
-# Databases
+# Kaptive Databases
 
 <a id="locus-definition"></a>
 
@@ -19,13 +19,6 @@ threshold to be considered 'unique'. Some genes (such as the core
 assembly machinery) will be highly similar, however the genes
 responsible for the polysaccharide structural diversity are expected to
 be more variable. The specific identity thresholds vary across species.
-The thresholds corresponding to the databases distributed with Kaptive
-are as follows:
-
-| Species                   | Pairwise protein identity threshold |
-|---------------------------|-------------------------------------|
-| *Klebsiella pneumoniae*   | 82.5%                               |
-| *Acinetobacter baumannii* | 85%                                 |
 
 ## Format
 
@@ -95,10 +88,42 @@ following nomenclature rules:
     Databases **must** follow this nomenclature system for distribution
     within Kaptive.
 
+## Metadata 📀
+All Kaptive databases now must be accompanied by a metadata [TOML file](https://toml.io/) with the **same name** as the corresponding Genbank file, 
+with a '.toml' extension in place of the '.gbk' extension.
+
+Below is an example of the _Klebsiella pneumoniae_ Species Complex K-locus database metadata:
+
+```toml
+name = "Klebsiella_pneumoniae_Species_Complex_K"
+keyword = "kpsc_k"
+genbank = "Klebsiella_pneumoniae_Species_Complex_K.gbk"
+organism = "Klebsiella pneumoniae Species Complex"
+taxon = 3390273
+antigen = "Capsular polysaccharide"
+pathway = "Wzx/Wzy-dependent"
+prefix = "K"
+version = "3.2.1"
+id_threshold = 82.5
+doi = ["TBD"]
+owner = "klebgenomics"
+repo = "KpSC_surface_antigen_loci"
+branch = "main"
+contact = { "Kelly Wyres" = "kaptive.typing@gmail.com" }
+
+[phenotype_logic]
+"Capsule null" = { loci = ["KL*"], inactive_genes = ['wza','wzb','wzc','wzx','wzy', 'wcaJ*', 'wbaP*'], priority = 100 }
+"K37" = { loci = ["KL22"], inactive_genes = ["atr12"] }
+```
 
 <a id="phenotype-logic"></a>
+### Phenotype Logic 🧠
+The [TOML format](https://toml.io/) is a simple, human-readable, easily-parsable format, which makes it perfect for metadata. For these reasons, it also made sense to define the
+phenotype logic here too! Whilst this is still a work-in-progress, here is how we're currently defining it:
 
-### Phenotype logic
+1. Each line represents a unique phenotype that can be applied to a serotyping call.
+1. All fields accept a wildcard ([`*`](https://docs.python.org/3/library/fnmatch.html)) for selecting multiple items.
+1. Loci are defined by the "loci" field - here you can choose the specific loci the logic applies to.
 
 Phenotype logic (previously called "special logic") is a set of rules
 that Kaptive uses to predict the polysaccharide phenotype based on the
@@ -177,266 +202,208 @@ prediction](Method.md#phenotype-prediction) step of typing and is
 reported in the <span class="title-ref">Type</span> column of the
 Kaptive tabular output.
 
-<a id="distributed-databases"></a>
-
-## Databases distributed with Kaptive
-
-Kaptive is distributed with databases for detection of *Klebsiella
-pneumoniae* Species Complex (KpSC) and *Acinetobacter baumannii* surface antigen
-synthesis loci in the
-[data](https://github.com/klebgenomics/Kaptive/tree/master/src/kaptive/data)
-directory, (see details below). You can also generate your own databases
-for use with Kaptive by following these guidelines.
-
-The existing databases were developed and curated by [Kelly
-Wyres](https://wyreslab.com/research-journey-kelly-wyres/) (*Klebsiella*) and [Johanna
-Kenyon](https://experts.griffith.edu.au/45350-johanna-kenyon)
-(*A. baumannii*).
-
-A third-party Kaptive database is available for *Vibrio
-parahaemolyticus* [K and O
-loci](https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping),
-created by Aldert Zomer and team (see
-[here](https://doi.org/10.1099/mgen.0.001007)). The database can
-be
-[downloaded](https://github.com/aldertzomer/vibrio_parahaemolyticus_genomoserotyping)
-and used as input to command-line Kaptive, it is also available in the
-online tool [Kaptive-Web](https://kaptive-web.erc.monash.edu/) along
-with our *Klebsiella* and *A. baumannii* databases.
-
-We are always keen to expand the utility of Kaptive for the research
-community, so if you have created a database that you feel will be
-useful for others and you are willing to share this resource, please get
-in touch via the [issues
-page](https://github.com/katholt/Kaptive/issues) or
-[email](mailto:kaptive.typing@gmail.com).
-
-Similarly, if you have identified new locus variants not currently in
-the existing databases, please let us know!
-
-### *Klebsiella pneumoniae* Species Complex (KpSC) K locus databases
-
-The KpSC K locus reference database
-(`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length
-(*galF* to *ugd*) annotated sequences for each distinct *Klebsiella* K
-locus, where available:
-
-- K-loci KL1-KL72, KL74 and KL79-KL82 correspond to the originally defined K-types K1-K72, K74 and K79-K82, respectively. K-loci 101 and greater
-  correspond to K-loci for which the phenotypes were unknown at the time of locus discovery, numbered in the order in which they
-  were discovered. 
-- KL101 and above are defined from DNA sequence data on the basis of
-  gene content, for which no matched phenotypes were known at the time. However, the polysaccharide structures and/or serotypes corresponding to several of these loci have since been described e.g. serotypes [K102, K112, K122, K136 and K149](https://zenodo.org/records/15742130)).
-
-!!! note
-    Insertion sequences (IS) are excluded from this database since we
-    assume that the ancestral sequence was likely IS-free and IS
-    transposase genes are not specific to the K locus.
+### App 💫
+We have created a simple [![Streamlit App](https://img.shields.io/badge/Streamlit-%23FE4B4B.svg?logo=streamlit&logoColor=white)](https://kaptive-database-validator.streamlit.app/) App to help you 
+generate the metadata any database in your repo!
 
 
-Synthetic IS-free K locus sequences were generated for K loci for which
-no naturally occurring IS-free variants have been identified to date.
+## Distribution
 
-!!! note
-    KL156-D1 is included in the primary reference database since no
-    full-length version of this locus has been identified to date.
+Kaptive 3 introduces a decentralized database system. Instead of bundling massive database files directly into the Kaptive application source code, databases are now decoupled and hosted in their own independent GitHub repositories. This provides several major advantages:
 
-Database versions:
+- **Independent Release Cycles**: Database curators can publish updates to a database without waiting for a new Kaptive application release.
+- **Custom Databases**: Users can easily create and maintain their own private or public databases in GitHub and add them directly to their local Kaptive installation.
+- **Smaller Application Footprint**: You only download the databases you actually need, keeping Kaptive's base installation lightweight.
 
-- Kaptive releases v0.5.1 and below include the original *Klebsiella* K
-  locus databases, as described in [Wyres, K. et al. Microbial Genomics
-  2016.](http://mgen.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000102)
-- Kaptive v0.6.0 and above include four novel primary *Klebsiella* K
-  locus references defined on the basis of gene content (KL162-KL165) in
-  [Wyres et al. Genome Medicine
-  2020](https://pubmed.ncbi.nlm.nih.gov/31948471/).
-- Kaptive v0.7.1 and above contain updated versions of the KL53 and
-  KL126 loci (see table below for details). The updated KL126 locus
-  sequence is described in [McDougall, F. et al. Research in
-  Microbiology 2021](https://pubmed.ncbi.nlm.nih.gov/34506927/).
-- Kaptive v0.7.2 and above include a novel primary *Klebsiella* K locus
-  reference defined on the basis of gene content (KL166), described in
-  [Le, MN. et al. Microbial Genomics
-  2022](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000827).
-- Kaptive v0.7.3 and above include four novel primary *Klebsiella* K
-  locus references defined on the basis of gene content (KL167-KL170),
-  described in [Gorrie, C. et al. Nature Communications
-  2022.](https://www.nature.com/articles/s41467-022-30717-6)
-- Kaptive v2.0 and above include 16 novel primary *Klebsiella* K locus
-  references defined on the basis of gene content (KL171-KL186) and
-  described in [Lam, M.M.C et al. Microbial Genomics
-  2022.](https://doi.org/10.1099/mgen.0.000800)
-- Kaptive v3.2 and above introduced a re-annotation of *Klebsiella* K
-  locus reference genes curated by Dr. Tom Stanton and A/Prof Johanna
-  Kenyon. All K-locus genes where throughly screened against curated
-  annotations with a variety of homology detection methods to provide a
-  more accurate functional description and standardised gene nomenclature.
+### How It Works Behind the Scenes
 
-Changes to the *Klebsiella* K locus primary reference database:
+When you install or update a database, Kaptive performs the following sequence of operations under the hood (managed in `kaptive.db.DatabaseManager`):
 
-| Locus | Change | Reason | Date of change | Kaptive version no. |
-|----|----|----|----|----|
-| KL53 | Annotation update: *wcaJ* changed to *wbaP* | Error in original annotation | 21 July 2020 | v 0.7.1 |
-| KL126 | Sequence update: new sequence from isolate FF923 includes *rmlBADC* genes between *gnd* and *ugd* | Assembly scaffolding error in original sequence from isolate A-003-I-a-1 | 21 July 2020 | v 0.7.1 |
-| KL37 | Removed from the database | Locus is a deletion (atr) variant of KL22 | 22 March 2024 | v 3.0.0 |
-| All | Updated gene names and functional annotations | Database standardisation | March 2026 | v3.2.0 |
+1. **Metadata Fetch**: Kaptive connects to the specified GitHub repository (via `raw.githubusercontent.com`) and fetches the small `.toml` metadata file.
+2. **Version Comparison**: It compares the `version` defined in the remote TOML file against your local installation cache. If your local version is equal to or greater than the remote version, Kaptive skips the download, saving bandwidth and time.
+3. **Database Download**: If a new version is detected, Kaptive downloads the full GenBank (`.gbk`) file.
+4. **Compilation**: Kaptive parses the GenBank sequences and compiles them into a highly optimized, flat Structure-of-Arrays (SoA) layout (`Database` object). This vectorised layout drastically reduces cache misses during ML and alignment steps.
+5. **Caching**: The compiled database is serialized (pickled) and saved to your local cache directory (`~/.kaptive/<keyword>.pkl`), alongside a lightweight JSON file (`~/.kaptive/<keyword>.json`) used for ultra-fast version checking on subsequent runs.
 
-### *Klebsiella* O locus database
+---
 
-In Kaptive 3.1.0, we introduced new O-antigen nomenclature in the
-*Klebsiella* O locus database
-(`Klebsiella_o_locus_primary_reference.gbk`) along wth the publication
-of this review: [O-antigen polysaccharides in Klebsiella pneumoniae:
-structures and molecular basis for antigenic
-diversity](https://journals.asm.org/doi/full/10.1128/mmbr.00090-23#T1).
+### Managing Databases via the CLI
 
-We have also summarised the O-antigen nomenclature update on the [Wyres
-Lab
-website](http://wyreslab.com/klebsiella-pneumoniae-o-antigen-genetics-structural-diversity-and-nomenclature/).
+Kaptive provides a dedicated command group, `kaptive db`, for managing your local databases.
 
-The *Klebsiella* O locus database
-(`Klebsiella_o_locus_primary_reference.gbk`) contains annotated
-sequences for 13 distinct *Klebsiella* O loci.
+#### Install a Known Database
+To install an officially supported database, use its known keyword:
+```bash
+kaptive db install kpsc_k
+```
+You can also install all officially supported databases concurrently:
+```bash
+kaptive db install all
+```
 
-O locus classification requires some special logic, as the O1 and O2
-serotypes are associated with the same loci and the distinction between
-O1 and each of the defined O2 subtypes (2α, 2β, 2γ) is determined by the
-presence/absence of 'extra genes' (gml2β and orf8) elsewhere in the
-chromosome as indicated in the table below. Kaptive therefore looks for
-these genes to predict antigen (sub)types.
+#### Add a Custom Database
+To add a new custom database hosted on GitHub, you need the repository owner, repository name, and the base name of the database files.
+```bash
+kaptive db add <db_name> <owner> <repo_name> --branch main
+```
+For example, if your database files are `My_Custom_Loci.gbk` and `My_Custom_Loci.toml` in `my-org/my-kaptive-db`:
+```bash
+kaptive db add My_Custom_Loci my-org my-kaptive-db
+```
 
-!!! note
-    You can find information about the *Klebsiella* O locus database in
-    Kaptive versions <3.1.0
-    [here](Legacy.md#legacy-klebsiella-o-locus-database).
+#### Update Databases
+To check for and install updates for all installed databases:
+```bash
+kaptive db update
+```
+Or for a specific database:
+```bash
+kaptive db update kpsc_k
+```
 
+#### List Installed Databases
+To see which databases are currently installed in your `~/.kaptive` cache:
+```bash
+kaptive db ls
+```
 
-| New serotype designation | Required genes/loci (implemented in Kaptive v.3.1+) | Prior Kaptive designation (v.2.0.8–v.3.0.0b6) | Prior Kaptive genes/loci (v.2.0.8–v.3.0.0b6) |
-|----|----|----|----|
-| O1αβ,2α | OL2α.(1/2/3), wbbYZ | O1ab | O1/O2v1, wbbYZ |
-| O1α,2α | OL2α.(1/2/3), wbbY | O1a | O1/O2v1, wbbY |
-| O1αβ,2β | OL2α.(1/2/3), gml2β, wbbYZ | O1ab | O1/O2v2, wbbYZ |
-| O1α,2β | OL2α.(1/2/3), gml2β, wbbY | O1a | O1/O2v2, wbbY |
-| O1αβ,2γ | OL2α.(1/2/3), orf8, wbbYZ | O1ab | O1/O2v3, wbbYZ |
-| O2α | OL2α.(1/2/3) | O2a | O1/O2v1 |
-| O2β | OL2α.(1/2/3), gml2β | O2afg | O1/O2v2 |
-| O2αγ | OL2α.(1/2/3), orf8 | O2a | O1/O2v3 |
-| O3α + O3β | OL3α/β | O3/O3a | O3/O3a |
-| O3γ | OL3γ | O3b | O3b |
-| O4 | OL4 | O4 | O4 |
-| O5 | OL5 | O5 | O5 |
-| O10 | OL10 | OL103 | OL103 |
-| O11αβ,2α | OL2α.(1/2/3), wbmVWX | O2ac | O1/O2v1, wbmVWX |
-| O11α,2α | OL2α.(1/2/3), wbmVW | O2ac | O1/O2v1, wbmVW |
-| O11αβ,2β | OL2α.(1/2/3), gml2β, wbmVWX | O2ac | O1/O2v2, wbmVWX |
-| O11α,2β | OL2α.(1/2/3), gml2β, wbmVW | O2ac | O1/O2v2, wbmVW |
-| O11αβ,2γ | OL2α.(1/2/3), orf8, wbmVWX | O2ac | O1/O2v3, wbmVW |
-| O12 | OL12 | O12 | O12 |
-| O13 | OL13 | O13 | OL13 |
-| O14 | OL14 | OL102 | OL102 |
-| O15 | OL15 | OL104 | OL104 |
+#### Reset Cache
+If you want to free up space or start fresh, you can uninstall all local databases and clear the cache:
+```bash
+kaptive db reset
+```
 
-### *Acinetobacter baunannii* K and OC locus databases
+---
 
-The *A. baumannii* K (capsule) locus reference database
-(`Acinetobacter_baumannii_k_locus_primary_reference.gbk`)
-contains annotated sequences for 241 distinct K loci.
+### Managing Databases via the Python API
 
-The *A. baumannii* OC (lipooligosaccharide outer core) locus reference
-database
-(`Acinetobacter_baumannii_OC_locus_primary_reference.gbk`)
-contains annotated sequences for 22 distinct OC loci.
+If you are using Kaptive programmatically as a Python library, you can interact with the database system using the `Database` or `DatabaseManager` classes from the `kaptive.db` module.
 
-!!! warning
-    These databases have been developed and tested specifically for *A.
-    baumannii* and may not be suitable for screening other *Acinetobacter*
-    species. You can check that your assembly is a true *A. baumannii* by
-    screening for the *oxaAB* gene e.g. using blastn.
+#### Installing and Loading
+```python
+from kaptive.db import Database, DatabaseManager
+
+# Install a known database (compiles and caches it)
+db = Database.install("kpsc_k")
+
+# Install all known databases concurrently
+dbs = Database.install("all")
+
+# Load an already installed database from the local cache
+db = Database.load("kpsc_k")
+```
+
+#### Adding a Custom Database
+You can fetch and compile a custom database directly from a GitHub repository:
+```python
+db = Database.add(
+    owner="klebgenomics",
+    repo_name="KpSC_surface_antigen_loci",
+    db_name="Klebsiella_pneumoniae_Species_Complex_K",
+    branch="main"
+)
+```
+
+#### Updating
+```python
+# Check and update all installed databases
+updated_dbs = DatabaseManager.update("all")
+
+# Update a specific database
+updated_db = DatabaseManager.update("kpsc_k")
+```
 
 
-Database versions:
+## Database Versioning & Release Workflow 🚀
+This repository uses a fully automated Continuous Integration / Continuous Deployment (CI/CD) pipeline to manage database versions.
 
-- Kaptive v0.7.0 and above include the original *A. baumannii* K and OC
-  locus databases, as described in [Wyres, KL. et al. Microbial Genomics
-  2020](https://doi.org/10.1099/mgen.0.000339).
-- Kaptive v2.0.1 and above include 149 novel primary *A. baumannii* K
-  locus references as described in Cahill, S.M. et al. 2022. An update
-  to the database for *Acinetobacter baumannii* capsular polysaccharide
-  locus typing extends the extensive and diverse repertoire of genes
-  found at and outside the K locus. [Microbial
-  Genomics](https://doi.org/10.1099/mgen.0.000878).
-- Kaptive v2.0.2 and above include special logic parameters that enable
-  prediction of the capsule polysaccharide type based on KL or the
-  detected combination of a specific KL with 'extra genes' elsewhere in
-  the chromosome as indicated in the table below and described in
-  Cahill, S.M. et al. 2022. An update to the database for *A. baumannii*
-  capsular polysaccharide locus typing extends the extensive and diverse
-  repertoire of genes found at and outside the K locus. [Microbial
-  Genomics](https://doi.org/10.1099/mgen.0.000878).
-- Kaptive v2.0.5 and above includes a further 10 *A. baumannii* OC locus
-  references (OCL13-OCL22) as described in Sorbello, B. et al.
-  Identification of further variation at the lipooligosaccharide outer
-  core locus in *Acinetobacter baumannii* genomes and extension of the
-  OCL reference sequence database for Kaptive. [Microbial Genomics](https://doi.org/10.1099/mgen.0.001042).
+You do not need to manually edit version numbers or create Git tags. The pipeline relies on Semantic Versioning (SemVer) and reads your 
+commit messages to automatically calculate the correct version bump, update the corresponding .toml files, and generate 
+database-specific release tags.
 
+### How It Works: Conventional Commits ⚙️
+The automation script decides how to version a database based on the language used in your commit messages. 
+We follow the [Conventional Commits standard](https://www.conventionalcommits.org/en/v1.0.0/).
 
-<a id="database-keywords"></a>
+When you commit changes to a database Genbank file, prefix your commit message with one of the following:
 
-### Database keywords
+#### Patch Bump 🔨
+`fix:` - Use this for correcting typos, fixing broken logic rules, or minor backwards-compatible bug fixes.
 
-When Kaptive is installed, it may be difficult to find the databases in
-the file system. However, each `<database>` argument in the Kaptive CLI
-accepts either a path to a Genbank file **or** a keyword that refers to
-a database distributed with Kaptive. The keywords are listed below.
+- Example: `fix: correct wcaJ truncation rule in Klebsiella`
+- Result: `v3.2.1 ➡️ v3.2.2`
 
-<table>
-<thead>
-<tr>
-<th>Database</th>
-<th>Keywords</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><em>Klebsiella pneumoniae</em> K locus primary reference
-database</td>
-<td><ul>
-<li>kpsc_k</li>
-</ul></td>
-</tr>
-<tr>
-<td><em>Klebsiella pneumoniae</em> O locus primary reference
-database</td>
-<td><ul>
-<li>kpsc_o</li>
-</ul></td>
-</tr>
-<tr>
-<td><em>Acinetobacter baumannii</em> K locus primary reference
-database</td>
-<td><ul>
-<li>ab_k</li>
-</ul></td>
-</tr>
-<tr>
-<td><em>Acinetobacter baumannii</em> OC locus primary reference
-database</td>
-<td><ul>
-<li>ab_o</li>
-</ul></td>
-</tr>
-</tbody>
-</table>
+#### Minor Bump 🛠️
+`feat:` - Use this when adding new features, such as adding a new locus, a new glycosidic linkage, or expanding the phenotype logic in a backwards-compatible way.
 
+- Example: `feat: add KL102 locus to Klebsiella_pneumoniae_K`
+- Result: `v3.2.1 ➡️ v3.3.0`
 
+#### Major Bump 🧰
+`feat!:` or `[major]` - Use this for breaking changes, such as overhauling the TOML schema, changing existing core 
+nomenclature, or deleting previously supported loci.
 
-## Extract
+- Example: `feat!: restructure TOML schema for phenotype logic`
+- Result: `v3.2.1 ➡️ v4.0.0`
 
-Kaptive 3.0.0 and above includes a new command-line mode `extract` that
-allows you to extract features from a Kaptive database in the following
-formats:
+#### No Bump 🤷
+`chore:`, `docs:`, `style:` - Changes to `README`s, generic repository maintenance, or formatting will not trigger a version bump.
 
-- **fna**: Locus nucleotide sequences in fasta format.
-- **ffn**: Gene nucleotide sequences in fasta format.
-- **faa**: Protein sequences in fasta format.
+### Day-to-Day Workflows 🖇️
+#### Updating an Existing Database ⬆️
+To update an existing database, simply make your changes to the .gbk files and commit them using the appropriate prefix.
 
-See [here](Usage.md#kaptive-extract) for usage instructions.
+```bash
+# 1. Make changes to your files
+git add Klebsiella_pneumoniae_K.gbk Klebsiella_pneumoniae_K.toml
+
+# 2. Commit using a Conventional Commit message
+git commit -m "feat: add new Wzy-dependent linkage rules"
+
+# 3. Push to main
+git push origin main
+```
+
+**What happens next?** The GitHub Action will detect the changes to the Klebsiella files, parse the `feat:` prefix, 
+bump the minor version in `Klebsiella_pneumoniae_K.toml`, commit that TOML update back to the repository, 
+and create a scoped tag (e.g., `Klebsiella_pneumoniae_K-v3.3.0`).
+
+#### Adding a Completely New Database ➡️
+The pipeline is database-agnostic. To add a new database, you just need to drop the required files into the repository.
+
+1. Add your new GenBank file (e.g., `seudomonas_aeruginosa_O.gbk`).
+2. Add a starting TOML file (e.g., `Pseudomonas_aeruginosa_O.toml`) and manually set the initial version (e.g., `version = "1.0.0"`).
+3. Commit and push:
+
+```bash
+git add Pseudomonas_aeruginosa_O.*
+git commit -m "feat: initial release of Pseudomonas O-locus database"
+git push origin main
+```
+
+The pipeline will automatically discover the new `.toml` file, register the `feat:` bump (e.g., `v1.1.0`), and tag it.
+
+#### Updating Multiple Databases at Once ⬆️⬆️
+If you make a broad change that affects multiple databases (for example, fixing a shared logic rule across both Klebsiella_pneumoniae_K and Klebsiella_pneumoniae_O), simply commit them together:
+
+```bash
+git add *.logic
+git commit -m "fix: standardize capsule null logic across all databases"
+git push origin main**
+```
+
+The workflow will detect every database that was modified, bump their `.toml` versions independently, and generate a separate release tag for each one.
+
+### Important Rules ⚠️
+ - Never manually edit the version = "..." string in the .toml files. The Python automation (tomlkit) handles this to ensure
+   strict alignment between the file contents and the Git tags.
+ - Ensure file names match exactly. The base name of the TOML file must match the base name of the GenBank files
+   (e.g., `Database_Name.toml` pairs with `Database_Name.gbk`).
+ - Pull before you work. Because the GitHub Action makes automated commits to update the TOML files, always
+   run `git pull` before starting new work to ensure your local branch has the latest version strings.
+
+## References 📚
+[^1]: Stanton TD, Hetland MAK, Löhr IH, Holt KE, Wyres KL. Fast and
+    Accurate in silico Antigen Typing with Kaptive 3.
+    2025 _Microbial Genomics_ 11(6):001428.
+    <https://doi.org/10.1099/mgen.0.001428>

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Self, NamedTuple
 from enum import IntEnum
@@ -124,12 +125,12 @@ class Cigars:
         return Cigars(extracted, new_offsets, new_lengths)
 
     @classmethod
-    def empty(cls) -> Cigars:
+    def empty(cls) -> 'Cigars':
         """Creates an empty Cigars."""
         return cls(np.empty(0, dtype=np.uint32), np.empty(0, dtype=np.int32), np.empty(0, dtype=np.int32))
 
     @classmethod
-    def concat(cls, batches: Iterable[Cigars]) -> Cigars:
+    def concat(cls, batches: Iterable[Cigars]) -> 'Cigars':
         """Concatenates multiple Cigars objects into a single, larger batch.
 
         Args:
@@ -161,7 +162,7 @@ class Cigars:
         return Cigars(_swap_cigar_kernel(self.data), self.offsets, self.lengths)
 
     @classmethod
-    def from_lists(cls, cigar_lists: list[npt.NDArray[np.uint32]]) -> Cigars:
+    def from_lists(cls, cigar_lists: list[npt.NDArray[np.uint32]]) -> 'Cigars':
         """Constructs a Cigars from a list of individual CIGAR NumPy arrays.
 
         This factory method handles the core logic of flattening the list of arrays into the single
@@ -291,7 +292,7 @@ class Alignments:
         return len(self.q_starts)
 
     @classmethod
-    def from_mappy(cls, q_name: str, q_length: int, alignments: Iterable['mappy.Alignment']) -> Self:
+    def from_mappy(cls, q_name: str, q_length: int, alignments: Iterable['mappy.Alignment']) -> 'Self':
         """A factory method to create an Alignments from an iterable of `mappy.Alignment` objects.
 
         This method efficiently extracts data from the `mappy` aligner's output format and populates
@@ -348,7 +349,7 @@ class Alignments:
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Alignments]) -> Self:
+    def concat(cls, batches: Iterable[Alignments]) -> 'Self':
         """Concatenates multiple Alignments objects into a single, larger batch.
 
         Args:
@@ -556,7 +557,7 @@ class Alignments:
         return self.is_partial_left | self.is_partial_right
 
     @classmethod
-    def from_records(cls, records: Iterable[Alignment]) -> Alignments:
+    def from_records(cls, records: Iterable[Alignment]) -> 'Alignments':
         """Constructs an Alignments from an iterable of `AlignmentRecord` objects.
 
         This factory method is the inverse of `__getitem__` and `split`. It efficiently reconstructs
@@ -623,7 +624,7 @@ def _cull_overlaps_kernel(order: npt.NDArray[np.int32], names: npt.NDArray[np.in
                 
             ks, ke = starts[prev_idx], ends[prev_idx]
             overlap = min(e, ke) - max(s, ks)
-            if overlap > 0 and (overlap / length) > max_overlap_fraction:
+            if overlap > 0 and (overlap / min(length, ke - ks)) > max_overlap_fraction:
                 overlap_found = True
                 break
                 
@@ -634,41 +635,45 @@ def _cull_overlaps_kernel(order: npt.NDArray[np.int32], names: npt.NDArray[np.in
 
 
 @njit(cache=True, nogil=True)
-def parse_cigar_string(cigar_str: str) -> npt.NDArray[np.uint32]:
-    """Fast Numba parser converting CIGAR string to BAM-encoded uint32 array."""
+def parse_cigar_string(cigar_bytes: bytes) -> npt.NDArray[np.uint32]:
+    """Fast Numba parser converting a CIGAR byte-string to a BAM-encoded uint32 array."""
     ops = 0
-    for char in cigar_str:
-        if char == 'M' or char == 'I' or char == 'D' or char == 'N' or char == 'S' or char == 'H' or char == 'P' or char == '=' or char == 'X' or char == 'B':
+    # Iterate over the byte values directly
+    for i in range(len(cigar_bytes)):
+        char = cigar_bytes[i]
+        # Check against ASCII values for valid CIGAR ops
+        if char == 77 or char == 73 or char == 68 or char == 78 or char == 83 or char == 72 or char == 80 or char == 61 or char == 88 or char == 66:
             ops += 1
 
     out = np.empty(ops, dtype=np.uint32)
     idx = 0
     current_len = 0
 
-    for char in cigar_str:
-        if '0' <= char <= '9':
-            current_len = current_len * 10 + (ord(char) - ord('0'))
+    for i in range(len(cigar_bytes)):
+        char = cigar_bytes[i]
+        if 48 <= char <= 57:  # ASCII '0' to '9'
+            current_len = current_len * 10 + (char - 48)
         else:
             op = 0
-            if char == 'M':
+            if char == 77:  # 'M'
                 op = 0
-            elif char == 'I':
+            elif char == 73:  # 'I'
                 op = 1
-            elif char == 'D':
+            elif char == 68:  # 'D'
                 op = 2
-            elif char == 'N':
+            elif char == 78:  # 'N'
                 op = 3
-            elif char == 'S':
+            elif char == 83:  # 'S'
                 op = 4
-            elif char == 'H':
+            elif char == 72:  # 'H'
                 op = 5
-            elif char == 'P':
+            elif char == 80:  # 'P'
                 op = 6
-            elif char == '=':
+            elif char == 61:  # '='
                 op = 7
-            elif char == 'X':
+            elif char == 88:  # 'X'
                 op = 8
-            elif char == 'B':
+            elif char == 66:  # 'B'
                 op = 9
             else:
                 continue

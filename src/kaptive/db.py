@@ -1,21 +1,24 @@
 """
 Updated database module with dataclasses, enums and SoA batch layouts for vectorized math and machine-learning.
 """
-from re import compile as re_compile
-from fnmatch import filter as fnmatch_filter
-from dataclasses import dataclass
-from typing import Generator
+import os
 import pickle
 import tomllib
+import json
+import urllib.error
+from collections.abc import Generator
+from dataclasses import dataclass, asdict
+from fnmatch import filter as fnmatch_filter
 from pathlib import Path
+from re import compile as re_compile
 from tempfile import TemporaryDirectory
-from urllib.request import urlopen, Request
+from urllib.request import urlopen
 
 import numpy as np
 import numpy.typing as npt
 
-from kaptive.core.seq import SeqRecord, Sequences
 from kaptive.core.interval import Intervals
+from kaptive.core.seq import SeqRecord, Sequences
 
 
 # Exceptions and warnings ----------------------------------------------------------------------------------------------
@@ -69,7 +72,7 @@ class DatabaseMetadata:
         return tuple(int(x) for x in pat.findall(str(self.version)))
 
     @classmethod
-    def from_dict(cls, data: dict) -> DatabaseMetadata:
+    def from_dict(cls, data: dict) -> 'DatabaseMetadata':
         if not isinstance(data, dict):
             raise DatabaseError("Metadata must be a dictionary.")
 
@@ -110,13 +113,50 @@ class Phenotype:
         loci (set[str]): The loci in the database this phenotype applies to.
         extra_genes (set[str]): Cluster names of extra genes that must ALL be present in this phenotype.
         inactive_genes (set[str]): Cluster names of ANY genes that must be inactive in this phenotype.
-        priority (int): Defaults to 50.
+        priority (int, optional): Used for sorting multiple matching phenotypes. Defaults to 50.
+        as_suffix (bool, optional): Append the phenotype as a suffix to all matching phenotypes. Defaults to False.
     """
     id: str
     loci: set[str]
     extra_genes: set[str]
     inactive_genes: set[str]
     priority: int = 50
+    as_suffix: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class Phenotypes:
+    """A Structure-of-Arrays (SoA) container for vectorized phenotype evaluation."""
+    ids: tuple[str, ...]
+    locus_masks: npt.NDArray[np.bool_]
+    extra_masks: npt.NDArray[np.bool_]
+    inactive_masks: npt.NDArray[np.bool_]
+    priorities: npt.NDArray[np.int32]
+    as_suffix: npt.NDArray[np.bool_]
+
+    def __len__(self) -> int:
+        return len(self.ids)
+
+    def to_dict(self) -> dict:
+        return {
+            'ids': self.ids,
+            'locus_masks': self.locus_masks,
+            'extra_masks': self.extra_masks,
+            'inactive_masks': self.inactive_masks,
+            'priorities': self.priorities,
+            'as_suffix': self.as_suffix
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Phenotypes':
+        return cls(
+            ids=tuple(data['ids']),
+            locus_masks=np.array(data['locus_masks'], dtype=bool),
+            extra_masks=np.array(data['extra_masks'], dtype=bool),
+            inactive_masks=np.array(data['inactive_masks'], dtype=bool),
+            priorities=np.array(data['priorities'], dtype=np.int32),
+            as_suffix=np.array(data['as_suffix'], dtype=bool)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,47 +182,49 @@ class Database:
         loci (Sequences): A vectorized batch of all locus nucleotide sequences and their IDs.
             The length of this batch defines the total number of loci (`N_loci`).
         serotypes (tuple[str, ...]): A tuple of length `N_loci` mapping each locus index to its associated serotype.
-        locus_gene_slices (tuple[slice, ...]): A tuple of length `N_loci`. Each slice defines the continuous range of
-            global gene indices that belong to the locus at that index. This allows O(1) retrieval of all genes
-            for a specific locus.
-        locus_intervals (tuple[Intervals, ...]): A tuple of length `N_loci` containing the coordinate intervals
-            (start, end, strand) for the genes within each locus, relative to the locus sequence.
+        locus_gene_offsets (npt.NDArray[np.uint32]): A 1D array of length `N_loci`. Each element is the start index
+            for the genes belonging to that locus in the global gene arrays.
+        locus_gene_lengths (npt.NDArray[np.uint32]): A 1D array of length `N_loci`. Each element is the number of
+            genes belonging to that locus.
+        gene_intervals (Intervals): A vectorized batch of all gene physical coordinates relative to their parent loci.
+            The length of this batch is `N_genes`.
         genes (Sequences): A vectorized batch of all gene nucleotide sequences across all loci.
             The length of this batch defines the total number of genes in the database (`N_genes`).
         translations (Sequences): A vectorized batch of all gene protein sequences (translated from `genes`).
             Has length `N_genes`.
         extra_genes (npt.NDArray[np.bool_]): A 1D boolean mask of length `N_genes`. True if the gene belongs to an
             "Extra genes" locus (which do not have expected positions or synteny rules).
-        gene_locus_indices (npt.NDArray[np.int32]): A 1D array of length `N_genes`. Contains the integer index of the
+        gene_locus_indices (npt.NDArray[np.uint16]): A 1D array of length `N_genes`. Contains the integer index of the
             parent locus for every gene, allowing fast reverse-lookups from gene to locus.
         cluster_keys (tuple[str, ...]): The vocabulary of unique gene cluster names (e.g., 'wzi'). The index in
             this tuple corresponds to the integer ID used in `gene_cluster_ids`.
-        gene_cluster_ids (npt.NDArray[np.int32]): A 1D array of length `N_genes`. Each element is the integer ID
+        gene_cluster_ids (npt.NDArray[np.uint16]): A 1D array of length `N_genes`. Each element is the integer ID
             representing the cluster name of that gene.
         description_keys (tuple[str, ...]): The vocabulary of unique gene product descriptions. The index in this
             tuple corresponds to the integer ID used in `gene_description_ids`.
-        gene_description_ids (npt.NDArray[np.int32]): A 1D array of length `N_genes`. Each element is the integer ID
+        gene_description_ids (npt.NDArray[np.uint16]): A 1D array of length `N_genes`. Each element is the integer ID
             representing the product description of that gene.
-        gene_positions (npt.NDArray[np.int32]): A 1D array of length `N_genes`. The expected biological position
+        gene_positions (npt.NDArray[np.uint16]): A 1D array of length `N_genes`. The expected biological position
             (1-indexed) of the gene within its locus. Set to 0 for extra genes.
-        phenotypes (tuple[Phenotype, ...]): A tuple of `Phenotype` rules dictating how serotypes are assigned based on
-            gene presence/absence.
+        phenotypes (Phenotypes): A vectorized SoA batch dictating how serotypes are assigned based on
+            locus and gene presence/absence logic.
     """
     metadata: DatabaseMetadata
     loci: Sequences
     serotypes: tuple[str, ...]
-    locus_gene_slices: tuple[slice, ...]
-    locus_intervals: tuple[Intervals, ...]
+    locus_gene_offsets: npt.NDArray[np.uint32]
+    locus_gene_lengths: npt.NDArray[np.uint32]
+    gene_intervals: Intervals
     genes: Sequences
     translations: Sequences
     extra_genes: npt.NDArray[np.bool_]
-    gene_locus_indices: npt.NDArray[np.int32]
+    gene_locus_indices: npt.NDArray[np.uint16]
     cluster_keys: tuple[str, ...]
-    gene_cluster_ids: npt.NDArray[np.int32]
+    gene_cluster_ids: npt.NDArray[np.uint16]
     description_keys: tuple[str, ...]
-    gene_description_ids: npt.NDArray[np.int32]
-    gene_positions: npt.NDArray[np.int32]
-    phenotypes: tuple[Phenotype, ...]
+    gene_description_ids: npt.NDArray[np.uint16]
+    gene_positions: npt.NDArray[np.uint16]
+    phenotypes: Phenotypes
 
     @property
     def max_locus_length(self) -> int:
@@ -245,7 +287,7 @@ class Database:
         raise FileNotFoundError(file)
 
     @classmethod
-    def load(cls, file_or_keyword: str | Path) -> Database:
+    def load(cls, file_or_keyword: str | Path) -> 'Database':
         """Loads a Database from a file path (Genbank or Pickle) or a known database keyword.
 
         This is the primary entry point for instantiating a Database object. It acts as a factory,
@@ -283,7 +325,7 @@ class Database:
                 return DatabaseManager.install(str(file_or_keyword))
 
     @classmethod
-    def from_pickle(cls, file: str | Path) -> Database:
+    def from_pickle(cls, file: str | Path) -> 'Database':
         """Loads a pre-compiled Database object from a serialized pickle file.
 
         This method is significantly faster than parsing from Genbank, as all the arrays
@@ -298,7 +340,7 @@ class Database:
         return pickle.loads(cls._check_file(file).read_bytes())
 
     @classmethod
-    def from_genbank(cls, file: str | Path) -> Database:
+    def from_genbank(cls, file: str | Path) -> 'Database':
         """Compiles a Database object by parsing a legacy GenBank format file and its associated TOML metadata.
 
         This is an expensive compilation step that converts the nested, string-heavy GenBank structure
@@ -335,7 +377,7 @@ class Database:
         global_gene_idx = 0
 
         # Locus trackers
-        locus_records, serotype_names, locus_gene_slices, locus_intervals = [], [], [], []
+        locus_records, serotype_names, locus_gene_offsets, locus_gene_lengths, locus_intervals = [], [], [], [], []
 
         # Gene trackers
         gene_ids, extra_genes = [], []
@@ -423,8 +465,8 @@ class Database:
                 if local_gene_idx == 0:
                     continue
 
-                # 1. Store the slice instead of an array of indices
-                locus_gene_slices.append(slice(locus_start_idx, global_gene_idx))
+                locus_gene_offsets.append(locus_start_idx)
+                locus_gene_lengths.append(local_gene_idx)
 
                 # 2. Handle Sequence Extraction via Intervals
                 intervals = Intervals(
@@ -440,22 +482,43 @@ class Database:
                 extra_genes.extend([extra] * local_gene_idx)
 
             # Pre-compute an array mapping every global gene index back to its locus index
-            gene_locus_indices = np.zeros(global_gene_idx, dtype=np.int32)
-            for i, s in enumerate(locus_gene_slices):
-                gene_locus_indices[s] = i
+            gene_locus_indices = np.zeros(global_gene_idx, dtype=np.uint16)
+            for i, (o, l) in enumerate(zip(locus_gene_offsets, locus_gene_lengths)):
+                gene_locus_indices[o : o + l] = i
 
         db_gene_ids = tuple(gene_ids)
         loci = Sequences.from_records(locus_records)
         cluster_keys = tuple(cluster_vocab.keys())
-        phenotypes = []
+        phenotype_objs = []
         if (metadata_file := file.with_suffix('.toml')).is_file():
             with metadata_file.open('rb') as fp:
                 metadata = DatabaseMetadata.from_dict(tomllib.load(fp))
                 for k, v in metadata.phenotype_logic.items():
-                    phenotypes.append(cls._parse_phenotype(k, v, loci.ids, cluster_keys))
+                    phenotype_objs.append(cls._parse_phenotype(k, v, loci.ids, cluster_keys))
         else:
             raise DatabaseError("Missing required TOML metadata file alongside Genbank file.")
 
+        # Initialize Phenotype SoA arrays
+        n_pheno, n_loci, n_clusters = len(phenotype_objs), len(loci), len(cluster_keys)
+        pheno_ids = []
+        locus_masks = np.zeros((n_pheno, n_loci), dtype=bool)
+        extra_masks = np.zeros((n_pheno, n_clusters), dtype=bool)
+        inactive_masks = np.zeros((n_pheno, n_clusters), dtype=bool)
+        priorities = np.zeros(n_pheno, dtype=np.int32)
+        as_suffix = np.zeros(n_pheno, dtype=bool)
+        
+        locus_vocab = {name: i for i, name in enumerate(loci.ids)}
+        for i, p in enumerate(phenotype_objs):
+            pheno_ids.append(p.id)
+            for loc in p.loci:
+                locus_masks[i, locus_vocab[loc]] = True
+            for ext in p.extra_genes:
+                extra_masks[i, cluster_vocab[ext]] = True
+            for ina in p.inactive_genes:
+                inactive_masks[i, cluster_vocab[ina]] = True
+            priorities[i] = p.priority
+            as_suffix[i] = p.as_suffix
+            
         global_intervals = Intervals.concat(locus_intervals)
         genes = loci.extract_intervals(gene_locus_indices, global_intervals, new_ids=db_gene_ids)
         translations = genes.translate()
@@ -464,49 +527,30 @@ class Database:
             metadata=metadata,
             loci=loci,
             serotypes=tuple(serotype_names),
-            locus_gene_slices=tuple(locus_gene_slices),
-            locus_intervals=tuple(locus_intervals),
+            locus_gene_offsets=np.array(locus_gene_offsets, dtype=np.uint32),
+            locus_gene_lengths=np.array(locus_gene_lengths, dtype=np.uint32),
+            gene_intervals=global_intervals,
             genes=genes,
             translations=translations,
             extra_genes=np.array(extra_genes, dtype=bool),
             gene_locus_indices=gene_locus_indices,
             cluster_keys=cluster_keys,
-            gene_cluster_ids=np.array(gene_cluster_ids, dtype=np.int32),
+            gene_cluster_ids=np.array(gene_cluster_ids, dtype=np.uint16),
             description_keys=tuple(description_vocab.keys()),
-            gene_description_ids=np.array(gene_description_ids, dtype=np.int32),
-            gene_positions=np.array(gene_expected_positions, dtype=np.int32),
-            phenotypes=tuple(phenotypes),
+            gene_description_ids=np.array(gene_description_ids, dtype=np.uint16),
+            gene_positions=np.array(gene_expected_positions, dtype=np.uint16),
+            phenotypes=Phenotypes(
+                ids=tuple(pheno_ids),
+                locus_masks=locus_masks,
+                extra_masks=extra_masks,
+                inactive_masks=inactive_masks,
+                priorities=priorities,
+                as_suffix=as_suffix
+            ),
         )
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
-class GitRepo:
-    """
-    A minimal class to fetch raw files from a GitHub repository via the GitHub API.
-    """
-    _BASE_URL = 'https://api.github.com'
-    __slots__ = ('owner', 'repo', 'branch', '_api_url')
-
-    def __init__(self, owner: str, repo: str, branch: str = 'main'):
-        self.owner = owner
-        self.repo = repo
-        self.branch = branch
-        self._api_url = f'{self._BASE_URL}/repos/{owner}/{repo}'
-
-    def __repr__(self):
-        return f"<GitRepo {self.owner}/{self.repo} ({self.branch})>"
-
-    def fetch(self, filename: str) -> bytes:
-        """Fetches the raw bytes of a specific file from the repository."""
-        url = f'{self._api_url}/contents/{filename}?ref={self.branch}'
-        req = Request(url, headers={'Accept': 'application/vnd.github.v3.raw'})
-        try:
-            with urlopen(req) as response:
-                return response.read()
-        except Exception as e:
-            raise e
-
-
 class DatabaseManager:
     """Class for managing Kaptive databases both on the user's disk and in curator Github repositories.
 
@@ -527,18 +571,26 @@ class DatabaseManager:
     """
     _KNOWN = {  # Tuple of username, repo and the name of the database - key is the database keyword from metadata
         "kpsc_k": ("klebgenomics", "KpSC_surface_antigen_loci", "Klebsiella_pneumoniae_Species_Complex_K"),
-        "kpsc_o": ("klebgenomics", "KpSC_surface_antigen_loci", "Klebsiella_pneumoniae_Species_Complex_O")
+        "kpsc_o": ("klebgenomics", "KpSC_surface_antigen_loci", "Klebsiella_pneumoniae_Species_Complex_O"),
+        "kosc_k": ("klebgenomics", "KoSC-surface-antigen-loci", "Klebsiella_oxytoca_Species_Complex_K_locus_database"),
+        "kosc_o": ("klebgenomics", "KoSC-surface-antigen-loci", "Klebsiella_oxytoca_Species_Complex_O_locus_database"),
+        "kaer_k": ("tomdstanton", "KAC_cps_reference", "KAC_k_locus_primary_reference"),
+        "ab_k": ("tomdstanton", "A_baumannii_Surface_Antigen_Loci", "Acinetobacter_baumannii_K"),
+        "ab_o": ("tomdstanton", "A_baumannii_Surface_Antigen_Loci", "Acinetobacter_baumannii_OC"),
+        "ecoli_kps": ("tomdstanton", "EC-K-typing", "EC-K-typing_group2and3"),
+        "vpar_k": ("tomdstanton", "vibrio_parahaemolyticus_genomoserotyping", "VibrioPara_Kaptivedb_K"),
+        "vpar_o": ("tomdstanton", "vibrio_parahaemolyticus_genomoserotyping", "VibrioPara_Kaptivedb_O"),
     }
-    _DB_DIR = Path.home() / '.kaptive'
+    _DB_DIR = Path(os.environ.get("KAPTIVE_DB_DIR", Path.home() / '.kaptive'))
     _DB_DIR.mkdir(parents=True, exist_ok=True)
 
     @classmethod
-    def _get_db_path(cls, kwd: str) -> Path:
+    def _get_db_path(cls, kwd: str) -> 'Path':
         """Returns the expected file path for a given database keyword."""
         return cls._DB_DIR / f"{kwd}.pkl"
 
     @classmethod
-    def _get_existing_db_path(cls, kwd: str) -> Path:
+    def _get_existing_db_path(cls, kwd: str) -> 'Path':
         """Returns the file path for an installed database, raising an error if it doesn't exist."""
         db_path = cls._get_db_path(kwd)
         if not db_path.is_file():
@@ -546,7 +598,7 @@ class DatabaseManager:
         return db_path
 
     @classmethod
-    def reset(cls) -> None:
+    def reset(cls) -> 'None':
         """Removes all installed databases by deleting their compiled files from the local directory.
         
         This clears the user's `~/.kaptive` directory of any `.pkl` files, effectively uninstalling
@@ -555,9 +607,11 @@ class DatabaseManager:
         if cls._DB_DIR.exists():
             for file_path in cls._DB_DIR.glob('*.pkl'):
                 file_path.unlink()
+            for file_path in cls._DB_DIR.glob('*.json'):
+                file_path.unlink()
 
     @classmethod
-    def uninstall(cls, kwd: str) -> None:
+    def uninstall(cls, kwd: str) -> 'None':
         """Uninstalls a specific database by removing its compiled local file.
 
         Args:
@@ -566,10 +620,13 @@ class DatabaseManager:
         Raises:
             DatabaseError: If the specified database is not currently installed.
         """
-        cls._get_existing_db_path(kwd).unlink()
+        db_path = cls._get_existing_db_path(kwd)
+        db_path.unlink()
+        if db_path.with_suffix('.json').exists():
+            db_path.with_suffix('.json').unlink()
 
     @classmethod
-    def installed(cls) -> list[str]:
+    def installed(cls) -> 'list[str]':
         """Returns a list of keywords for all currently installed databases.
 
         Returns:
@@ -581,7 +638,7 @@ class DatabaseManager:
         return [p.stem for p in cls._DB_DIR.glob('*.pkl')]
 
     @classmethod
-    def known(cls) -> list[str]:
+    def known(cls) -> 'list[str]':
         """Returns a list of keywords for all currently known, officially supported databases.
 
         These databases can be installed simply by providing their keyword to the `install` method.
@@ -592,45 +649,96 @@ class DatabaseManager:
         return list(cls._KNOWN.keys())
 
     @classmethod
-    def update(cls) -> Generator[Database, None, None]:
-        """Updates all installed databases by checking against their remote repositories.
+    def update(cls, kwd: str | list[str] = "all") -> 'Generator[Database, None, None]':
+        """Updates installed databases by checking against their remote repositories.
 
-        This method iterates through all locally installed databases, extracting their metadata
-        to determine their source repository and current version. It then calls `add` to check
-        the remote repository for a newer version. If a newer version is found, it is downloaded,
-        compiled, and the local file is replaced.
+        This method extracts metadata to determine the source repository and current version.
+        It then calls `add` to check the remote repository for a newer version. If a newer version
+        is found, it is downloaded, compiled, and the local file is replaced. If 'all' or a list
+        of keywords is provided, updates are fetched concurrently.
+
+        Args:
+            kwd (str | list[str]): The keyword(s) of the database to update (e.g., 'kpsc_k' or 'all').
+                Defaults to "all", which updates all currently installed databases.
 
         Yields:
             Database: The updated compiled `Database` object for each database that required an update.
                 If a database was already up-to-date, nothing is yielded for that database.
         """
-        for db_path in cls._DB_DIR.glob('*.pkl'):
-            meta = pickle.loads(db_path.read_bytes()).metadata  # type: DatabaseMetadata
-            yield cls.add(meta.owner, meta.repo, meta.name, branch=meta.branch, local_meta=meta)
+        import json
+        
+        if kwd == "all":
+            kwd = cls.installed()
+            if not kwd:
+                return
+                
+        if isinstance(kwd, list):
+            import concurrent.futures
+            
+            def _update_one(k: str) -> 'Database | None':
+                db_path = cls._get_existing_db_path(k)
+                json_path = db_path.with_suffix('.json')
+                if json_path.is_file():
+                    meta = DatabaseMetadata.from_dict(json.loads(json_path.read_text()))
+                else:
+                    meta = pickle.loads(db_path.read_bytes()).metadata
+                db_name = Path(meta.genbank).with_suffix('').name
+                return cls.add(meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta)
+                
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future_to_db = {executor.submit(_update_one, k): k for k in kwd}
+                for future in concurrent.futures.as_completed(future_to_db):
+                    if (res := future.result()) is not None:
+                        yield res
+        else:
+            db_path = cls._get_existing_db_path(kwd)
+            json_path = db_path.with_suffix('.json')
+            if json_path.is_file():
+                meta = DatabaseMetadata.from_dict(json.loads(json_path.read_text()))
+            else:
+                meta = pickle.loads(db_path.read_bytes()).metadata
+            db_name = Path(meta.genbank).with_suffix('').name
+            if (res := cls.add(meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta)) is not None:
+                yield res
 
     @classmethod
-    def install(cls, kwd: str) -> Database:
+    def install(cls, kwd: str | list[str]) -> 'Database | list[Database | None]':
         """Installs a known, officially supported database by its keyword.
 
         This looks up the repository details (owner, repo, database name) associated with the provided
         keyword in the internal registry of known databases and delegates the installation to `add`.
+        If 'all' or a list of keywords is provided, they are installed concurrently.
 
         Args:
-            kwd (str): The keyword of the known database to install (e.g., 'kpsc_k').
+            kwd (str | list[str]): The keyword(s) of the known database to install (e.g., 'kpsc_k' or 'all').
 
         Returns:
-            Database: The newly compiled and installed `Database` object.
+            Database | list[Database | None]: The newly compiled and installed `Database` object(s).
 
         Raises:
             DatabaseError: If the provided keyword is not found in the list of known databases.
         """
+        if kwd == "all":
+            kwd = list(cls._KNOWN.keys())
+
+        if isinstance(kwd, list):
+            import concurrent.futures
+            
+            def _install_one(k: str) -> 'Database | None':
+                if (known_info := cls._KNOWN.get(k, None)) is None:
+                    raise DatabaseError(f'"{k}" is not a known database, choose from {list(cls._KNOWN.keys())}')
+                return cls.add(*known_info)
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                return list(executor.map(_install_one, kwd))
+
         if (known_info := cls._KNOWN.get(kwd, None)) is None:
             raise DatabaseError(f'"{kwd}" is not a known database, choose from {list(cls._KNOWN.keys())}')
         return cls.add(*known_info)
 
     @classmethod
     def add(cls, owner: str, repo_name: str, db_name: str, branch: str = 'main',
-            local_meta: DatabaseMetadata | None = None) -> Database | None:
+            local_meta: DatabaseMetadata | None = None) -> 'Database | None':
         """Adds or updates a database from a specific Git repository.
 
         This is the core method for retrieving and compiling databases. The installation mechanism
@@ -659,42 +767,68 @@ class DatabaseManager:
                 Returns `None` if the local version was already up-to-date with the remote repository.
         """
 
-        repo = GitRepo(owner, repo_name, branch=branch)
-        toml_filename = f"{db_name}.toml"
-        gbk_filename = f"{db_name}.gbk"
+        base_url = f"https://raw.githubusercontent.com/{owner}/{repo_name}/{branch}"
+        toml_url = f"{base_url}/{db_name}.toml"
+        gbk_url = f"{base_url}/{db_name}.gbk"
 
         # Fetch TOML first to quickly check version
-        toml_bytes = repo.fetch(toml_filename)
+        try:
+            with urlopen(toml_url) as response:
+                toml_bytes = response.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise DatabaseError(f"Remote file not found: {toml_url}\n"
+                                    f"Ensure the repository branch, name, and owner are correct.") from e
+            raise DatabaseError(f"HTTP Error {e.code} fetching {toml_url}: {e.reason}") from e
+        except urllib.error.URLError as e:
+            raise DatabaseError(f"Network error: Failed to fetch {toml_url}."
+                                f"Ensure you have an active internet connection. ({e.reason})") from e
+            
         remote_meta_dict = tomllib.loads(toml_bytes.decode('utf-8'))
         remote_meta = DatabaseMetadata.from_dict(remote_meta_dict)
 
         db_keyword = remote_meta.keyword
         db_path = cls._get_db_path(db_keyword)
+        json_path = db_path.with_suffix('.json')
 
         if local_meta is None and db_path.is_file():
-            local_db = pickle.loads(db_path.read_bytes())
-            local_meta = getattr(local_db, 'metadata', None)
+            import json
+            if json_path.is_file():
+                local_meta = DatabaseMetadata.from_dict(json.loads(json_path.read_text()))
+            else:
+                local_db = pickle.loads(db_path.read_bytes())
+                local_meta = getattr(local_db, 'metadata', None)
 
         if local_meta and local_meta.parsed_version >= remote_meta.parsed_version:
             return  # Up to date
 
         # Fetch GBK if update is needed
-        gbk_bytes = repo.fetch(gbk_filename)
+        try:
+            with urlopen(gbk_url) as response:
+                gbk_bytes = response.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise DatabaseError(f"Remote file not found: {gbk_url}\n"
+                                    f"Ensure the repository branch, name, and owner are correct.") from e
+            raise DatabaseError(f"HTTP Error {e.code} fetching {gbk_url}: {e.reason}") from e
+        except urllib.error.URLError as e:
+            raise DatabaseError(f"Network error: Failed to fetch {gbk_url}. "
+                                f"Ensure you have an active internet connection. ({e.reason})") from e
 
         # Use temp directory for parsing since Database.from_genbank expects files
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            gbk_path = tmp_path / gbk_filename
-            toml_path = tmp_path / toml_filename
+            gbk_path = tmp_path / f"{db_name}.gbk"
+            toml_path = tmp_path / f"{db_name}.toml"
             gbk_path.write_bytes(gbk_bytes)
             toml_path.write_bytes(toml_bytes)
             db_obj = Database.from_genbank(gbk_path)
 
-        db_path.write_bytes(pickle.dumps(db_obj, protocol=pickle.HIGHEST_PROTOCOL))
+        cls.save(db_obj)
         return db_obj
 
     @classmethod
-    def load(cls, kwd: str) -> Database:
+    def load(cls, kwd: str) -> 'Database':
         """Loads a locally installed, compiled database using its keyword.
 
         Args:
@@ -709,10 +843,11 @@ class DatabaseManager:
         return pickle.loads(cls._get_existing_db_path(kwd).read_bytes())
 
     @classmethod
-    def save(cls, db: Database) -> int:
+    def save(cls, db: Database) -> 'int':
         """Serializes and saves a compiled Database object to the local cache directory.
 
         The database is saved as a `.pkl` file named after its keyword in the `~/.kaptive` directory.
+        A companion `.json` file containing the metadata is also saved for fast version checking.
 
         Args:
             db (Database): The compiled database object to save.
@@ -720,4 +855,6 @@ class DatabaseManager:
         Returns:
             int: The number of bytes written to the file.
         """
-        return cls._get_db_path(db.metadata.keyword).write_bytes(pickle.dumps(db, protocol=pickle.HIGHEST_PROTOCOL))
+        db_path = cls._get_db_path(db.metadata.keyword)
+        db_path.with_suffix('.json').write_text(json.dumps(asdict(db.metadata)))
+        return db_path.write_bytes(pickle.dumps(db, protocol=pickle.HIGHEST_PROTOCOL))

@@ -6,7 +6,7 @@ site_author = "Tom Stanton"
 edit_uri = "edit/main/docs/"
 repo_name = "klebgenomics/Kaptive"
 copyright = "2026, Tom Stanton, Kathryn Holt and Kelly Wyres"
-watch = ["mkdocs.yml", "README.md", "src"]
+watch = ["zensical.toml", "README.md", "src"]
 
 nav = [
   { Home = "index.md" },
@@ -16,7 +16,6 @@ nav = [
   { Outputs = "Outputs.md" },
   { "Interpreting the Results" = "Interpreting-the-results.md" },
   { Databases = "Databases.md" },
-  { Legacy = "Legacy.md" },
   { FAQs = "FAQs.md" }
 ]
 

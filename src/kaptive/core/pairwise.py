@@ -1,12 +1,16 @@
+"""
+Module for performing pairwise protein alignments using a numba-powered banded Gotoh Smith-Waterman kernel.
+Also contains a Randstrobe strobemer generation and jaccard implementation to act as a pre-filter.
+"""
 from dataclasses import dataclass
 from functools import cache
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 from numba import njit, prange
 
 from kaptive.core.seq import Sequences
-
 
 # Constants ------------------------------------------------------------------------------------------------------------
 _INF = np.int32(-1_000_000_000)  # Safe negative infinity for int32 DP arithmetic
@@ -85,17 +89,17 @@ class PairwiseAlignments:
         """Returns the number of alignments in the batch."""
         return len(self.scores)
 
-    def __dict__(self) -> dict:
-        """Serializes the batch to a dictionary of lists."""
+    def to_dict(self) -> dict:
+        """Returns a dictionary containing the SoA arrays for orjson serialization."""
         return {
-            'scores': self.scores.tolist(),
-            'matches': self.matches.tolist(),
-            'mismatches': self.mismatches.tolist(),
-            'gaps': self.gaps.tolist(),
-            'q_starts': self.q_starts.tolist(),
-            'q_ends': self.q_ends.tolist(),
-            't_starts': self.t_starts.tolist(),
-            't_ends': self.t_ends.tolist()
+            'scores': self.scores,
+            'matches': self.matches,
+            'mismatches': self.mismatches,
+            'gaps': self.gaps,
+            'q_starts': self.q_starts,
+            'q_ends': self.q_ends,
+            't_starts': self.t_starts,
+            't_ends': self.t_ends
         }
 
     @classmethod
@@ -112,7 +116,7 @@ class PairwiseAlignments:
             np.array(d['t_ends'], dtype=np.int32)
         )
 
-    def __getitem__(self, item) -> PairwiseAlignment | 'PairwiseAlignments':
+    def __getitem__(self, item) -> Union[PairwiseAlignment, 'PairwiseAlignments']:
         """Accesses alignment results by index, slice, or boolean mask.
 
         - If `item` is an integer, it returns a single `PairwiseAlignment` object.
@@ -156,6 +160,22 @@ class PairwiseAlignments:
             np.empty(0, dtype=np.int32),
             np.empty(0, dtype=np.int32),
             np.empty(0, dtype=np.int32)
+        )
+
+    @classmethod
+    def concat(cls, batches: list['PairwiseAlignments']) -> 'PairwiseAlignments':
+        """Concatenates multiple PairwiseAlignments collections into one."""
+        if not batches:
+            return cls.empty()
+        return cls(
+            scores=np.concatenate([b.scores for b in batches]),
+            matches=np.concatenate([b.matches for b in batches]),
+            mismatches=np.concatenate([b.mismatches for b in batches]),
+            gaps=np.concatenate([b.gaps for b in batches]),
+            q_starts=np.concatenate([b.q_starts for b in batches]),
+            q_ends=np.concatenate([b.q_ends for b in batches]),
+            t_starts=np.concatenate([b.t_starts for b in batches]),
+            t_ends=np.concatenate([b.t_ends for b in batches]),
         )
 
     @property
@@ -414,7 +434,7 @@ class RandstrobeIndex:
         return len(self.hashes)
     
     @classmethod
-    def empty(cls) -> RandstrobeIndex:
+    def empty(cls) -> 'RandstrobeIndex':
         """Creates an empty RandstrobeIndex."""
         return cls(
             np.empty(0, dtype=np.uint64),
@@ -1040,86 +1060,3 @@ def _intersect_all_hits_kernel(
                     h_count += 1
 
         hit_counts[q_idx] = h_count
-
-
-@njit(cache=True)
-def _greedy_set_cover_kernel(indptr, indices, num_sequences):
-    """
-    Performs greedy set cover clustering over a pre-computed similarity graph.
-
-    Parameters:
-    -----------
-    indptr : np.ndarray (int32 or int64)
-        CSR matrix index pointers indicating where each row's neighbors start/end.
-    indices : np.ndarray (int32 or int64)
-        CSR matrix column indices containing the sequence IDs of valid neighbors.
-    num_sequences : int
-        Total number of protein sequences in the dataset.
-
-    Returns:
-    --------
-    cluster_assignments : np.ndarray (int32)
-        Array mapping each sequence index to its designated Representative Sequence ID.
-    """
-    # Track which sequences have already been swept into a cluster
-    is_covered = np.zeros(num_sequences, dtype=np.bool_)
-    cluster_assignments = np.full(num_sequences, -1, dtype=np.int32)
-
-    # Track the active degree (number of uncovered neighbors) for every sequence
-    uncovered_degrees = np.zeros(num_sequences, dtype=np.int32)
-    for i in range(num_sequences):
-        uncovered_degrees[i] = indptr[i + 1] - indptr[i]
-
-    # Iterative set-cover process
-    while True:
-        best_rep = -1
-        max_degree = -1
-
-        # 1. Find the uncovered sequence with the highest remaining neighbor count
-        for i in range(num_sequences):
-            if not is_covered[i]:
-                if uncovered_degrees[i] > max_degree:
-                    max_degree = uncovered_degrees[i]
-                    best_rep = i
-
-        # Break condition: if no uncovered sequences remain, we are done
-        if best_rep == -1 or max_degree < 0:
-            break
-
-        # 2. Form a new cluster around this representative sequence
-        cluster_assignments[best_rep] = best_rep
-        is_covered[best_rep] = True
-
-        # 3. Consume all valid neighbors of this representative sequence
-        start_idx = indptr[best_rep]
-        end_idx = indptr[best_rep + 1]
-
-        for idx in range(start_idx, end_idx):
-            neighbor = indices[idx]
-
-            if not is_covered[neighbor]:
-                is_covered[neighbor] = True
-                cluster_assignments[neighbor] = best_rep
-
-                # Proactively update the degrees of adjacent sequences
-                # (Decrements their count since this neighbor is now taken)
-                n_start = indptr[neighbor]
-                n_end = indptr[neighbor + 1]
-                for n_idx in range(n_start, n_end):
-                    adj_node = indices[n_idx]
-                    if not is_covered[adj_node]:
-                        uncovered_degrees[adj_node] -= 1
-
-    return cluster_assignments
-
-
-@njit(parallel=True, cache=True)
-def _jaccard_graph_kernel(strobemer_bitsets, threshold, num_sequences):
-    """
-    Parallelised dummy placeholder showing how you would calculate
-    strobemer similarities and filter them by your threshold.
-    """
-    # In practice, you would calculate a sparse edge list here,
-    # then convert it to Scipy's csr_matrix(data, indices, indptr)
-    # before calling numba_greedy_set_cover.
-    pass
