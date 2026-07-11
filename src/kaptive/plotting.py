@@ -559,28 +559,28 @@ class LocusComparisonPlotter(BasePlotter):
                         hoverinfo='none'
                     ))
 
-                # 4.5 Add Invisible Hover Markers for Links
-                link_center_x = (q_starts + q_ends + t_starts + t_ends) / 4.0
-                link_center_y = (q_y + t_y) / 2.0
-                
-                link_hover_texts = [
-                    f"<b>Query:</b> {comparisons.locus_names[global_to_locus[q]]} ({starts[q]}-{ends[q]})<br>"
-                    f"<b>Target:</b> {comparisons.locus_names[global_to_locus[t]]} ({starts[t]}-{ends[t]})<br>"
-                    f"<b>Identity:</b> {p:.1f}%"
-                    for q, t, p in zip(q_idx, t_idx, pidents)
-                ]
-                link_hover_colors = [cls._get_cluster_color(link_labels[i]) for i in range(len(q_idx))]
-                
-                fig.add_trace(go.Scatter(
-                    x=link_center_x.tolist(),
-                    y=link_center_y.tolist(),
-                    mode='markers',
-                    marker=dict(size=1, color='rgba(0,0,0,0)'),
-                    text=link_hover_texts,
-                    hoverinfo='text',
-                    hoverlabel=dict(bgcolor=link_hover_colors),
-                    showlegend=False
-                ))
+                    # 4.5 Add Invisible Hover Markers for Links
+                    cx = (q_starts[e_arr] + q_ends[e_arr] + t_starts[e_arr] + t_ends[e_arr]) / 4.0
+                    cy = (q_y[e_arr] + t_y[e_arr]) / 2.0
+                    
+                    link_texts = [
+                        f"<b>Query:</b> {comparisons.locus_names[global_to_locus[q_idx[i]]]} ({starts[q_idx[i]]}-{ends[q_idx[i]]})<br>"
+                        f"<b>Target:</b> {comparisons.locus_names[global_to_locus[t_idx[i]]]} ({starts[t_idx[i]]}-{ends[t_idx[i]]})<br>"
+                        f"<b>Identity:</b> {pidents[i]:.1f}%"
+                        for i in e_idxs
+                    ]
+                    
+                    fig.add_trace(go.Scatter(
+                        x=cx.tolist(),
+                        y=cy.tolist(),
+                        mode='markers',
+                        marker=dict(size=1, color='rgba(0,0,0,0)'),
+                        text=link_texts,
+                        hoverinfo='text',
+                        hoverlabel=dict(bgcolor=color),
+                        legendgroup=name,
+                        showlegend=False
+                    ))
 
         # 5. Add Vectorised Gene Arrows
         lengths = ends - starts
@@ -617,27 +617,30 @@ class LocusComparisonPlotter(BasePlotter):
                 hoverinfo='none'
             ))
 
-        # 6. Invisible Hover Markers
-        hover_texts = [
-            f"<b>Locus:</b> {comparisons.locus_names[global_to_locus[i]]}<br>"
-            f"<b>Gene:</b> {comparisons.gene_names[i]}<br>"
-            f"<b>Description:</b> {comparisons.gene_descriptions[i]}<br>"
-            f"<b>Coordinates:</b> {starts[i]}-{ends[i]}<br>"
-            f"<b>Cluster:</b> {labels[i] if labels[i] >= 0 else 'Unique'}"
-            for i in range(total_genes)
-        ]
-        hover_colors = [cls._get_cluster_color(labels[i]) for i in range(total_genes)]
-        
-        fig.add_trace(go.Scatter(
-            x=((starts + ends) / 2).tolist(),
-            y=base_y.tolist(),
-            mode='markers',
-            marker=dict(size=1, color='rgba(0,0,0,0)'),
-            text=hover_texts,
-            hoverinfo='text',
-            hoverlabel=dict(bgcolor=hover_colors),
-            showlegend=False
-        ))
+            # 6. Invisible Hover Markers
+            cx = (starts[idxs] + ends[idxs]) / 2.0
+            cy = base_y[idxs]
+            
+            cluster_hover_texts = [
+                f"<b>Locus:</b> {comparisons.locus_names[global_to_locus[i]]}<br>"
+                f"<b>Gene:</b> {comparisons.gene_names[i]}<br>"
+                f"<b>Description:</b> {comparisons.gene_descriptions[i]}<br>"
+                f"<b>Coordinates:</b> {starts[i]}-{ends[i]}<br>"
+                f"<b>Cluster:</b> {cluster_id if cluster_id >= 0 else 'Unique'}"
+                for i in idxs
+            ]
+            
+            fig.add_trace(go.Scatter(
+                x=cx.tolist(),
+                y=cy.tolist(),
+                mode='markers',
+                marker=dict(size=1, color='rgba(0,0,0,0)'),
+                text=cluster_hover_texts,
+                hoverinfo='text',
+                hoverlabel=dict(bgcolor=color),
+                legendgroup=name,
+                showlegend=False
+            ))
 
         fig.update_layout(
             yaxis=dict(

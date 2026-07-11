@@ -1,13 +1,13 @@
 """
 Updated database module with dataclasses, enums and SoA batch layouts for vectorized math and machine-learning.
 """
+import json
 import os
 import pickle
 import tomllib
-import json
 import urllib.error
 from collections.abc import Generator
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from fnmatch import filter as fnmatch_filter
 from pathlib import Path
 from re import compile as re_compile
@@ -174,8 +174,8 @@ class Database:
     3.  **Fast Lookups:**  Vocabularies (like `cluster_keys`) convert strings into integer IDs (`gene_cluster_ids`).
         Comparing integers is orders of magnitude faster than comparing strings.
 
-    The database manages two main entities: Loci (full locus sequences) and Genes (individual coding sequences within loci).
-    Mappings between these entities are maintained via indices and slices, not object references.
+    The database manages two main entities: Loci (full locus sequences) and Genes (individual coding sequences within
+    loci). Mappings between these entities are maintained via indices and slices, not object references.
 
     Attributes:
         metadata (DatabaseMetadata): The strict, validated metadata schema associated with the database.

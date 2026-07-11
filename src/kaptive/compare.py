@@ -5,7 +5,9 @@ import numpy as np
 import numpy.typing as npt
 
 from kaptive.core.interval import Intervals
-from kaptive.core.pairwise import PairwiseAligner, PairwiseAlignments, RandstrobeIndex
+from kaptive.core.alignment import Alignment
+from kaptive.core.pairwise import PairwiseAligner, PairwiseAlignments
+from kaptive.core.kmers import RandstrobeIndex
 from kaptive.core.seq import Sequences
 
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, Self, NamedTuple
 from enum import IntEnum
+from typing import NamedTuple, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -86,7 +87,7 @@ class Cigars:
         """Returns the number of CIGAR sequences in the batch."""
         return len(self.offsets)
 
-    def __getitem__(self, item) -> npt.NDArray[np.uint32] | Cigars:
+    def __getitem__(self, item) -> 'npt.NDArray[np.uint32] | Cigars':
         """Accesses CIGAR data by index, slice, or boolean mask.
 
         - If `item` is an integer, it returns a NumPy array of the encoded CIGAR operations for that single alignment.
@@ -121,16 +122,19 @@ class Cigars:
         if len(new_lengths) > 1:
             np.cumsum(new_lengths[:-1], out=new_offsets[1:])
 
-        extracted = np.concatenate([self.data[self.offsets[i]:self.offsets[i] + self.lengths[i]] for i in indices])
+        extracted = np.concatenate(
+            [self.data[self.offsets[i]:self.offsets[i] + self.lengths[i]] for i in indices])
         return Cigars(extracted, new_offsets, new_lengths)
 
     @classmethod
     def empty(cls) -> 'Cigars':
         """Creates an empty Cigars."""
-        return cls(np.empty(0, dtype=np.uint32), np.empty(0, dtype=np.int32), np.empty(0, dtype=np.int32))
+        return cls(np.empty(0, dtype=np.uint32),
+                   np.empty(0, dtype=np.int32),
+                   np.empty(0, dtype=np.int32))
 
     @classmethod
-    def concat(cls, batches: Iterable[Cigars]) -> 'Cigars':
+    def concat(cls, batches: Iterable['Cigars']) -> 'Cigars':
         """Concatenates multiple Cigars objects into a single, larger batch.
 
         Args:
@@ -148,7 +152,7 @@ class Cigars:
             np.cumsum(lengths[:-1], out=offsets[1:])
         return cls(np.concatenate([b.data for b in batches]), offsets, lengths)
 
-    def swap_sides(self) -> Cigars:
+    def swap_sides(self) -> 'Cigars':
         """Returns a new Cigars with Insertion (I) and Deletion (D) operations swapped.
 
         This is used when swapping the query and target roles of an alignment. An insertion relative
@@ -272,20 +276,48 @@ class Alignments:
     cigars: Cigars
 
     @property
+    def q_aln_lens(self):
+        return self.q_ends - self.q_starts
+
+    @property
+    def t_aln_lens(self):
+        return self.t_ends - self.t_starts
+
+    @property
+    def q_covs(self):
+        return np.divide(
+            self.q_aln_lens, self.q_lengths,
+            out=np.zeros_like(self.q_lengths, dtype=np.float64),
+            where=self.q_lengths > 0
+        )
+
+    @property
+    def t_covs(self):
+        return np.divide(
+            self.t_aln_lens, self.t_lengths,
+            out=np.zeros_like(self.t_lengths, dtype=np.float64),
+            where=self.t_lengths > 0
+        )
+
+    @property
     def scores(self):
         return np.maximum(0, self.matches - self.mismatches)
 
     @property
-    def length_weighted_scores(self):
-        return self.scores / self.lengths
+    def q_weighted_matches(self):
+        return self.matches * self.q_covs
 
     @property
-    def query_weighted_scores(self):
-        return self.scores / self.q_lengths
+    def t_weighted_matches(self):
+        return self.matches * self.t_covs
 
     @property
-    def target_weighted_scores(self):
-        return self.scores / self.t_lengths
+    def q_weighted_scores(self):
+        return self.scores * self.q_covs
+
+    @property
+    def t_weighted_scores(self):
+        return self.scores * self.t_covs
 
     def __len__(self) -> int:
         """Returns the number of alignments in the batch."""
@@ -349,7 +381,7 @@ class Alignments:
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Alignments]) -> 'Self':
+    def concat(cls, batches: Iterable['Alignments']) -> 'Self':
         """Concatenates multiple Alignments objects into a single, larger batch.
 
         Args:
@@ -411,23 +443,30 @@ class Alignments:
             qualities=self.qualities[item], cigars=self.cigars[item]
         )
 
-    def best(self, by_query: bool = True) -> Alignments:
+    def best(self, by_query: bool = True) -> 'Alignments':
         """Returns Alignments with the best alignment per query or target."""
-        if len(self) == 0:
+        if (n := len(self)) == 0:
             return self
 
         names = self.q_names if by_query else self.t_names
-        scores = self.query_weighted_scores if by_query else self.target_weighted_scores
+        scores = self.q_weighted_scores if by_query else self.t_weighted_scores
 
         _, name_ints = np.unique(names, return_inverse=True)
 
         # np.lexsort sorts by the last key first.
-        # We group by name (primary) and sort by score descending (secondary).
-        order = np.lexsort((-scores, name_ints))
+        # Primary: group by name
+        # Secondary: highest weighted score
+        # Tertiary: most matching bases (tie-breaker 1)
+        # Quaternary: highest MAPQ (tie-breaker 2)
+        order = np.lexsort((-self.qualities, -self.matches, -scores, name_ints))
 
-        # Extract the first occurrence of each name in the sorted order
-        _, first_indices = np.unique(name_ints[order], return_index=True)
-        best_indices = order[first_indices]
+        # Extract the first occurrence of each name using a highly optimized O(N) boundary mask
+        name_sorted = name_ints[order]
+        first_occurrence_mask = np.empty(n, dtype=bool)
+        first_occurrence_mask[0] = True
+        first_occurrence_mask[1:] = name_sorted[1:] != name_sorted[:-1]
+        
+        best_indices = order[first_occurrence_mask]
 
         # Sort indices to maintain the original relative order from the batch
         best_indices.sort()
@@ -466,14 +505,16 @@ class Alignments:
         names = self.q_names if by_query else self.t_names
         starts = self.q_starts if by_query else self.t_starts
         ends = self.q_ends if by_query else self.t_ends
-        scores = self.query_weighted_scores if by_query else self.target_weighted_scores
+        scores = self.q_weighted_scores if by_query else self.t_weighted_scores
         
         # Map string names to integer IDs for C-level kernel processing
         _, name_ints = np.unique(names, return_inverse=True)
 
         if priority_mask is not None:
             scores[priority_mask] += 1e9
-        order = np.argsort(scores, kind='stable')[::-1].astype(np.int32)
+            
+        # Deterministic tie-breaking for culling: Score -> Matches -> MAPQ
+        order = np.lexsort((-self.qualities, -self.matches, -scores)).astype(np.int32)
         
         if group_by is None:
             group_by = np.zeros(n, dtype=np.int32)
