@@ -125,7 +125,7 @@ def convert_subparser(subparsers):
         usage=f"{_DIST} convert <db> <json> [formats] [options]")
     opts = convert_parser.add_argument_group(bold('Inputs'), "")
     opts.add_argument('db', metavar='db path/keyword', help='Database path or keyword')
-    opts.add_argument('inputf', help=f'{_DIST} JSON lines file or - for stdin', type=argparse.FileType('rt'),
+    opts.add_argument('input', help=f'{_DIST} JSON lines file or - for stdin', type=argparse.FileType('rt'),
                       metavar='json')
     opts = convert_parser.add_argument_group(bold('Formats'), "\nNote, text outputs accept '-' for stdout")
     opts.add_argument('-t', '--tsv', metavar='', nargs='?', default=None, const='-', type=check_out,
