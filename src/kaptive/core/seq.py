@@ -7,6 +7,7 @@ import numpy.typing as npt
 from numba import njit, prange
 
 from kaptive.core.interval import Interval, IntervalLike, Intervals, Strand
+from kaptive.core.collections import RaggedArrayContainer
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -60,7 +61,7 @@ class SeqRecord:
             interval = Interval.from_item(start, strand=strand)
             start_val, end_val, strand_val = interval.start, interval.end, interval.strand
         else:
-            start_val, end_val, strand_val = int(start), int(end), strand
+            start_val, end_val, strand_val = int(start), int(end), strand # type: ignore
             
         new_seq = self.seq[start_val:end_val]
         if strand_val < 0:
@@ -69,7 +70,7 @@ class SeqRecord:
 
 
 @dataclass(frozen=True, slots=True)
-class Sequences:
+class Sequences(RaggedArrayContainer['SeqRecord', 'Sequences']):
     """A high-performance SoA container for biological sequences.
 
     This class stores multiple sequences in a flat, contiguous memory layout using a 1D NumPy array
@@ -206,7 +207,7 @@ class Sequences:
         _, unique_indices = np.unique(hashes, return_index=True)
         unique_indices.sort()
         
-        return self[unique_indices]
+        return self[unique_indices] # type: ignore
 
     def __getitem__(self, item: int | slice | np.ndarray | list) -> 'SeqRecord | Sequences':
         """Accesses sequences by index, slice, or boolean mask.
@@ -224,12 +225,14 @@ class Sequences:
             IndexError: If an integer index is out of range.
         """
         if isinstance(item, (int, np.integer)):
-            if item < 0:
-                item += len(self)
-            if item < 0 or item >= len(self): raise IndexError("Index out of range")
-            s = self.offsets[item]
-            l = self.lengths[item]
-            return SeqRecord(self.ids[item], self.seqs[s:s + l].tobytes())
+            item_idx = int(item)
+            if item_idx < 0:
+                item_idx += len(self)
+            if item_idx < 0 or item_idx >= len(self):
+                raise IndexError("Batch index out of range")
+            s = self.offsets[item_idx]
+            l = self.lengths[item_idx]
+            return SeqRecord(self.ids[item_idx], self.seqs[s:s + l].tobytes())
             
         if isinstance(item, slice):
             indices = np.arange(len(self))[item]
@@ -431,7 +434,7 @@ def _hash_sequences_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.
     """Computes a 64-bit FNV-1a hash for each sequence in parallel."""
     n = len(offsets)
     hashes = np.zeros(n, dtype=np.uint64)
-    for i in prange(n):
+    for i in prange(n): # type: ignore
         s = offsets[i]
         l = lengths[i]
         h = np.uint64(14695981039346656037)  # FNV offset basis
@@ -448,7 +451,7 @@ def _translate_kernel(seq_arr: npt.NDArray[np.uint8], char_map: npt.NDArray[np.u
                       codon_map: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
     n_codons = len(seq_arr) // 3
     out = np.empty(n_codons, dtype=np.uint8)
-    for i in prange(n_codons):
+    for i in prange(n_codons): # type: ignore
         c1 = char_map[seq_arr[i * 3]]
         c2 = char_map[seq_arr[i * 3 + 1]]
         c3 = char_map[seq_arr[i * 3 + 2]]
@@ -475,7 +478,7 @@ def _extract_ragged_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.
             out_offsets[i] = out_offsets[i-1] + out_lengths[i-1]
             
     out_seqs = np.empty(total_len, dtype=seqs.dtype)
-    for i in prange(n):
+    for i in prange(n): # type: ignore
         l = out_lengths[i]
         if l == 0: continue
         
@@ -518,7 +521,7 @@ def _translate_ragged_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[n
             out_offsets[i] = out_offsets[i-1] + out_lengths[i-1]
             
     out_data = np.empty(total_len, dtype=np.uint8)
-    for i in prange(n):
+    for i in prange(n): # type: ignore
         n_codons = out_lengths[i]
         if n_codons == 0: continue
         
@@ -538,7 +541,7 @@ def _internal_stops_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.
                            lengths: npt.NDArray[np.int32]) -> npt.NDArray[np.bool_]:
     n = len(offsets)
     out = np.zeros(n, dtype=np.bool_)
-    for i in prange(n):
+    for i in prange(n): # type: ignore
         s = offsets[i]
         l = lengths[i]
         if l > 0:  # Check up to the second-to-last character (s + l - 1)

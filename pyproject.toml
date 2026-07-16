@@ -5,7 +5,7 @@ description = "The tool for _in silico_ serotyping"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
 dynamic = ["version"]
-keywords = ["bioinformatics", "serotyping", "microbiology"]
+keywords = ["bioinformatics", "genomics", "serotyping", "microbiology"]
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -27,7 +27,7 @@ classifiers = [
 dependencies = [
     "numpy>=2.4",
     "numba>=0.62",
-    "mappy>=2.3",
+    "rammappy>=0.1.2",
     "gb-io>=0.4",
 ]
 
@@ -36,8 +36,8 @@ plot = ["plotly"]
 json = ["orjson"]
 
 [dependency-groups]
-test = ["kaptive[plot,json]", "marimo", "pandas", "pytest>=9.0.0"]
-docs = ["kaptive[plot,json]", "zensical", "mkdocstrings-python"]
+test = ["kaptive[plot,json]", "pytest>=9.0.0", "pytest-cov"]
+docs = ["kaptive[plot,json]", "zensical", "mkdocstrings[python]"]
 dev = [
     "black>=26.5.1",
     "ruff>=0.15.20",

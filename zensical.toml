@@ -21,7 +21,6 @@ nav = [
 
 plugins = [
   "search",
-  { termynal = { prompt_literal_start = ["$"] } },
   { mkdocstrings = { handlers = { python = { options = { docstring_style = "google" } } } } },
   { api-autonav = { modules = ["src/kaptive"], nav_section_title = "API Reference" } },
   "include-markdown",

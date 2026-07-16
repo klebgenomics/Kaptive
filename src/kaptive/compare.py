@@ -1,19 +1,20 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
+from kaptive.core.collections import BatchedContainer
 from kaptive.core.interval import Intervals
-from kaptive.core.alignment import Alignment
-from kaptive.core.pairwise import PairwiseAligner, PairwiseAlignments
 from kaptive.core.kmers import RandstrobeIndex
+from kaptive.core.pairwise import PairwiseAligner, PairwiseAlignments
 from kaptive.core.seq import Sequences
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
 @dataclass(slots=True, frozen=True)
-class LocusComparisonEdges:
+class LocusComparisonEdges(BatchedContainer[Any, 'LocusComparisonEdges']):
     """A high-performance SoA container for all forward cross-locus protein alignments."""
     
     # 1. Pointers to the locus-level sequences (useful for metadata)
@@ -33,6 +34,19 @@ class LocusComparisonEdges:
 
     def __len__(self) -> int:
         return len(self.query_locus_indices)
+
+    def __getitem__(self, item: int | slice | npt.NDArray | list) -> 'Any | LocusComparisonEdges':
+        if isinstance(item, (int, np.integer)):
+            raise NotImplementedError("Single item access not implemented for LocusComparisonEdges")
+        return LocusComparisonEdges(
+            query_locus_indices=self.query_locus_indices[item],
+            target_locus_indices=self.target_locus_indices[item],
+            query_indices=self.query_indices[item],
+            target_indices=self.target_indices[item],
+            global_query_indices=self.global_query_indices[item],
+            global_target_indices=self.global_target_indices[item],
+            alignments=self.alignments[item]
+        )
 
     @classmethod
     def empty(cls) -> 'LocusComparisonEdges':
@@ -78,6 +92,16 @@ class LocusComparisons:
     gene_intervals: Intervals
 
 
+@dataclass(slots=True, frozen=True)
+class LocusData:
+    """A generalised container representing a single locus for comparison."""
+    proteins: Sequences
+    name: str
+    backbone: Intervals
+    pieces: 'LocusPieces | None' = None
+    gene_ctg_indices: npt.NDArray[np.uint32] | None = None
+
+
 class LocusComparator:
     """
     Highly vectorized engine for comparing multiple loci (collections of protein sequences)
@@ -89,12 +113,13 @@ class LocusComparator:
         self.min_score = min_score
         self.aligner = PairwiseAligner(**(aligner_kwargs or {}))
 
-    def __call__(self, 
-                 loci: Sequence[Sequences], 
-                 locus_names: Sequence[str],
-                 backbones: Sequence[Intervals],
-                 locus_pieces: Sequence['LocusPieces'] | None = None,
-                 gene_ctg_indices: Sequence[npt.NDArray[np.uint32]] | None = None) -> LocusComparisons:
+    def __call__(self, inputs: Sequence[LocusData]) -> LocusComparisons:
+        loci = [inp.proteins for inp in inputs]
+        locus_names = [inp.name for inp in inputs]
+        backbones = [inp.backbone for inp in inputs]
+        locus_pieces = [inp.pieces for inp in inputs]
+        gene_ctg_indices = [inp.gene_ctg_indices for inp in inputs]
+
         n_loci = len(loci)
         
         # Build global sequences to extract metadata

@@ -110,7 +110,7 @@ class GenomeAssembly:
             return genome
         elif isinstance(genome, (str, Path)):
             return cls.from_file(genome)
-        return cls.from_stream(genome)  # ty:ignore[invalid-argument-type]
+        return cls.from_stream(genome)  # type: ignore
 
     def __len__(self) -> int:
         """Total number of base pairs in the assembly."""
@@ -130,18 +130,18 @@ class GenomeAssembly:
         return self.contigs.seqs[s:s + l].tobytes()
 
     @classmethod
-    def from_file(cls, file: str | Path) -> Self:
+    def from_file(cls, filepath: str | Path) -> Self:
         """Load a genome from a FASTA file.
 
         Parameters:
-            file (Union[str, Path]): Path to the file. Supports .gz, .bz2, and .xz compression.
+            filepath (Union[str, Path]): Path to the file. Supports .gz, .bz2, and .xz compression.
         """
-        file = Path(file)  # type: Path
-        if not (m := cls._SEQUENCE_FILE_REGEX.search(file.name)):
-            raise NotImplementedError(f'Unsupported format: {file}')
+        filepath = Path(filepath)  # type: Path
+        if not (m := cls._SEQUENCE_FILE_REGEX.search(filepath.name)):
+            raise NotImplementedError(f'Unsupported format: {filepath}')
 
-        with cls._OPENERS.get(m.group('compression'), open)(file, mode='rb') as handle:
-            return cls.from_stream(handle, file.name.rstrip(m.group()))
+        with cls._OPENERS.get(m.group('compression'), open)(filepath, mode='rb') as handle:
+            return cls.from_stream(handle, filepath.name.rstrip(m.group()))
 
     @classmethod
     def from_stream(cls, handle: IO[bytes], id_: str | None = None) -> Self:

@@ -10,6 +10,7 @@ from typing import Union
 import numpy as np
 import numpy.typing as npt
 from numba import njit
+from kaptive.core.collections import BatchedContainer
 
 
 # Enums ----------------------------------------------------------------------------------------------------------------
@@ -164,7 +165,7 @@ class Interval:
         """
         if length is None:
             length = self.end
-        return Interval(length - self.end, length - self.start, self.strand * -1)
+        return Interval(length - self.end, length - self.start, Strand(self.strand * -1))
 
     @classmethod
     def from_match(cls, item: Match, strand: Strand = Strand.UNSTRANDED) -> 'Interval':
@@ -242,7 +243,7 @@ class Interval:
         """
         if isinstance(item, cls):
             return item
-        if interval := getattr(item, 'interval', None) is not None:
+        if (interval := getattr(item, 'interval', None)) is not None:
             return interval
         if isinstance(item, Match):
             return cls.from_match(item, strand)
@@ -254,7 +255,7 @@ class Interval:
 
 
 @dataclass(frozen=True, slots=True)
-class Intervals:
+class Intervals(BatchedContainer[Interval, 'Intervals']):
     """A high-performance, vectorized SoA collection of genomic intervals.
 
     This class stores interval data in a Structure-of-Arrays (SoA) layout using NumPy arrays,
@@ -327,7 +328,7 @@ class Intervals:
         """Returns the number of intervals in the batch."""
         return len(self.starts)
 
-    def __dict__(self) -> dict:
+    def to_dict(self) -> dict:
         """Serializes the batch to a dictionary of lists."""
         return {'starts': self.starts.tolist(), 'ends': self.ends.tolist(), 'strands': self.strands.tolist()}
 
@@ -367,7 +368,7 @@ class Intervals:
             self.starts[item],
             self.ends[item],
             self.strands[item],
-            self.original_indices[item]
+            self.original_indices[item] if self.original_indices is not None else None
         )
 
     @classmethod
@@ -390,7 +391,7 @@ class Intervals:
             np.concatenate([b.starts for b in batches]),
             np.concatenate([b.ends for b in batches]),
             np.concatenate([b.strands for b in batches]),
-            np.concatenate([b.original_indices for b in batches])
+            np.concatenate([b.original_indices for b in batches]) if batches[0].original_indices is not None else None
         )
 
     def shift(self, x: int | npt.NDArray[np.int32], y: int | npt.NDArray[np.int32] | None = None) -> 'Intervals':
@@ -414,6 +415,39 @@ class Intervals:
             np.asarray(new_ends, dtype=np.int32),
             self.strands,
             self.original_indices
+        )
+
+    def cull_overlaps(self, order: npt.NDArray[np.int32],
+                      max_overlap_fraction: float = 0.1,
+                      group_by: npt.NDArray[np.integer] | None = None,
+                      secondary_group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.bool_]:
+        """Greedily culls intervals that overlap significantly with higher-priority intervals.
+        
+        Args:
+            order (npt.NDArray[np.int32]): An array of indices specifying the greedy selection order.
+            max_overlap_fraction (float): The maximum allowable overlap as a fraction of an interval's length.
+            group_by (npt.NDArray[np.integer], optional): First grouping array. Overlaps are only checked within groups.
+            secondary_group_by (npt.NDArray[np.integer], optional): Second grouping array.
+            
+        Returns:
+            npt.NDArray[np.bool_]: A boolean mask indicating which intervals are kept.
+        """
+        n = len(self)
+        if n == 0:
+            return np.empty(0, dtype=np.bool_)
+            
+        if group_by is None:
+            group_by = np.zeros(n, dtype=np.int32)
+        else:
+            group_by = np.asarray(group_by, dtype=np.int32)
+            
+        if secondary_group_by is None:
+            secondary_group_by = np.zeros(n, dtype=np.int32)
+        else:
+            secondary_group_by = np.asarray(secondary_group_by, dtype=np.int32)
+            
+        return _cull_overlaps_kernel(
+            order, group_by, secondary_group_by, self.starts, self.ends, max_overlap_fraction, n
         )
 
     def cluster_spatial(self, tolerance: int = 0,
@@ -474,12 +508,14 @@ class Intervals:
         else:
             group_by = np.asarray(group_by, dtype=np.int32)
 
-        if enforce_strand:
-            order = np.lexsort((self.original_indices, self.strands, group_by)).astype(np.int32)
-        else:
-            order = np.lexsort((self.original_indices, group_by)).astype(np.int32)
+        indices = self.original_indices if self.original_indices is not None else np.zeros(n, dtype=np.int32)
 
-        return _cluster_by_index_kernel(self.original_indices, group_by, self.strands, 
+        if enforce_strand:
+            order = np.lexsort((indices, self.strands, group_by)).astype(np.int32)
+        else:
+            order = np.lexsort((indices, group_by)).astype(np.int32)
+
+        return _cluster_by_index_kernel(indices, group_by, self.strands, 
                                         tolerance, enforce_strand, order)
 
     def arrange(self, indices: npt.NDArray[np.integer],
@@ -525,7 +561,7 @@ class Intervals:
                 
             p_s = starts[i]
             p_e = ends[i]
-            orient = strands[i]
+            orient = Strand(strands[i])
             offset = piece_plot_starts[i]
             
             g_s = self.starts[mask]
@@ -612,3 +648,40 @@ def _cluster_by_index_kernel(indices: npt.NDArray[np.int32], groups: npt.NDArray
         cluster_ids[idx] = curr_cluster
 
     return cluster_ids
+
+
+@njit(cache=True, nogil=True)
+def _cull_overlaps_kernel(order: npt.NDArray[np.int32], group1: npt.NDArray[np.int32], group2: npt.NDArray[np.int32],
+                          starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32], 
+                          max_overlap_fraction: float, n: int) -> npt.NDArray[np.bool_]:
+    """Numba-accelerated greedy overlap culling."""
+    kept_mask = np.zeros(n, dtype=np.bool_)
+    
+    for i in range(n):
+        idx = order[i]
+        g1 = group1[idx]
+        g2 = group2[idx]
+        s = starts[idx]
+        e = ends[idx]
+        length = e - s
+        
+        if length <= 0:
+            continue
+            
+        overlap_found = False
+        # Check against previously kept intervals in O(N^2) (Very fast in pure C)
+        for j in range(i):
+            prev_idx = order[j]
+            if not kept_mask[prev_idx] or group1[prev_idx] != g1 or group2[prev_idx] != g2:
+                continue
+                
+            ks, ke = starts[prev_idx], ends[prev_idx]
+            overlap = min(e, ke) - max(s, ks)
+            if overlap > 0 and (overlap / min(length, ke - ks)) > max_overlap_fraction:
+                overlap_found = True
+                break
+                
+        if not overlap_found:
+            kept_mask[idx] = True
+            
+    return kept_mask

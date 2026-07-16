@@ -1,10 +1,14 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cache
+from typing import NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 from numba import njit, prange
 
+from kaptive.core.collections import BatchedContainer
+from kaptive.core.interval import Intervals
 from kaptive.core.seq import Sequences
 
 # Constants ------------------------------------------------------------------------------------------------------------
@@ -23,8 +27,15 @@ RANDSTROBE_DTYPE = np.dtype([
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
+class Seed(NamedTuple):
+    query_index: int
+    target_index: int
+    score: int
+    offset: int
+
+
 @dataclass(frozen=True, slots=True)
-class Seeds:
+class Seeds(BatchedContainer[Seed, 'Seeds']):
     """A high-performance SoA container for alignment seeds.
 
     This class stores information about potential alignment regions (seeds) between query and target
@@ -49,6 +60,44 @@ class Seeds:
     def __len__(self) -> int:
         """Returns the number of seeds in the batch."""
         return len(self.query_indices)
+
+    def __getitem__(self, item) -> 'Seed | Seeds':
+        if isinstance(item, (int, np.integer)):
+            if item < 0:
+                item += len(self)
+            if item < 0 or item >= len(self):
+                raise IndexError("Batch index out of range")
+            return Seed(
+                self.query_indices[item],
+                self.target_indices[item],
+                self.scores[item],
+                self.offsets[item]
+            )
+            
+        if isinstance(item, slice):
+            indices = np.arange(len(self))[item]
+        else:
+            item_arr = np.asarray(item)
+            indices = np.nonzero(item_arr)[0] if item_arr.dtype.kind == 'b' else item_arr
+            
+        return Seeds(
+            self.query_indices[indices],
+            self.target_indices[indices],
+            self.scores[indices],
+            self.offsets[indices]
+        )
+        
+    @classmethod
+    def concat(cls, batches: Iterable['Seeds']) -> 'Seeds':
+        batches = list(batches)
+        if not batches:
+            return cls.empty()
+        return cls(
+            np.concatenate([b.query_indices for b in batches]),
+            np.concatenate([b.target_indices for b in batches]),
+            np.concatenate([b.scores for b in batches]),
+            np.concatenate([b.offsets for b in batches])
+        )
 
     @classmethod
     def empty(cls) -> 'Seeds':
@@ -77,6 +126,49 @@ class Seeds:
             self.scores[mask],
             self.offsets[mask]
         )
+
+    def to_intervals(self, query_lengths: npt.NDArray[np.int32]) -> 'Intervals':
+        """Converts seeds into Intervals on the target sequences.
+        
+        Since offset = query_pos - target_pos, we approximate target_pos as -offset.
+        The end position is target_start + query_length.
+        """
+        t_starts = -self.offsets
+        q_lens = query_lengths[self.query_indices]
+        t_ends = t_starts + q_lens
+        
+        return Intervals(
+            starts=t_starts,
+            ends=t_ends,
+            strands=np.ones(len(self), dtype=np.int8),
+            original_indices=np.arange(len(self), dtype=np.int32)
+        )
+        
+    def cull_overlaps(
+        self,
+        query_lengths: npt.NDArray[np.int32],
+        max_overlap_fraction: float = 0.1,
+        priority_mask: npt.NDArray[np.bool_] | None = None
+    ) -> 'Seeds':
+        """Greedily culls seeds that overlap significantly on the target sequence."""
+        n = len(self)
+        if n == 0:
+            return self
+
+        # Sort order: priority_mask (True first), then scores (descending)
+        if priority_mask is None:
+            priority_mask = np.zeros(n, dtype=np.bool_)
+            
+        order = np.lexsort((-self.scores, ~priority_mask)).astype(np.int32)
+
+        # We pass target_indices as the 'names' array to only cull overlaps on the same contig
+        intervals = self.to_intervals(query_lengths)
+        kept_mask = intervals.cull_overlaps(
+            order=order,
+            max_overlap_fraction=max_overlap_fraction,
+            group_by=self.target_indices.astype(np.int32)
+        )
+        return self.filter(kept_mask)
 
     def top_hits(self, min_score: int = 1) -> 'Seeds':
         """Reduces the batch to only the highest-scoring seed for each query.
@@ -124,7 +216,7 @@ class Seeds:
         Returns:
             tuple[Sequences, Sequences]: Paired sequences ready for alignment.
         """
-        return queries[self.query_indices], targets[self.target_indices]
+        return queries[self.query_indices], targets[self.target_indices] # type: ignore
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -198,79 +290,79 @@ class BaseKmerIndex:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class MinHashIndex(BaseKmerIndex):
-    """A specialized index for fast nucleotide sequence comparisons using MinHash.
+class FracMinHashIndex(BaseKmerIndex):
+    """A specialized index for fast nucleotide sequence comparisons using FracMinHash.
     
     This index generates a sparse sketch of sequence-specific minimizers (k-mers).
     It is extremely fast for finding large nucleotide sequence homologies and containment.
     """
-    sketch_size: int = 1000
+    scaled: int = 100
     canonical: bool = True
     bits_per_char: int = 2
     lut: npt.NDArray[np.uint8] | None = None
 
     @classmethod
-    def empty(cls) -> 'MinHashIndex':
+    def empty(cls) -> 'FracMinHashIndex':
         return cls(
             records=np.empty(0, dtype=MINHASH_DTYPE),
-            n_seqs=0, is_sorted=False, k=21, sketch_size=1000, canonical=True, bits_per_char=2, lut=None
+            n_seqs=0, is_sorted=False, k=21, scaled=100, canonical=True, bits_per_char=2, lut=None
         )
 
     @classmethod
-    def build(cls, batch: Sequences, k: int = 21, sketch_size: int = 1000, 
-              canonical: bool = True, sort_by_hash: bool = False,
-              lut: npt.NDArray[np.uint8] | None = None, bits_per_char: int = 2) -> 'MinHashIndex':
+    def build(cls, batch: Sequences, k: int = 21, scaled: int = 100, 
+              canonical: bool = True, seed: int = 42, sort_by_hash: bool = False,
+              lut: npt.NDArray[np.uint8] | None = None, bits_per_char: int = 2, **kwargs) -> 'FracMinHashIndex':
         if len(batch) == 0:
             return cls.empty()
             
         n_seqs = len(batch)
-        out_offsets = np.empty(n_seqs, dtype=np.uint32)
-        out_counts = np.zeros(n_seqs, dtype=np.uint32)
-        
-        # Max possible memory footprint
-        total_max_hashes = n_seqs * sketch_size
-        out_records = np.empty(total_max_hashes, dtype=MINHASH_DTYPE)
-        
-        for i in range(n_seqs):
-            out_offsets[i] = i * sketch_size
-            
         kernel_lut = lut if lut is not None else _dna_lut()
-        _populate_minhash_kernel(
-            batch.seqs, batch.offsets, batch.lengths, kernel_lut, k, sketch_size, canonical, bits_per_char,
-            out_offsets, out_counts, out_records
+        
+        # Pass 1: Count fracminhashes per sequence to allocate exact memory footprint
+        counts = _count_fracminhash_kernel(
+            batch.seqs, batch.offsets, batch.lengths, kernel_lut, k, scaled, canonical, bits_per_char
         )
         
-        # Pack the arrays to remove unused sketch slots
-        total_hashes = np.sum(out_counts)
-        if total_hashes == 0:
+        if (total_hashes := np.sum(counts)) == 0:
             return cls.empty()
             
-        packed_records = np.empty(total_hashes, dtype=MINHASH_DTYPE)
-        
-        write_offsets = np.empty(n_seqs, dtype=np.uint32)
+        # Generate exact write offsets via cumulative sum
+        out_offsets = np.empty(n_seqs, dtype=np.uint32)
         current_offset = 0
         for i in range(n_seqs):
-            write_offsets[i] = current_offset
-            current_offset += out_counts[i]
+            out_offsets[i] = current_offset
+            current_offset += counts[i]
             
-        _pack_kernel(
-            out_offsets, write_offsets, out_counts,
-            out_records, packed_records
+        out_records = np.empty(total_hashes, dtype=MINHASH_DTYPE)
+        
+        # Pass 2: Populate the fracminhashes in parallel
+        _populate_fracminhash_kernel(
+            batch.seqs, batch.offsets, batch.lengths, kernel_lut, k, scaled, canonical, bits_per_char,
+            out_offsets, out_records
         )
         
         if sort_by_hash:
-            packed_records = _radix_sort_records(packed_records)
+            out_records = _radix_sort_records(out_records)
             
         return cls(
-            records=packed_records,
-            n_seqs=n_seqs, is_sorted=sort_by_hash, k=k, sketch_size=sketch_size, 
+            records=out_records,
+            n_seqs=n_seqs, is_sorted=sort_by_hash, k=k, scaled=scaled, 
             canonical=canonical, bits_per_char=bits_per_char, lut=lut
         )
         
-    def _build_queries(self, queries: Sequences) -> 'MinHashIndex':
-        return self.build(queries, k=self.k, sketch_size=self.sketch_size, 
+    def _build_queries(self, queries: Sequences) -> 'FracMinHashIndex':
+        return self.build(queries, k=self.k, scaled=self.scaled, 
                           canonical=self.canonical, sort_by_hash=False,
                           lut=self.lut, bits_per_char=self.bits_per_char)
+                          
+    def to_sorted(self) -> 'FracMinHashIndex':
+        if self.is_sorted:
+            return self
+        return self.__class__(
+            records=_radix_sort_records(self.records),
+            n_seqs=self.n_seqs, is_sorted=True, k=self.k, scaled=self.scaled, 
+            canonical=self.canonical, bits_per_char=self.bits_per_char, lut=self.lut
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -291,18 +383,20 @@ class RandstrobeIndex(BaseKmerIndex):
     s:           int = 5
     w_min:       int = 1
     w_max:       int = 5
+    lut:         npt.NDArray[np.uint8] | None = None
 
     @classmethod
     def empty(cls) -> 'RandstrobeIndex':
         """Creates an empty RandstrobeIndex."""
         return cls(
             records=np.empty(0, dtype=RANDSTROBE_DTYPE),
-            n_seqs=0, is_sorted=False, k=10, s=5, w_min=1, w_max=5
+            n_seqs=0, is_sorted=False, k=10, s=5, w_min=1, w_max=5, lut=None
         )
 
     @classmethod
     def build(cls, batch: Sequences, k: int = 10, s: int = 5, w_min: int = 1, w_max: int = 5,
-              sort_by_hash: bool = False) -> 'RandstrobeIndex':
+              canonical: bool = True, seed: int = 42, sort_by_hash: bool = False,
+              lut: npt.NDArray[np.uint8] | None = None, **kwargs) -> 'RandstrobeIndex':
         """Builds a RandstrobeIndex from a `Sequences` collection."""
         if s >= k:
             raise ValueError("Sub-k-mer size (s) must be strictly less than k-mer size (k).")
@@ -311,8 +405,8 @@ class RandstrobeIndex(BaseKmerIndex):
             return cls.empty()
 
         # Pass 1: Count randstrobes per sequence to allocate exact memory footprint
-        lut = _mmseqs12_lut()
-        counts = _count_randstrobes_kernel(batch.seqs, batch.offsets, batch.lengths, lut, k, s, w_min)
+        kernel_lut = lut if lut is not None else _mmseqs12_lut()
+        counts = _count_randstrobes_kernel(batch.seqs, batch.offsets, batch.lengths, kernel_lut, k, s, w_min)
         if (total_randstrobes := np.sum(counts)) == 0:
             return cls.empty()
 
@@ -328,7 +422,7 @@ class RandstrobeIndex(BaseKmerIndex):
 
         # Pass 2: Populate the randstrobes in parallel
         _populate_randstrobes_kernel(
-            batch.seqs, batch.offsets, batch.lengths, lut, k, s, w_min, w_max, out_offsets,
+            batch.seqs, batch.offsets, batch.lengths, kernel_lut, k, s, w_min, w_max, out_offsets,
             out_records
         )
 
@@ -337,11 +431,11 @@ class RandstrobeIndex(BaseKmerIndex):
 
         return cls(
             records=out_records,
-            n_seqs=len(batch), is_sorted=sort_by_hash, k=k, s=s, w_min=w_min, w_max=w_max
+            n_seqs=len(batch), is_sorted=sort_by_hash, k=k, s=s, w_min=w_min, w_max=w_max, lut=lut
         )
 
     def _build_queries(self, queries: Sequences) -> 'RandstrobeIndex':
-        return self.build(queries, k=self.k, s=self.s, w_min=self.w_min, w_max=self.w_max, sort_by_hash=False)
+        return self.build(queries, k=self.k, s=self.s, w_min=self.w_min, w_max=self.w_max, sort_by_hash=False, lut=self.lut)
 
 
 # Functions ------------------------------------------------------------------------------------------------------------
@@ -408,32 +502,6 @@ def _splitmix64(x: np.uint64) -> np.uint64:
     x = (x ^ (x >> np.uint64(27))) * np.uint64(0x94D049BB133111EB)
     return x ^ (x >> np.uint64(31))
 
-@njit(inline='always')
-def _sift_down(heap_h, heap_p, idx, size):
-    while True:
-        left = 2 * idx + 1
-        right = 2 * idx + 2
-        largest = idx
-        
-        if left < size and heap_h[left] > heap_h[largest]:
-            largest = left
-        if right < size and heap_h[right] > heap_h[largest]:
-            largest = right
-            
-        if largest == idx:
-            break
-            
-        # Swap
-        tmp_h = heap_h[idx]
-        heap_h[idx] = heap_h[largest]
-        heap_h[largest] = tmp_h
-        
-        tmp_p = heap_p[idx]
-        heap_p[idx] = heap_p[largest]
-        heap_p[largest] = tmp_p
-        
-        idx = largest
-
 @njit(cache=True, nogil=True)
 def _radix_sort_records(records: npt.NDArray) -> npt.NDArray:
     """
@@ -474,38 +542,79 @@ def _radix_sort_records(records: npt.NDArray) -> npt.NDArray:
     return src
 
 @njit(parallel=True, cache=True, nogil=True)
-def _populate_minhash_kernel(
-        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.uint32], lengths: npt.NDArray[np.uint32],
-        lut: npt.NDArray[np.uint8], k: int, sketch_size: int, canonical: bool, bits_per_char: int,
-        out_offsets: npt.NDArray[np.uint32], out_counts: npt.NDArray[np.uint32],
-        out_records: npt.NDArray
+def _count_fracminhash_kernel(
+        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.int32], lengths: npt.NDArray[np.int32],
+        lut: npt.NDArray[np.uint8], k: int, scaled: int, canonical: bool, bits_per_char: int
+) -> npt.NDArray[np.uint32]:
+    n_seqs = len(offsets)
+    counts = np.zeros(n_seqs, dtype=np.uint32)
+    mask = (np.uint64(1) << np.uint64(bits_per_char * k)) - np.uint64(1)
+    max_val = np.uint64(1) << np.uint64(bits_per_char)
+    threshold = ~np.uint64(0) // np.uint64(scaled)
+
+    for idx in prange(n_seqs): # type: ignore
+        seq_len = lengths[idx]
+        if seq_len < k:
+            continue
+
+        seq_start = offsets[idx]
+        k_val_fwd = np.uint64(0)
+        k_val_rev = np.uint64(0)
+        valid_len = 0
+        n_hashes = 0
+
+        for j in range(seq_len):
+            char = seqs[seq_start + j]
+            val = np.uint64(lut[char])
+            
+            if val < max_val:
+                k_val_fwd = ((k_val_fwd << np.uint64(bits_per_char)) & mask) | val
+                valid_len += 1
+                
+                if canonical:
+                    comp = val ^ np.uint64(2)
+                    k_val_rev = (k_val_rev >> np.uint64(bits_per_char)) | (comp << np.uint64(bits_per_char * (k - 1)))
+                
+                if valid_len >= k:
+                    if canonical:
+                        h_val = min(k_val_fwd, k_val_rev)
+                    else:
+                        h_val = k_val_fwd
+                        
+                    h = _splitmix64(h_val)
+                    if h <= threshold:
+                        n_hashes += 1
+            else:
+                valid_len = 0
+                k_val_fwd = np.uint64(0)
+                k_val_rev = np.uint64(0)
+                
+        counts[idx] = n_hashes
+    return counts
+
+@njit(parallel=True, cache=True, nogil=True)
+def _populate_fracminhash_kernel(
+        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.int32], lengths: npt.NDArray[np.int32],
+        lut: npt.NDArray[np.uint8], k: int, scaled: int, canonical: bool, bits_per_char: int,
+        out_offsets: npt.NDArray[np.uint32], out_records: npt.NDArray
 ):
     n_seqs = len(offsets)
     mask = (np.uint64(1) << np.uint64(bits_per_char * k)) - np.uint64(1)
     max_val = np.uint64(1) << np.uint64(bits_per_char)
+    threshold = ~np.uint64(0) // np.uint64(scaled)
 
-    for idx in prange(n_seqs):
+    for idx in prange(n_seqs): # type: ignore
         seq_len = lengths[idx]
         if seq_len < k:
-            out_counts[idx] = 0
             continue
 
         seq_start = offsets[idx]
         out_s = out_offsets[idx]
         
-        # Thread-local heap buffer for intermediate max-heap
-        max_items = min(seq_len - k + 1, sketch_size)
-        heap_h = np.empty(max_items, dtype=np.uint64)
-        heap_p = np.empty(max_items, dtype=np.uint32)
-        
-        for j in range(max_items):
-            heap_h[j] = ~np.uint64(0)
-            heap_p[j] = np.uint32(0)
-            
-        heap_size = 0
         k_val_fwd = np.uint64(0)
         k_val_rev = np.uint64(0)
         valid_len = 0
+        written = 0
 
         for j in range(seq_len):
             char = seqs[seq_start + j]
@@ -521,53 +630,28 @@ def _populate_minhash_kernel(
                 
                 if valid_len >= k:
                     pos = j - k + 1
-                    
                     if canonical:
                         h_val = min(k_val_fwd, k_val_rev)
                     else:
                         h_val = k_val_fwd
                         
                     h = _splitmix64(h_val)
-                    
-                    if heap_size < max_items:
-                        heap_h[heap_size] = h
-                        heap_p[heap_size] = np.uint32(pos)
-                        heap_size += 1
-                        if heap_size == max_items:
-                            for p in range(max_items // 2 - 1, -1, -1):
-                                _sift_down(heap_h, heap_p, p, max_items)
-                    else:
-                        if h < heap_h[0]:
-                            heap_h[0] = h
-                            heap_p[0] = np.uint32(pos)
-                            _sift_down(heap_h, heap_p, 0, max_items)
+                    if h <= threshold:
+                        out_records[out_s + written]['hash'] = h
+                        out_records[out_s + written]['seq_idx'] = idx
+                        out_records[out_s + written]['pos1'] = pos
+                        written += 1
             else:
                 valid_len = 0
                 k_val_fwd = np.uint64(0)
                 k_val_rev = np.uint64(0)
-                
-        out_counts[idx] = heap_size
-        
-        # We need to extract from max-heap and sort it locally so the final sketch is sorted.
-        if heap_size > 0:
-            sort_idx = np.argsort(heap_h[:heap_size])
-            temp_h = heap_h[:heap_size].copy()
-            temp_p = heap_p[:heap_size].copy()
-            for j in range(heap_size):
-                heap_h[j] = temp_h[sort_idx[j]]
-                heap_p[j] = temp_p[sort_idx[j]]
-                
-        for j in range(heap_size):
-            out_records[out_s + j]['hash'] = heap_h[j]
-            out_records[out_s + j]['seq_idx'] = idx
-            out_records[out_s + j]['pos1'] = heap_p[j]
 
 @njit(parallel=True, cache=True, nogil=True)
 def _pack_kernel(
     read_offsets: npt.NDArray[np.uint32], write_offsets: npt.NDArray[np.uint32], counts: npt.NDArray[np.uint32],
     in_records: npt.NDArray, out_records: npt.NDArray
 ):
-    for idx in prange(len(counts)):
+    for idx in prange(len(counts)): # type: ignore
         c = counts[idx]
         if c > 0:
             r = read_offsets[idx]
@@ -576,13 +660,13 @@ def _pack_kernel(
 
 @njit(parallel=True, cache=True, nogil=True)
 def _count_randstrobes_kernel(
-        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.uint32], lengths: npt.NDArray[np.uint32],
+        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.int32], lengths: npt.NDArray[np.int32],
         lut: npt.NDArray[np.uint8], k: int, s: int, w_min: int
 ) -> npt.NDArray[np.uint32]:
     n_seqs = len(offsets)
     counts = np.zeros(n_seqs, dtype=np.uint32)
 
-    for idx in prange(n_seqs):
+    for idx in prange(n_seqs): # type: ignore
         seq_len = lengths[idx]
         if seq_len < k:
             continue
@@ -620,13 +704,13 @@ def _count_randstrobes_kernel(
 
 @njit(parallel=True, cache=True, nogil=True)
 def _populate_randstrobes_kernel(
-        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.uint32], lengths: npt.NDArray[np.uint32],
+        seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.int32], lengths: npt.NDArray[np.int32],
         lut: npt.NDArray[np.uint8], k: int, s: int, w_min: int, w_max: int, out_offsets: npt.NDArray[np.uint32],
         out_records: npt.NDArray
 ):
     n_seqs = len(offsets)
 
-    for idx in prange(n_seqs):
+    for idx in prange(n_seqs): # type: ignore
         seq_len = lengths[idx]
         if seq_len < k:
             continue
@@ -759,7 +843,7 @@ def _intersect_top_hit_kernel(
     max_s = np.zeros(num_queries, dtype=np.uint32)
     offsets = np.zeros(num_queries, dtype=np.int32)
 
-    for q_idx in prange(num_queries):
+    for q_idx in prange(num_queries): # type: ignore
         start, end = q_offsets[q_idx], q_offsets[q_idx + 1]
         if start == end: continue
 

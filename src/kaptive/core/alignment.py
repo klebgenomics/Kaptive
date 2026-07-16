@@ -1,4 +1,3 @@
-from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import IntEnum
@@ -8,6 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from numba import njit
 
+from kaptive.core.collections import BatchedContainer, RaggedArrayContainer
 from kaptive.core.interval import Intervals, Strand
 
 
@@ -52,7 +52,7 @@ class CigarOp(IntEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class Cigars:
+class Cigars(RaggedArrayContainer[npt.NDArray[np.uint32], 'Cigars']):
     """A high-performance, batched container for CIGAR data using a flat memory layout.
 
     Instead of storing CIGAR strings or lists of tuples for each alignment, this class concatenates all
@@ -226,12 +226,21 @@ class Alignment(NamedTuple):
     length: int
     match: int
     mismatch: int
+    score: int
     quality: int
     cigar: npt.NDArray[np.uint32]
+    is_primary: bool
+    is_supplementary: bool
+    is_spliced: bool
+    divergence: float
+    cs: bytes | None
+    md: bytes | None
+
+    from rammappy.align import Mapping
 
 
 @dataclass(frozen=True, slots=True)
-class Alignments:
+class Alignments(BatchedContainer[Alignment, 'Alignments']):
     """A high-performance, vectorized batch of alignment records.
 
     This class stores all data for a large collection of alignments in a Structure-of-Arrays (SoA)
@@ -257,6 +266,7 @@ class Alignments:
         lengths (npt.NDArray[np.int32]): Array of alignment block lengths.
         matches (npt.NDArray[np.int32]): Array of the number of matching bases.
         mismatches (npt.NDArray[np.int32]): Array of the number of mismatches.
+        scores (npt.NDArray[np.int32]): Array of alignment scores.
         qualities (npt.NDArray[np.uint8]): Array of mapping qualities (MAPQ).
         cigars (Cigars): The batched CIGAR data associated with these alignments.
     """
@@ -272,8 +282,15 @@ class Alignments:
     lengths: npt.NDArray[np.int32]
     matches: npt.NDArray[np.int32]
     mismatches: npt.NDArray[np.int32]
+    scores: npt.NDArray[np.int32]
     qualities: npt.NDArray[np.uint8]
     cigars: Cigars
+    is_primary: npt.NDArray[np.bool_]
+    is_supplementary: npt.NDArray[np.bool_]
+    is_spliced: npt.NDArray[np.bool_]
+    divergence: npt.NDArray[np.float64]
+    cs: npt.NDArray[np.object_]
+    md: npt.NDArray[np.object_]
 
     @property
     def q_aln_lens(self):
@@ -300,18 +317,6 @@ class Alignments:
         )
 
     @property
-    def scores(self):
-        return np.maximum(0, self.matches - self.mismatches)
-
-    @property
-    def q_weighted_matches(self):
-        return self.matches * self.q_covs
-
-    @property
-    def t_weighted_matches(self):
-        return self.matches * self.t_covs
-
-    @property
     def q_weighted_scores(self):
         return self.scores * self.q_covs
 
@@ -319,49 +324,81 @@ class Alignments:
     def t_weighted_scores(self):
         return self.scores * self.t_covs
 
+    @property
+    def minus_edit_distances(self):
+        return -self.mismatches
+
+    @property
+    def q_weighted_minus_edit_distances(self):
+        return self.minus_edit_distances * self.q_covs
+
+    @property
+    def minus_divergences(self):
+        return -self.divergence
+
+    @property
+    def q_weighted_minus_divergences(self):
+        return self.minus_divergences * self.q_covs
+
+    @property
+    def q_weighted_matches(self):
+        return self.matches * self.q_covs
+
+    @property
+    def identities(self):
+        return np.divide(
+            self.matches, self.lengths,
+            out=np.zeros_like(self.lengths, dtype=np.float64),
+            where=self.lengths > 0
+        )
+
+    @property
+    def q_weighted_identities(self):
+        return self.identities * self.q_covs
+
     def __len__(self) -> int:
         """Returns the number of alignments in the batch."""
         return len(self.q_starts)
 
     @classmethod
-    def from_mappy(cls, q_name: str, q_length: int, alignments: Iterable['mappy.Alignment']) -> 'Self':
-        """A factory method to create an Alignments from an iterable of `mappy.Alignment` objects.
-
-        This method efficiently extracts data from the `mappy` aligner's output format and populates
-        the NumPy arrays of the `Alignments`.
-
-        Args:
-            q_name (str): The name of the single query sequence that was aligned.
-            q_length (int): The length of the query sequence.
-            alignments (Iterable['mappy.Alignment']): An iterable of alignment objects from a `mappy` alignment result.
-
-        Returns:
-            Alignments: A new batch containing the alignment data.
-
-        Raises:
-            ValueError: If the `alignments` iterable is empty.
-        """
-        qn, ql, qs, qe, tn, tl, ts, te, st, bl, ml, nm, mq = [], [], [], [], [], [], [], [], [], [], [], [], []
+    def from_mapping_iterators(cls, queries: list[tuple[str, int]], iterators: Iterable['rammappy.align.MappingIterator']) -> Self:
+        """A factory method to create an Alignments from mapping iterators."""
+        qn, ql, qs, qe, tn, tl, ts, te, st, bl, ml, nm, sc, mq = [], [], [], [], [], [], [], [], [], [], [], [], [], []
+        ip, isu, isp, div, cs_list, md_list = [], [], [], [], [], []
         cigar_lists = []
 
-        for h in alignments:
-            qn.append(q_name)
-            ql.append(q_length)
-            qs.append(h.q_st)
-            qe.append(h.q_en)
-            tn.append(h.ctg)
-            tl.append(h.ctg_len)
-            ts.append(h.r_st)
-            te.append(h.r_en)
-            st.append(h.strand)
-            bl.append(h.blen)
-            ml.append(h.mlen)
-            nm.append(h.NM)
-            mq.append(h.mapq)
-            cigar_lists.append(np.array([(l << 4) | op for l, op in h.cigar], dtype=np.uint32))
+        for (q_name, q_length), it in zip(queries, iterators):
+            for h in it:
+                qn.append(q_name)
+                ql.append(q_length)
+                qs.append(h.query_start)
+                qe.append(h.query_end)
+                tn.append(h.target_name.decode('ascii'))
+                tl.append(h.target_len)
+                ts.append(h.target_start)
+                te.append(h.target_end)
+                st.append(1 if 'Forward' in repr(h.strand) else -1)
+                bl.append(h.block_len)
+                ml.append(h.matches)
+                nm.append(h.edit_distance)
+                sc.append(h.score)
+                mq.append(h.mapq)
+                
+                ip.append(h.is_primary)
+                isu.append(h.is_supplementary)
+                isp.append(h.is_spliced)
+                div.append(h.divergence)
+                cs_list.append(h.cs)
+                md_list.append(h.md)
+                
+                cigar_bytes = h.cigar
+                if cigar_bytes:
+                    cigar_lists.append(parse_cigar_string(cigar_bytes))
+                else:
+                    cigar_lists.append(np.empty(0, dtype=np.uint32))
 
         if not qn:
-            raise ValueError("Cannot initialize Alignments with empty alignments")
+            return cls.empty()
 
         return cls(
             q_names=np.array(qn, dtype=object),
@@ -376,12 +413,19 @@ class Alignments:
             lengths=np.array(bl, dtype=np.int32),
             matches=np.array(ml, dtype=np.int32),
             mismatches=np.array(nm, dtype=np.int32),
+            scores=np.array(sc, dtype=np.int32),
             qualities=np.array(mq, dtype=np.uint8),
-            cigars=Cigars.from_lists(cigar_lists)
+            cigars=Cigars.from_lists(cigar_lists),
+            is_primary=np.array(ip, dtype=bool),
+            is_supplementary=np.array(isu, dtype=bool),
+            is_spliced=np.array(isp, dtype=bool),
+            divergence=np.array(div, dtype=np.float64),
+            cs=np.array(cs_list, dtype=object),
+            md=np.array(md_list, dtype=object)
         )
 
     @classmethod
-    def concat(cls, batches: Iterable['Alignments']) -> 'Self':
+    def concat(cls, batches: Iterable['Alignments']) -> Self:
         """Concatenates multiple Alignments objects into a single, larger batch.
 
         Args:
@@ -409,7 +453,7 @@ class Alignments:
 
         return cls(**kwargs)
 
-    def __getitem__(self, item) -> Alignment | Alignments:
+    def __getitem__(self, item) -> 'Alignment | Alignments':
         """Accesses alignment records by index, slice, or boolean mask.
 
         - If `item` is an integer, it returns a single, lightweight `AlignmentRecord` view.
@@ -432,7 +476,10 @@ class Alignments:
                 q_start=self.q_starts[item], q_end=self.q_ends[item], t_name=self.t_names[item],
                 t_length=self.t_lengths[item], t_start=self.t_starts[item], t_end=self.t_ends[item],
                 strand=Strand(self.strands[item]), length=self.lengths[item], match=self.matches[item],
-                mismatch=self.mismatches[item], quality=self.qualities[item], cigar=self.cigars[item]
+                mismatch=self.mismatches[item], score=self.scores[item], quality=self.qualities[item], cigar=self.cigars[item],
+                is_primary=self.is_primary[item], is_supplementary=self.is_supplementary[item],
+                is_spliced=self.is_spliced[item], divergence=self.divergence[item],
+                cs=self.cs[item], md=self.md[item]
             )
             
         return Alignments(
@@ -440,7 +487,10 @@ class Alignments:
             q_ends=self.q_ends[item], t_names=self.t_names[item], t_lengths=self.t_lengths[item],
             t_starts=self.t_starts[item], t_ends=self.t_ends[item], strands=self.strands[item],
             lengths=self.lengths[item], matches=self.matches[item], mismatches=self.mismatches[item],
-            qualities=self.qualities[item], cigars=self.cigars[item]
+            scores=self.scores[item], qualities=self.qualities[item], cigars=self.cigars[item],
+            is_primary=self.is_primary[item], is_supplementary=self.is_supplementary[item],
+            is_spliced=self.is_spliced[item], divergence=self.divergence[item],
+            cs=self.cs[item], md=self.md[item]
         )
 
     def best(self, by_query: bool = True) -> 'Alignments':
@@ -449,7 +499,6 @@ class Alignments:
             return self
 
         names = self.q_names if by_query else self.t_names
-        scores = self.q_weighted_scores if by_query else self.t_weighted_scores
 
         _, name_ints = np.unique(names, return_inverse=True)
 
@@ -458,7 +507,7 @@ class Alignments:
         # Secondary: highest weighted score
         # Tertiary: most matching bases (tie-breaker 1)
         # Quaternary: highest MAPQ (tie-breaker 2)
-        order = np.lexsort((-self.qualities, -self.matches, -scores, name_ints))
+        order = np.lexsort((-self.qualities, -self.matches, -self.scores, name_ints))
 
         # Extract the first occurrence of each name using a highly optimized O(N) boundary mask
         name_sorted = name_ints[order]
@@ -474,7 +523,7 @@ class Alignments:
         return self[best_indices]
 
     def cull_overlaps(self, max_overlap_fraction: float = 0.1, group_by: np.ndarray | None = None,
-                      priority_mask: np.ndarray | None = None, by_query: bool = True) -> Alignments:
+                      priority_mask: np.ndarray | None = None, by_query: bool = True) -> "Alignments":
         """Greedily culls alignments that overlap significantly with higher-scoring alignments.
 
         This method is used to resolve redundant or ambiguous mappings. It sorts all alignments by score
@@ -519,12 +568,13 @@ class Alignments:
         if group_by is None:
             group_by = np.zeros(n, dtype=np.int32)
         
-        kept_mask = _cull_overlaps_kernel(
-            order, name_ints.astype(np.int32), starts, ends, group_by, max_overlap_fraction, n
+        kept_mask = self.to_intervals(by_query=by_query).cull_overlaps(
+            order=order, max_overlap_fraction=max_overlap_fraction,
+            group_by=name_ints, secondary_group_by=group_by
         )
         return self[kept_mask]
 
-    def swap_sides(self) -> Alignments:
+    def swap_sides(self) -> 'Alignments':
         """Returns a new batch with the roles of query and target swapped.
 
         This operation effectively flips the alignment. The original query becomes the new target,
@@ -548,8 +598,30 @@ class Alignments:
             lengths=self.lengths,
             matches=self.matches,
             mismatches=self.mismatches,
+            scores=self.scores,
             qualities=self.qualities,
-            cigars=self.cigars.swap_sides()
+            cigars=self.cigars.swap_sides(),
+            is_primary=self.is_primary,
+            is_supplementary=self.is_supplementary,
+            is_spliced=self.is_spliced,
+            divergence=self.divergence,
+            cs=self.cs,
+            md=self.md
+        )
+        
+    @classmethod
+    def empty(cls) -> 'Alignments':
+        return cls(
+            q_names=np.empty(0, dtype=object), q_lengths=np.empty(0, dtype=np.int32),
+            q_starts=np.empty(0, dtype=np.int32), q_ends=np.empty(0, dtype=np.int32),
+            t_names=np.empty(0, dtype=object), t_lengths=np.empty(0, dtype=np.int32),
+            t_starts=np.empty(0, dtype=np.int32), t_ends=np.empty(0, dtype=np.int32),
+            strands=np.empty(0, dtype=np.int8), lengths=np.empty(0, dtype=np.int32),
+            matches=np.empty(0, dtype=np.int32), mismatches=np.empty(0, dtype=np.int32),
+            scores=np.empty(0, dtype=np.int32), qualities=np.empty(0, dtype=np.int8), cigars=Cigars.empty(),
+            is_primary=np.empty(0, dtype=bool), is_supplementary=np.empty(0, dtype=bool),
+            is_spliced=np.empty(0, dtype=bool), divergence=np.empty(0, dtype=np.float64),
+            cs=np.empty(0, dtype=object), md=np.empty(0, dtype=object)
         )
 
     def to_intervals(self, by_query: bool = False) -> Intervals:
@@ -613,13 +685,14 @@ class Alignments:
         data = [
             (r.q_name, r.q_length, r.q_start, r.q_end, r.t_name, r.t_length,
              r.t_start, r.t_end, r.strand, r.length, r.match, r.mismatch,
-             r.quality)
+             r.quality, r.is_primary, r.is_supplementary, r.is_spliced, r.divergence, r.cs, r.md)
             for r in records
 
         ]
         if not data:
-            raise ValueError("Cannot initialize Alignments with empty records")
-        qn, ql, qs, qe, tn, tl, ts, te, st, bl, ml, nm, mq = zip(*data, strict=True)
+            return cls.empty()
+            
+        qn, ql, qs, qe, tn, tl, ts, te, st, bl, ml, nm, mq, ip, isu, isp, div, cs_list, md_list = zip(*data, strict=True)
         return cls(
             q_names=np.array(qn, dtype=object),
             q_lengths=np.array(ql, dtype=np.int32),
@@ -634,47 +707,17 @@ class Alignments:
             matches=np.array(ml, dtype=np.int32),
             mismatches=np.array(nm, dtype=np.int32),
             qualities=np.array(mq, dtype=np.uint8),
-            cigars=Cigars.from_lists([r.cigar for r in records])
+            cigars=Cigars.from_lists([r.cigar for r in records]),
+            is_primary=np.array(ip, dtype=bool),
+            is_supplementary=np.array(isu, dtype=bool),
+            is_spliced=np.array(isp, dtype=bool),
+            divergence=np.array(div, dtype=np.float64),
+            cs=np.array(cs_list, dtype=object),
+            md=np.array(md_list, dtype=object)
         )
 
 
 # Kernels --------------------------------------------------------------------------------------------------------------
-@njit(cache=True, nogil=True)
-def _cull_overlaps_kernel(order: npt.NDArray[np.int32], names: npt.NDArray[np.int32], starts: npt.NDArray[np.int32],
-                          ends: npt.NDArray[np.int32], groups: npt.NDArray[np.int32], max_overlap_fraction: float, n: int):
-    """Numba-accelerated greedy overlap culling."""
-    kept_mask = np.zeros(n, dtype=np.bool_)
-    
-    for i in range(n):
-        idx = order[i]
-        t = names[idx]
-        s = starts[idx]
-        e = ends[idx]
-        g = groups[idx]
-        length = e - s
-        
-        if length <= 0:
-            continue
-            
-        overlap_found = False
-        # Check against previously kept intervals in O(N^2) (Very fast in pure C)
-        for j in range(i):
-            prev_idx = order[j]
-            if not kept_mask[prev_idx] or names[prev_idx] != t or groups[prev_idx] != g:
-                continue
-                
-            ks, ke = starts[prev_idx], ends[prev_idx]
-            overlap = min(e, ke) - max(s, ks)
-            if overlap > 0 and (overlap / min(length, ke - ks)) > max_overlap_fraction:
-                overlap_found = True
-                break
-                
-        if not overlap_found:
-            kept_mask[idx] = True
-            
-    return kept_mask
-
-
 @njit(cache=True, nogil=True)
 def parse_cigar_string(cigar_bytes: bytes) -> npt.NDArray[np.uint32]:
     """Fast Numba parser converting a CIGAR byte-string to a BAM-encoded uint32 array."""

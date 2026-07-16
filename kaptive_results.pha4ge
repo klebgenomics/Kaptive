@@ -1,2 +1,0 @@
-sample	genotyping_schema_taxon	genotyping_database_name	genotyping_database_version	genotyping_software_version	genotype	genotype_confidence_value	genotype_predicted_phenotype	genotyping_details	genotyping_method	genotyping_schema_name	genotyping_software_name	genotyping_method_url
-GCF_006492865.1_ASM649286v1_genomic	Acinetobacter baumannii [NCBITaxon:470]	Acinetobacter_baumannii_K	0.0.1	3.2.2.dev25+g7f2e9ef87.d20260709	KL81	Typeable	K2	Problems: missing expected gene(s), uexpected gene(s) in locus	In silico serotyping	Kaptive	Kaptive	https://github.com/klebgenomics/Kaptive

@@ -1,6 +1,4 @@
-"""
-Module for performing pairwise protein alignments using a numba-powered banded Gotoh Smith-Waterman kernel.
-"""
+from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cache
 
@@ -8,6 +6,8 @@ import numpy as np
 import numpy.typing as npt
 from numba import njit, prange
 
+from kaptive.core.collections import BatchedContainer
+from kaptive.core.kmers import Seeds
 from kaptive.core.seq import Sequences
 
 # Constants ------------------------------------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ class PairwiseAlignment:
 
 
 @dataclass(frozen=True, slots=True)
-class PairwiseAlignments:
+class PairwiseAlignments(BatchedContainer['PairwiseAlignment', 'PairwiseAlignments']):
     """A high-performance SoA container for the results of multiple pairwise alignments.
 
     This class stores alignment statistics in a Structure-of-Arrays (SoA) layout using NumPy arrays.
@@ -161,7 +161,7 @@ class PairwiseAlignments:
         )
 
     @classmethod
-    def concat(cls, batches: list['PairwiseAlignments']) -> 'PairwiseAlignments':
+    def concat(cls, batches: Iterable['PairwiseAlignments']) -> 'PairwiseAlignments':
         """Concatenates multiple PairwiseAlignments collections into one."""
         if not batches:
             return cls.empty()
@@ -333,8 +333,8 @@ def _blosum62_matrix(fill_value: int = -128) -> npt.NDArray[np.int8]:
 # Kernels --------------------------------------------------------------------------------------------------------------
 @njit(parallel=True, cache=True, nogil=True)
 def _batched_banded_gotoh(
-        q_data: npt.NDArray[np.uint8], q_offsets: npt.NDArray[np.uint32], q_lengths: npt.NDArray[np.uint32],
-        t_data: npt.NDArray[np.uint8], t_offsets: npt.NDArray[np.uint32], t_lengths: npt.NDArray[np.uint32],
+        q_data: npt.NDArray[np.uint8], q_offsets: npt.NDArray[np.int32], q_lengths: npt.NDArray[np.int32],
+        t_data: npt.NDArray[np.uint8], t_offsets: npt.NDArray[np.int32], t_lengths: npt.NDArray[np.int32],
         matrix: npt.NDArray[np.int8], k: int, gap_open: int, gap_extend: int,
         is_seeded: bool, diagonal_offsets: npt.NDArray[np.int32],
         out_scores: npt.NDArray[np.int32], out_matches: npt.NDArray[np.int32],
@@ -342,7 +342,7 @@ def _batched_banded_gotoh(
         out_q_starts: npt.NDArray[np.int32], out_q_ends: npt.NDArray[np.int32],
         out_t_starts: npt.NDArray[np.int32], out_t_ends: npt.NDArray[np.int32]
 ):
-    for idx in prange(len(q_offsets)):
+    for idx in prange(len(q_offsets)): # type: ignore
         seq1 = q_data[q_offsets[idx]:q_offsets[idx] + q_lengths[idx]]
         seq2 = t_data[t_offsets[idx]:t_offsets[idx] + t_lengths[idx]]
 

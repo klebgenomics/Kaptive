@@ -12,13 +12,20 @@ from fnmatch import filter as fnmatch_filter
 from pathlib import Path
 from re import compile as re_compile
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING, Any
 from urllib.request import urlopen
+from collections.abc import Iterable
+
+if TYPE_CHECKING:
+    from kaptive.compare import LocusData
 
 import numpy as np
 import numpy.typing as npt
 
 from kaptive.core.interval import Intervals
 from kaptive.core.seq import SeqRecord, Sequences
+from kaptive.core.kmers import FracMinHashIndex
+from kaptive.core.collections import BatchedContainer
 
 
 # Exceptions and warnings ----------------------------------------------------------------------------------------------
@@ -125,7 +132,7 @@ class Phenotype:
 
 
 @dataclass(frozen=True, slots=True)
-class Phenotypes:
+class Phenotypes(BatchedContainer[Any, 'Phenotypes']):
     """A Structure-of-Arrays (SoA) container for vectorized phenotype evaluation."""
     ids: tuple[str, ...]
     locus_masks: npt.NDArray[np.bool_]
@@ -136,6 +143,43 @@ class Phenotypes:
 
     def __len__(self) -> int:
         return len(self.ids)
+
+    def __getitem__(self, item: int | slice | npt.NDArray | list) -> 'Any | Phenotypes':
+        if isinstance(item, (int, np.integer)):
+            raise NotImplementedError("Single item access not implemented for Phenotypes")
+        return Phenotypes(
+            ids=tuple(np.array(self.ids, dtype=object)[item]),
+            locus_masks=self.locus_masks[item],
+            extra_masks=self.extra_masks[item],
+            inactive_masks=self.inactive_masks[item],
+            priorities=self.priorities[item],
+            as_suffix=self.as_suffix[item]
+        )
+
+    @classmethod
+    def empty(cls) -> 'Phenotypes':
+        return cls(
+            ids=(),
+            locus_masks=np.empty((0, 0), dtype=bool),
+            extra_masks=np.empty((0, 0), dtype=bool),
+            inactive_masks=np.empty((0, 0), dtype=bool),
+            priorities=np.empty(0, dtype=np.int32),
+            as_suffix=np.empty(0, dtype=bool)
+        )
+
+    @classmethod
+    def concat(cls, batches: Iterable['Phenotypes']) -> 'Phenotypes':
+        batches = list(batches)
+        if not batches:
+            return cls.empty()
+        return cls(
+            ids=tuple(x for b in batches for x in b.ids),
+            locus_masks=np.concatenate([b.locus_masks for b in batches]),
+            extra_masks=np.concatenate([b.extra_masks for b in batches]),
+            inactive_masks=np.concatenate([b.inactive_masks for b in batches]),
+            priorities=np.concatenate([b.priorities for b in batches]),
+            as_suffix=np.concatenate([b.as_suffix for b in batches])
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -208,6 +252,8 @@ class Database:
             (1-indexed) of the gene within its locus. Set to 0 for extra genes.
         phenotypes (Phenotypes): A vectorized SoA batch dictating how serotypes are assigned based on
             locus and gene presence/absence logic.
+        loci_sketches (FracMinHashIndex): Precomputed FracMinHash sketches for all loci, used for
+            rapid containment testing in Stage 2 of serotyping.
     """
     metadata: DatabaseMetadata
     loci: Sequences
@@ -225,6 +271,21 @@ class Database:
     gene_description_ids: npt.NDArray[np.uint16]
     gene_positions: npt.NDArray[np.uint16]
     phenotypes: Phenotypes
+    loci_sketches: 'FracMinHashIndex'
+
+    def get_locus_data(self, locus_name: str) -> 'LocusData':
+        from kaptive.compare import LocusData
+        locus_idx = self.loci.ids.index(locus_name)
+        start = self.locus_gene_offsets[locus_idx]
+        length = self.locus_gene_lengths[locus_idx]
+        
+        return LocusData(
+            proteins=self.translations[start:start+length],
+            name=locus_name,
+            backbone=self.gene_intervals[start:start+length],
+            pieces=None,
+            gene_ctg_indices=None
+        )
 
     @property
     def max_locus_length(self) -> int:
@@ -547,6 +608,7 @@ class Database:
                 priorities=priorities,
                 as_suffix=as_suffix
             ),
+            loci_sketches=FracMinHashIndex.build(loci, sort_by_hash=False)
         )
 
 
