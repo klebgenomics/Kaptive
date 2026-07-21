@@ -24,14 +24,14 @@ from .utils import check_file
 _LOCUS_REGEX = re.compile(r'(?<=locus:)\w+|(?<=locus: ).*')
 _TYPE_REGEX = re.compile(r'(?<=type:)\w+|(?<=type: ).*')
 _DB_KEYWORDS = {
-    'Klebsiella_k_locus_primary_reference': ['kpsc_k', 'kp_k', 'k_k'],
-    'Klebsiella_o_locus_primary_reference': ['kpsc_o', 'kp_o', 'k_o'],
+    'Klebsiella_pneumoniae_SC_K': ['kpsc_k', 'kp_k', 'k_k'],
+    'Klebsiella_pneumoniae_SC_O': ['kpsc_o', 'kp_o', 'k_o'],
     'Acinetobacter_baumannii_k_locus_primary_reference': ['ab_k'],
     'Acinetobacter_baumannii_OC_locus_primary_reference': ['ab_o']
 }
 _GENE_THRESHOLDS = {
-    'Klebsiella_k_locus_primary_reference': 82.5,
-    'Klebsiella_o_locus_primary_reference': 82.5,
+    'Klebsiella_pneumoniae_SC_K': 82.5,
+    'Klebsiella_pneumoniae_SC_O': 82.5,
     'Acinetobacter_baumannii_k_locus_primary_reference': 85,
     'Acinetobacter_baumannii_OC_locus_primary_reference': 85
 }
