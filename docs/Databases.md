@@ -217,7 +217,7 @@ the existing databases, please let us know!
 ### *Klebsiella pneumoniae* Species Complex (KpSC) K locus databases
 
 The KpSC K locus reference database
-(`Klebsiella_k_locus_primary_reference.gbk`) comprises full-length
+(`Klebsiella_pneumoniae_SC_K.gbk`) comprises full-length
 (*galF* to *ugd*) annotated sequences for each distinct *Klebsiella* K
 locus, where available:
 
@@ -271,7 +271,7 @@ Database versions:
   annotations with a variety of homology detection methods to provide a
   more accurate functional description and standardised gene nomenclature.
 
-Changes to the *Klebsiella* K locus primary reference database:
+Changes to the KpSC K locus primary reference database:
 
 | Locus | Change | Reason | Date of change | Kaptive version no. |
 |----|----|----|----|----|
@@ -280,11 +280,11 @@ Changes to the *Klebsiella* K locus primary reference database:
 | KL37 | Removed from the database | Locus is a deletion (atr) variant of KL22 | 22 March 2024 | v 3.0.0 |
 | All | Updated gene names and functional annotations | Database standardisation | March 2026 | v3.2.0 |
 
-### *Klebsiella* O locus database
+### *Klebsiella pneumoniae* Species Complex (KpSC) O locus database
 
 In Kaptive 3.1.0, we introduced new O-antigen nomenclature in the
 *Klebsiella* O locus database
-(`Klebsiella_o_locus_primary_reference.gbk`) along wth the publication
+(`Klebsiella_pneumoniae_SC_O.gbk`) along wth the publication
 of this review: [O-antigen polysaccharides in Klebsiella pneumoniae:
 structures and molecular basis for antigenic
 diversity](https://journals.asm.org/doi/full/10.1128/mmbr.00090-23#T1).
@@ -293,9 +293,9 @@ We have also summarised the O-antigen nomenclature update on the [Wyres
 Lab
 website](http://wyreslab.com/klebsiella-pneumoniae-o-antigen-genetics-structural-diversity-and-nomenclature/).
 
-The *Klebsiella* O locus database
-(`Klebsiella_o_locus_primary_reference.gbk`) contains annotated
-sequences for 13 distinct *Klebsiella* O loci.
+The KpSC O locus database
+(`Klebsiella_pneumoniae_SC_O.gbk`) contains annotated
+sequences for 13 distinct KpSC O loci.
 
 O locus classification requires some special logic, as the O1 and O2
 serotypes are associated with the same loci and the distinction between
