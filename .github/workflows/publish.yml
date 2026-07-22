@@ -25,16 +25,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: "3.x"
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
 
       - name: Build release distributions
-        run: |
-          # NOTE: put your own distribution build steps here.
-          python -m pip install build twine
-          python -m build
-          python -m twine check dist/*
+        run: just build
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
@@ -57,6 +57,16 @@ jobs:
       url: https://pypi.org/p/kaptive
 
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Retrieve release distributions
         uses: actions/download-artifact@v4
         with:
@@ -64,6 +74,4 @@ jobs:
           path: dist/
 
       - name: Publish release distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
+        run: just publish

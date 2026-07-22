@@ -1,3 +1,8 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["semver", "tomlkit"]
+# ///
+
 import argparse
 import semver
 import tomlkit

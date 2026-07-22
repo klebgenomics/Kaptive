@@ -38,7 +38,7 @@ class Colors:
 
 
 class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom formatter to add sexy ANSI colors to argparse output!"""
+    """Custom formatter to add ANSI colors to argparse output!"""
 
     def _format_usage(self, usage, actions, groups, prefix):
         # Filter out optional actions to cleanly generate the positional usage string
@@ -729,16 +729,15 @@ class Type(Command):
         db = Database.load(args.database)
         exporter = ResultExporter(self.cli, args)
 
-        with Serotyper(
+        serotyper = Serotyper(
             db=db,
             max_other_genes=args.max_other_genes,
             min_completeness=args.min_completeness,
             allow_below_threshold=args.below_threshold,
-            max_workers=args.threads if args.threads > 0 else None,
-        ) as serotyper:
-            for genome in self.cli.progress(args.genomes, "💉 Serotyping genomes..."):
-                if result := serotyper(genome):
-                    exporter(result)
+        )
+        for genome in self.cli.progress(args.genomes, "💉 Serotyping genomes..."):
+            if result := serotyper(genome):
+                exporter(result)
 
         self.cli.msg(f"✅ Serotyping complete. Results written to '{args.out}'.")
 

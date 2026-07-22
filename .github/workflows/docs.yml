@@ -1,25 +1,76 @@
-name: docs
+name: Deploy docs to GitHub Pages
+
 on:
   push:
     branches:
       - master
       - main
+
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.x'
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
 
-      - name: Install dependencies
-        run: python -m pip install . --group docs
+      - name: Install just
+        uses: extractions/setup-just@v2
 
-      - name: Deploy documentation
-        run: mkdocs gh-deploy --force
+      - name: Install package and dependencies
+        run: just install
+
+      - name: Fetch Latest Announcement
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python fetch_announcement.py
+
+      - name: Generate DeepL API Config
+        run: |
+          echo "window.DEEPL_API_KEY = '${{ secrets.DEEPL_API_KEY }}';" > docs/javascripts/deepl-api-config.js
+
+      - name: Build docs
+        run: just docs-build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'site'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
+
+
+
+
+
+
+
+

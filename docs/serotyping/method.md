@@ -1,60 +1,18 @@
-# Serotyping with Kaptive
+---
+title: Serotyping with Kaptive
+author: Tom Stanton
+comments: true
+tags: [serotyping]
+icon: lucide/syringe
+categories:
+  - Serotyping
+---
 
 ## Serotyping Overview
 
-The `Serotyper.__call__` method executes a highly-optimized, multi-phase pipeline to analyze a genome assembly and produce a serotyping result. 
-The following sequence diagram details these phases:
+The [`Serotyper`](api.md#kaptive.serotyping.Serotyper) executes a highly-optimized, multi-phase pipeline to analyze a
+genome assembly and produce a [SerotypingResult](api.md#kaptive.serotyping.SerotypingResult). 
 
-```plantuml
-@startuml
-!theme superhero
-
-start
-
-:Receive **GenomeAssembly**;
-
-partition "1. Map Phase" {
-  :Align Contigs to Database Genes\nusing **Mappy**;
-  :Swap Alignment Sides\n(Query to Target);
-  :Generate **Alignments** (raw);
-}
-
-partition "2. Scoring Phase" {
-  :Select Best Alignment per Database Gene;
-  :Calculate Locus Core Scores;
-  :Calculate Locus Completeness;
-  :Select **Best Match Locus**;
-}
-
-partition "3. Reconstruction Phase" {
-  :Cull Overlapping Alignments\n(Prioritize Best Locus);
-  :Cluster Alignments Spatially;
-  :Identify **Locus Bounding Pieces**;
-}
-
-partition "4. Locus Extraction Phase" {
-  :Extract Locus Nucleotide Sequences;
-  :Calculate Assembly Coverage & Length Discrepancy;
-}
-
-partition "5. Gene State Phase" {
-  :Extract Gene Nucleotide Sequences;
-  :Translate to Amino Acids;
-  :Align to Reference Proteins\nusing **kaptive.core.pairwise**;
-  :Assign **Gene States**\n(NORMAL, NOVEL, PARTIAL, TRUNCATED);
-}
-
-partition "6. Phenotype Evaluation Phase" {
-  :Determine Active Gene Clusters;
-  :Evaluate Database Phenotype Rules\n(Boolean Presence/Absence);
-  :Apply Suffixes & Replacements to\n**Base Phenotype**;
-}
-
-:Generate **SerotypingResult**;
-
-stop
-@enduml
-```
 
 ## Locus Scoring Algorithm
 
@@ -66,6 +24,7 @@ When Kaptive analyses a genome, it first attempts to find matches for every gene
 $$S_{gene} = \text{Identity} \times \frac{\text{Alignment Length}}{\text{Expected Gene Length}}$$
 
 *Where:*
+
 * **Identity:** The fraction of matching nucleotides between the genome sequence and the database gene.
 * **Alignment Length:** The length of the matching region.
 * **Expected Gene Length:** The full length of the gene as defined in the database.
@@ -80,6 +39,7 @@ To solve this, Kaptive applies an **Inverse Document Frequency (IDF)** weight to
 $$W_{gene} = \log_2\left(\frac{N_{loci}}{N_{loci\_containing\_gene}}\right) + 1.0$$
 
 *Where:*
+
 * $N_{loci}$ is the total number of distinct loci in the database.
 * $N_{loci\_containing\_gene}$ is the number of loci that contain this specific gene or a highly homologous variant of it.
 * The $+ 1.0$ ensures that even the most universally conserved core genes still contribute a baseline value to the score.
@@ -124,6 +84,7 @@ Kaptive uses a highly-optimized Boolean rule engine to apply these nuanced biolo
 Before any phenotype rules can be evaluated, Kaptive must assess the "health" of every gene found in the locus. 
 
 Each gene is translated into its corresponding amino acid sequence and aligned to the database reference. Based on this alignment, it is assigned a **Gene State**:
+
 * **NORMAL**: The gene is fully intact and its sequence identity exceeds the database's minimum identity threshold.
 * **PARTIAL**: The gene was cut off by the edge of a fragmented assembly contig. Because we cannot know if the missing portion is intact, we assume it is functional for the sake of caution.
 * **TRUNCATED**: The gene contains a premature stop codon, frameshift, or massive internal deletion, indicating it is definitively broken.

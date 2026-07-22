@@ -39,9 +39,6 @@ json = ["orjson"]
 test = ["kaptive[plot,json]", "pytest>=9.0.0", "pytest-cov"]
 docs = ["kaptive[plot,json]", "zensical", "mkdocstrings[python]"]
 dev = [
-    "black>=26.5.1",
-    "ruff>=0.15.20",
-    "ty>=0.0.57",
     { include-group = "test" },
     { include-group = "docs" },
 ]

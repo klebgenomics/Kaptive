@@ -1,74 +1,130 @@
-site_name = "Kaptive Documentation"
-repo_url = "https://github.com/klebgenomics/Kaptive"
-site_url = "https://klebgenomics.github.io/Kaptive"
+[project]
+site_name = "Kaptive Docs"
 site_description = "The tool for _in silico_ serotyping"
+site_url = "https://klebgenomics.github.io/Kaptive"
 site_author = "Tom Stanton"
-edit_uri = "edit/main/docs/"
+repo_url = "https://github.com/klebgenomics/Kaptive"
 repo_name = "klebgenomics/Kaptive"
-copyright = "2026, Tom Stanton, Kathryn Holt and Kelly Wyres"
-watch = ["zensical.toml", "README.md", "src"]
+edit_uri = "edit/master/docs/"
+language = "en"
+copyright = """
+Copyright &copy; 2026 <a href="https://tomdstanton.com" target="_blank">Tom Stanton</a>
+"""
+docs_dir = "docs"
+site_dir = "site"
+watch = ["src"]
 
 nav = [
-  { Home = "index.md" },
-  { Installation = "Installation.md" },
-  { Usage = "Usage.md" },
-  { Method = "Method.md" },
-  { Outputs = "Outputs.md" },
-  { "Interpreting the Results" = "Interpreting-the-results.md" },
-  { Databases = "Databases.md" },
-  { FAQs = "FAQs.md" }
+{ "Home" = "index.md" },
+"installation.md",
+  { Databases = [
+    "db/overview.md",
+    "db/curation.md",
+    "db/creation.md",
+    { "CLI Usage" = "db/cli.md" },
+    { "API Reference" = "db/api.md" },
+  ] },
+  { Serotyping = [
+    "serotyping/method.md",
+    "serotyping/outputs.md",
+    "serotyping/results.md",
+    { "CLI Usage" = "serotyping/cli.md" },
+    { "API Reference" = "serotyping/api.md" },
+    "serotyping/faqs.md",
+  ] },
+  { "Kaptive-Web" = [
+    "kaptive_web/installation.md"
+  ] },
+{ "Development" = [
+    "dev/conduct.md",
+    "dev/contributing.md",
+  ] },
 ]
 
 plugins = [
   "search",
   { mkdocstrings = { handlers = { python = { options = { docstring_style = "google" } } } } },
   { api-autonav = { modules = ["src/kaptive"], nav_section_title = "API Reference" } },
+  { reading-time = { words_per_minute = 200 } },
   "include-markdown",
-  "offline"
+  "offline",
 ]
 
-extra_css = [
-  "stylesheets/extra.css"
+extra_javascript = [
+    "javascripts/mathjax.js",
+    "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
+    "javascripts/deepl-config.js",
+    "javascripts/deepl-translate.js",
+    "javascripts/deepl-api-config.js", # Dynamically generated configuration containing the key
 ]
 
-markdown_extensions = [
-  { toc = { permalink = true, title = "On this page" } },
-  { "pymdownx.arithmatex" = { generic = true } },
-  "admonition",
-  "footnotes"
-]
-
-[theme]
+[project.theme]
 name = "material"
 logo = "assets/logo.png"
 favicon = "assets/favicon.png"
-features = [
-  "navigation.tabs",
-  "toc.follow",
-  "content.action.edit",
-  "toc.integrate"
+custom_dir = "overrides"
+icon.repo = "fontawesome/brands/github"
+font.text = "Roboto Slab" #"DM Sans"
+font.code = "JetBrains Mono"
+
+palette = [
+    { media = "(prefers-color-scheme)", toggle = { icon = "lucide/sun-moon", name = "Switch to light mode" } },
+    { media = "(prefers-color-scheme: light)", scheme = "default", toggle = { icon = "lucide/sun", name = "Switch to dark mode" }, primary = "purple", accent = "purple" },
+    { media = "(prefers-color-scheme: dark)", scheme = "slate", toggle = { icon = "lucide/moon", name = "Switch to system preference" }, primary = "purple", accent = "purple" }
 ]
 
-# Palette toggle for light mode
-[[theme.palette]]
-scheme = "custom"
+features = [
+    "announce.dismiss",
+    "content.action.edit",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "header.autohide",
+    "navigation.top",
+    "navigation.footer",
+    "navigation.tabs",
+    "navigation.tracking",
+    "navigation.sections",
+    "navigation.expand",
+    "navigation.instant",
+    "navigation.instant.progress",
+    "search.suggest",
+    "search.highlight",
+    "search.share",
+    "toc.follow",
+    "toc.integrate",
+]
 
-[theme.palette.toggle]
-icon = "material/brightness-7"
-name = "Switch to dark mode"
+[project.extra]
+social = [
+    { icon = "lucide/mail", link = "mailto:kaptive.typing@gmail.com" },
+    { icon = "simple/pypi", link = "https://pypi.org/project/kaptive" },
+    { icon = "simple/anaconda", link = "https://anaconda.org/bioconda/kaptive" },
+    { icon = "lucide/book-open-text", link = "https://klebgenomics.github.io/Kaptive" },
+    { icon = "lucide/globe", link = "https://kaptive-web.erc.monash.edu/" },
+]
+alternate = [
+    { name = "Español", link = "#deepl-translate-es", lang = "es" },
+    { name = "Français", link = "#deepl-translate-fr", lang = "fr" },
+    { name = "中文", link = "#deepl-translate-zh", lang = "zh" },
+    { name = "日本語", link = "#deepl-translate-ja", lang = "ja" },
+]
 
-# Palette toggle for dark mode
-[[theme.palette]]
-scheme = "custom"
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+footnotes = {}
+md_in_html = {}
+toc = { permalink = true, title = "On this page" }
 
-[theme.palette.toggle]
-icon = "material/brightness-4"
-name = "Switch to light mode"
+"pymdownx.arithmatex" = { generic = true }
+"pymdownx.details" = {}
+"pymdownx.emoji" = { emoji_index = "zensical.extensions.emoji.twemoji", emoji_generator = "zensical.extensions.emoji.to_svg" }
+"pymdownx.highlight" = { anchor_linenums = true, use_pygments = true }
+"pymdownx.inlinehilite" = {}
+"pymdownx.snippets" = { base_path = ["."] }
+"pymdownx.superfences" = { custom_fences = [ { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" } ] }
+"pymdownx.tabbed" = { alternate_style = true }
 
-[[extra.social]]
-icon = "fontawesome/brands/github"
-link = "https://github.com/klebgenomics/Kaptive"
-
-[[extra.social]]
-icon = "fontawesome/brands/python"
-link = "https://pypi.org/project/kaptive"
+"zensical.extensions.glightbox" = {}

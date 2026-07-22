@@ -1,4 +1,12 @@
-# FAQs
+---
+title: FAQs
+author: Tom Stanton
+comments: true
+tags: [serotyping, FAQ]
+icon: lucide/circle-question-mark
+categories:
+  - Serotyping
+---
 
 <a id="fragmented-klebs-faq"></a>
 
@@ -22,7 +30,7 @@ gene to count it for locus assignment.
 A small number of the original *Klebsiella* K locus references are
 truncated, containing only a partial *ugd* sequence. The reference
 annotations for these loci do not include *ugd*, so are not identified
-by the 'tblastn' search. Instead \<b\>Kaptive\</b\> reports the closest
+by the 'tblastn' search. Instead **Kaptive** reports the closest
 match to the partial sequence (if it exceeds the 90% coverage
 threshold).
 

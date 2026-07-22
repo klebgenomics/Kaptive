@@ -1,7 +1,15 @@
-# Interpreting the results
+---
+title: Interpreting the Results
+author: Tom Stanton
+comments: true
+tags: [serotyping, CLI]
+icon: lucide/microscope
+categories:
+  - Serotyping
+---
 
 The four most important columns in the Kaptive
-[tabular](Outputs.md#tabular) output:
+[tabular](api.md#kaptive.serotyping.KaptiveRow) output:
 
 - `Best match locus` indicating the locus that is best supported by the
   available sequence data
@@ -26,13 +34,13 @@ The four most important columns in the Kaptive
 
 Kaptive will indicate the best matching locus and its confidence in the
 locus match. The critera mentioned below can be tweaked using the
-[confidence options](Usage.md#confidence-options).
+[confidence options](cli.md).
 
 ### Typeable loci
 
 The locus was found in a single piece in the query assembly with no
 genes below the minimum translated identity according to the [locus
-thresholds](Databases.md#locus-definition) and:
+thresholds](../db/overview.md#locus-definition) and:
 
 - no missing genes
 - no (non-truncated) unexpected genes (genes from other loci) inside the
@@ -42,7 +50,7 @@ thresholds](Databases.md#locus-definition) and:
 
 The locus was found in more than one piece in the query assembly with no
 genes below the minimum translated identity according to the [locus
-thresholds](Databases.md#locus-definition) and:
+thresholds](../db/overview.md#locus-definition) and:
 
 - no less than N% missing genes (default: 50%)
 - no more than N unexpected gene (genes from other loci) inside the
@@ -60,7 +68,7 @@ fragmented, because it can be difficult to distinguish genuine from
 spurious matches for fragmented genes. Fragmentation is common among *K.
 pneumoniae* K loci, particularly when the genomes were sequenced using
 the Illumina technology with the Illumina XT library prep (see
-[FAQs](FAQs.md#fragmented-klebs-faq) for more details).
+[FAQs](faqs.md#fragmented-klebs-faq) for more details).
 
 ### Untypeable loci
 
@@ -93,7 +101,7 @@ variation in more detail. Interesting features include:
   discrepancies of \>700bp often indicate insertion sequence insertions
   resulting in so called 'IS variants' of the locus.
 - Other genes inside the locus may indicate a novel locus (with some
-  exceptions, see the [FAQs](FAQs.md#extra-genes-faq))
+  exceptions, see the [FAQs](faqs.md#extra-genes-faq))
 - Truncated genes may have an impact on the resultant phenotype. Kaptive
   will consider truncations when reporting predicting phenotypes, but it
   currently considers only gene truncations for which there is good

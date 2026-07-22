@@ -35,7 +35,7 @@ categories:
 === "pixi"
 
     ```bash
-    pixi add kaptive
+    pixi install -c bioconda kaptive
     ```
 
 

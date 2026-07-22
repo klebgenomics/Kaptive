@@ -345,7 +345,7 @@ class Sequences(RaggedArrayContainer['SeqRecord', 'Sequences']):
             new_ids=new_ids
         )
 
-    def translate(self, frames: npt.NDArray[np.int8] | None = None) -> 'Sequences':
+    def translate(self, frames: npt.NDArray[np.int8] | None = None, to_stop: bool = False) -> 'Sequences':
         """Vectorized translation of nucleotide sequences into protein sequences.
 
         This method uses a highly optimized Numba kernel and lookup tables to translate
@@ -355,6 +355,7 @@ class Sequences(RaggedArrayContainer['SeqRecord', 'Sequences']):
         Args:
             frames (npt.NDArray[np.int8], optional): An array specifying the reading frame offset
                 (0, 1, or 2) for each sequence. If None, frame 0 is used for all. Defaults to None.
+            to_stop (bool): If True, truncates each sequence at the first stop codon.
 
         Returns:
             Sequences: A new collection containing the translated amino acid sequences.
@@ -365,7 +366,7 @@ class Sequences(RaggedArrayContainer['SeqRecord', 'Sequences']):
             frames = np.zeros(len(self), dtype=np.int8)
         out_seqs, offsets, lengths = _translate_ragged_kernel(
             self.seqs, self.offsets, self.lengths, frames,
-            BacterialTranslationTable._CHAR_MAP, BacterialTranslationTable._CODON_MAP
+            BacterialTranslationTable._CHAR_MAP, BacterialTranslationTable._CODON_MAP, to_stop
         )
         return Sequences(self.ids, out_seqs, offsets, lengths)
 
@@ -411,14 +412,14 @@ class BacterialTranslationTable:
     _COMP_MAP.flags.writeable = False
 
     @classmethod
-    def translate(cls, seq: bytes | bytearray | memoryview | npt.NDArray[np.uint8]) -> 'npt.NDArray[np.uint8]':
+    def translate(cls, seq: bytes | bytearray | memoryview | npt.NDArray[np.uint8], to_stop: bool = False) -> 'npt.NDArray[np.uint8]':
         if len(seq) < 3:
             return np.array([], dtype=np.uint8)
 
         if not isinstance(seq, np.ndarray):
             seq = np.ascontiguousarray(np.frombuffer(seq, np.uint8))
 
-        return _translate_kernel(seq, cls._CHAR_MAP, cls._CODON_MAP)
+        return _translate_kernel(seq, cls._CHAR_MAP, cls._CODON_MAP, to_stop)
 
     @classmethod
     def is_coding(cls, seq: bytes) -> 'bool':
@@ -448,8 +449,21 @@ def _hash_sequences_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.
 
 @njit(cache=True, nogil=True, parallel=True)
 def _translate_kernel(seq_arr: npt.NDArray[np.uint8], char_map: npt.NDArray[np.uint8],
-                      codon_map: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
-    n_codons = len(seq_arr) // 3
+                      codon_map: npt.NDArray[np.uint8], to_stop: bool) -> npt.NDArray[np.uint8]:
+    max_codons = len(seq_arr) // 3
+    if to_stop:
+        n_codons = 0
+        for i in range(max_codons):
+            c1 = char_map[seq_arr[i * 3]]
+            c2 = char_map[seq_arr[i * 3 + 1]]
+            c3 = char_map[seq_arr[i * 3 + 2]]
+            idx = c1 * 25 + c2 * 5 + c3
+            if codon_map[idx] == 42:
+                break
+            n_codons += 1
+    else:
+        n_codons = max_codons
+        
     out = np.empty(n_codons, dtype=np.uint8)
     for i in prange(n_codons): # type: ignore
         c1 = char_map[seq_arr[i * 3]]
@@ -500,7 +514,8 @@ def _extract_ragged_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.
 @njit(cache=True, nogil=True, parallel=True)
 def _translate_ragged_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[np.int32],
                              lengths: npt.NDArray[np.int32], frames: npt.NDArray[np.int8],
-                             char_map: npt.NDArray[np.uint8], codon_map: npt.NDArray[np.uint8]):
+                             char_map: npt.NDArray[np.uint8], codon_map: npt.NDArray[np.uint8],
+                             to_stop: bool):
     n = len(offsets)
     out_lengths = np.empty(n, dtype=np.int32)
     total_len = 0
@@ -509,7 +524,19 @@ def _translate_ragged_kernel(seqs: npt.NDArray[np.uint8], offsets: npt.NDArray[n
         f = frames[i]
         if l > f:
             adj_len = l - f
-            out_lengths[i] = adj_len // 3 if adj_len >= 3 else 0
+            max_codons = adj_len // 3 if adj_len >= 3 else 0
+            if to_stop:
+                n_codons = 0
+                ptr = offsets[i] + f
+                for c in range(max_codons):
+                    c1, c2, c3 = char_map[seqs[ptr]], char_map[seqs[ptr + 1]], char_map[seqs[ptr + 2]]
+                    if codon_map[c1 * 25 + c2 * 5 + c3] == 42:
+                        break
+                    n_codons += 1
+                    ptr += 3
+                out_lengths[i] = n_codons
+            else:
+                out_lengths[i] = max_codons
         else:
             out_lengths[i] = 0
         total_len += out_lengths[i]
