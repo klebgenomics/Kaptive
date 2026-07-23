@@ -270,11 +270,13 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
         qualities (npt.NDArray[np.uint8]): Array of mapping qualities (MAPQ).
         cigars (Cigars): The batched CIGAR data associated with these alignments.
     """
-    q_names: npt.NDArray[np.object_]
+    q_name_ids: npt.NDArray[np.int32]
+    q_names_dict: tuple[str, ...]
     q_lengths: npt.NDArray[np.int32]
     q_starts: npt.NDArray[np.int32]
     q_ends: npt.NDArray[np.int32]
-    t_names: npt.NDArray[np.object_]
+    t_name_ids: npt.NDArray[np.int32]
+    t_names_dict: tuple[str, ...]
     t_lengths: npt.NDArray[np.int32]
     t_starts: npt.NDArray[np.int32]
     t_ends: npt.NDArray[np.int32]
@@ -291,6 +293,15 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
     divergence: npt.NDArray[np.float64]
     cs: npt.NDArray[np.object_]
     md: npt.NDArray[np.object_]
+
+
+    @property
+    def q_names(self):
+        return np.array([self.q_names_dict[i] for i in self.q_name_ids], dtype=object)
+
+    @property
+    def t_names(self):
+        return np.array([self.t_names_dict[i] for i in self.t_name_ids], dtype=object)
 
     @property
     def q_aln_lens(self):
@@ -315,47 +326,6 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
             out=np.zeros_like(self.t_lengths, dtype=np.float64),
             where=self.t_lengths > 0
         )
-
-    @property
-    def q_weighted_scores(self):
-        return self.scores * self.q_covs
-
-    @property
-    def t_weighted_scores(self):
-        return self.scores * self.t_covs
-
-    @property
-    def minus_edit_distances(self):
-        return -self.mismatches
-
-    @property
-    def q_weighted_minus_edit_distances(self):
-        return self.minus_edit_distances * self.q_covs
-
-    @property
-    def minus_divergences(self):
-        return -self.divergence
-
-    @property
-    def q_weighted_minus_divergences(self):
-        return self.minus_divergences * self.q_covs
-
-    @property
-    def q_weighted_matches(self):
-        return self.matches * self.q_covs
-
-    @property
-    def identities(self):
-        return np.divide(
-            self.matches, self.lengths,
-            out=np.zeros_like(self.lengths, dtype=np.float64),
-            where=self.lengths > 0
-        )
-
-    @property
-    def q_weighted_identities(self):
-        return self.identities * self.q_covs
-
     def __len__(self) -> int:
         """Returns the number of alignments in the batch."""
         return len(self.q_starts)
@@ -363,17 +333,29 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
     @classmethod
     def from_mapping_iterators(cls, queries: list[tuple[str, int]], iterators: Iterable['rammappy.align.MappingIterator']) -> Self:
         """A factory method to create an Alignments from mapping iterators."""
-        qn, ql, qs, qe, tn, tl, ts, te, st, bl, ml, nm, sc, mq = [], [], [], [], [], [], [], [], [], [], [], [], [], []
+        ql, qs, qe, tl, ts, te, st, bl, ml, nm, sc, mq = [], [], [], [], [], [], [], [], [], [], [], []
         ip, isu, isp, div, cs_list, md_list = [], [], [], [], [], []
         cigar_lists = []
+        qn_ids, tn_ids = [], []
+        q_names_map, t_names_map = {}, {}
+        q_names_list, t_names_list = [], []
 
         for (q_name, q_length), it in zip(queries, iterators):
+            if q_name not in q_names_map:
+                q_names_map[q_name] = len(q_names_list)
+                q_names_list.append(q_name)
+            q_id = q_names_map[q_name]
             for h in it:
-                qn.append(q_name)
+                t_name = h.target_name.decode('ascii')
+                if t_name not in t_names_map:
+                    t_names_map[t_name] = len(t_names_list)
+                    t_names_list.append(t_name)
+                t_id = t_names_map[t_name]
+                qn_ids.append(q_id)
                 ql.append(q_length)
                 qs.append(h.query_start)
                 qe.append(h.query_end)
-                tn.append(h.target_name.decode('ascii'))
+                tn_ids.append(t_id)
                 tl.append(h.target_len)
                 ts.append(h.target_start)
                 te.append(h.target_end)
@@ -396,16 +378,17 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
                     cigar_lists.append(parse_cigar_string(cigar_bytes))
                 else:
                     cigar_lists.append(np.empty(0, dtype=np.uint32))
-
-        if not qn:
+        if not qn_ids:
             return cls.empty()
 
         return cls(
-            q_names=np.array(qn, dtype=object),
+            q_name_ids=np.array(qn_ids, dtype=np.int32),
+            q_names_dict=tuple(q_names_list),
             q_lengths=np.array(ql, dtype=np.int32),
             q_starts=np.array(qs, dtype=np.int32),
             q_ends=np.array(qe, dtype=np.int32),
-            t_names=np.array(tn, dtype=object),
+            t_name_ids=np.array(tn_ids, dtype=np.int32),
+            t_names_dict=tuple(t_names_list),
             t_lengths=np.array(tl, dtype=np.int32),
             t_starts=np.array(ts, dtype=np.int32),
             t_ends=np.array(te, dtype=np.int32),
@@ -439,7 +422,36 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
             raise ValueError("Cannot concatenate an empty iterable of batches")
 
         kwargs = {}
+        
+        q_names_map, q_names_list = {}, []
+        t_names_map, t_names_list = {}, []
+        new_q_ids, new_t_ids = [], []
+        
+        for b in batches:
+            q_remap = np.empty(len(b.q_names_dict), dtype=np.int32)
+            for i, name in enumerate(b.q_names_dict):
+                if name not in q_names_map:
+                    q_names_map[name] = len(q_names_list)
+                    q_names_list.append(name)
+                q_remap[i] = q_names_map[name]
+            new_q_ids.append(q_remap[b.q_name_ids])
+            
+            t_remap = np.empty(len(b.t_names_dict), dtype=np.int32)
+            for i, name in enumerate(b.t_names_dict):
+                if name not in t_names_map:
+                    t_names_map[name] = len(t_names_list)
+                    t_names_list.append(name)
+                t_remap[i] = t_names_map[name]
+            new_t_ids.append(t_remap[b.t_name_ids])
+
+        kwargs['q_name_ids'] = np.concatenate(new_q_ids)
+        kwargs['q_names_dict'] = tuple(q_names_list)
+        kwargs['t_name_ids'] = np.concatenate(new_t_ids)
+        kwargs['t_names_dict'] = tuple(t_names_list)
+
         for field_name in cls.__dataclass_fields__:
+            if field_name in ('q_name_ids', 'q_names_dict', 't_name_ids', 't_names_dict'):
+                continue
             if field_name == 'cigars':
                 kwargs[field_name] = Cigars.concat([b.cigars for b in batches])
                 continue
@@ -472,8 +484,8 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
             if item < 0 or item >= len(self):
                 raise IndexError("Batch index out of range")
             return Alignment(
-                idx=item, q_name=self.q_names[item], q_length=self.q_lengths[item],
-                q_start=self.q_starts[item], q_end=self.q_ends[item], t_name=self.t_names[item],
+                idx=item, q_name=self.q_names_dict[self.q_name_ids[item]], q_length=self.q_lengths[item],
+                q_start=self.q_starts[item], q_end=self.q_ends[item], t_name=self.t_names_dict[self.t_name_ids[item]],
                 t_length=self.t_lengths[item], t_start=self.t_starts[item], t_end=self.t_ends[item],
                 strand=Strand(self.strands[item]), length=self.lengths[item], match=self.matches[item],
                 mismatch=self.mismatches[item], score=self.scores[item], quality=self.qualities[item], cigar=self.cigars[item],
@@ -483,8 +495,8 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
             )
             
         return Alignments(
-            q_names=self.q_names[item], q_lengths=self.q_lengths[item], q_starts=self.q_starts[item],
-            q_ends=self.q_ends[item], t_names=self.t_names[item], t_lengths=self.t_lengths[item],
+            q_name_ids=self.q_name_ids[item], q_names_dict=self.q_names_dict, q_lengths=self.q_lengths[item], q_starts=self.q_starts[item],
+            q_ends=self.q_ends[item], t_name_ids=self.t_name_ids[item], t_names_dict=self.t_names_dict, t_lengths=self.t_lengths[item],
             t_starts=self.t_starts[item], t_ends=self.t_ends[item], strands=self.strands[item],
             lengths=self.lengths[item], matches=self.matches[item], mismatches=self.mismatches[item],
             scores=self.scores[item], qualities=self.qualities[item], cigars=self.cigars[item],
@@ -498,9 +510,7 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
         if (n := len(self)) == 0:
             return self
 
-        names = self.q_names if by_query else self.t_names
-
-        _, name_ints = np.unique(names, return_inverse=True)
+        name_ints = self.q_name_ids if by_query else self.t_name_ids
 
         # np.lexsort sorts by the last key first.
         # Primary: group by name
@@ -551,13 +561,10 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
         if (n := len(self)) < 2:
             return self
         
-        names = self.q_names if by_query else self.t_names
+        name_ints = self.q_name_ids if by_query else self.t_name_ids
         starts = self.q_starts if by_query else self.t_starts
         ends = self.q_ends if by_query else self.t_ends
-        scores = self.q_weighted_scores if by_query else self.t_weighted_scores
-        
-        # Map string names to integer IDs for C-level kernel processing
-        _, name_ints = np.unique(names, return_inverse=True)
+        scores = self.scores.astype(np.float64)
 
         if priority_mask is not None:
             scores[priority_mask] += 1e9
@@ -586,11 +593,13 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
             Alignments: A new batch representing the swapped alignments.
         """
         return Alignments(
-            q_names=self.t_names,
+            q_name_ids=self.t_name_ids,
+            q_names_dict=self.t_names_dict,
             q_lengths=self.t_lengths,
             q_starts=self.t_starts,
             q_ends=self.t_ends,
-            t_names=self.q_names,
+            t_name_ids=self.q_name_ids,
+            t_names_dict=self.q_names_dict,
             t_lengths=self.q_lengths,
             t_starts=self.q_starts,
             t_ends=self.q_ends,
@@ -612,9 +621,9 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
     @classmethod
     def empty(cls) -> 'Alignments':
         return cls(
-            q_names=np.empty(0, dtype=object), q_lengths=np.empty(0, dtype=np.int32),
+            q_name_ids=np.empty(0, dtype=np.int32), q_names_dict=(), q_lengths=np.empty(0, dtype=np.int32),
             q_starts=np.empty(0, dtype=np.int32), q_ends=np.empty(0, dtype=np.int32),
-            t_names=np.empty(0, dtype=object), t_lengths=np.empty(0, dtype=np.int32),
+            t_name_ids=np.empty(0, dtype=np.int32), t_names_dict=(), t_lengths=np.empty(0, dtype=np.int32),
             t_starts=np.empty(0, dtype=np.int32), t_ends=np.empty(0, dtype=np.int32),
             strands=np.empty(0, dtype=np.int8), lengths=np.empty(0, dtype=np.int32),
             matches=np.empty(0, dtype=np.int32), mismatches=np.empty(0, dtype=np.int32),
@@ -694,11 +703,13 @@ class Alignments(BatchedContainer[Alignment, 'Alignments']):
             
         qn, ql, qs, qe, tn, tl, ts, te, st, bl, ml, nm, mq, ip, isu, isp, div, cs_list, md_list = zip(*data, strict=True)
         return cls(
-            q_names=np.array(qn, dtype=object),
+            q_name_ids=np.array(qn_ids, dtype=np.int32),
+            q_names_dict=tuple(q_names_list),
             q_lengths=np.array(ql, dtype=np.int32),
             q_starts=np.array(qs, dtype=np.int32),
             q_ends=np.array(qe, dtype=np.int32),
-            t_names=np.array(tn, dtype=object),
+            t_name_ids=np.array(tn_ids, dtype=np.int32),
+            t_names_dict=tuple(t_names_list),
             t_lengths=np.array(tl, dtype=np.int32),
             t_starts=np.array(ts, dtype=np.int32),
             t_ends=np.array(te, dtype=np.int32),

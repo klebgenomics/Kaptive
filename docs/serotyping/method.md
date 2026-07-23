@@ -16,61 +16,58 @@ genome assembly and produce a [SerotypingResult](api.md#kaptive.serotyping.Serot
 
 ## Locus Scoring Algorithm
 
-This provides a detailed overview of the mathematical scoring algorithm that Kaptive uses to determine the best-matching locus for a given genome assembly. The algorithm is designed to be highly sensitive to the specific genes that uniquely define a locus, while appropriately managing highly conserved "core" genes that are shared across many different loci.
+This provides a detailed overview of the mathematical scoring algorithm that Kaptive uses to determine the best-matching locus for a given genome assembly. The algorithm is designed to be highly accurate and computationally efficient, utilizing dynamic programming alignment scores and strict completeness penalties to resolve locus identities.
 
-### 1. Initial Gene Mapping and Scoring
-When Kaptive analyses a genome, it first attempts to find matches for every gene present in its reference database. When a match is found, a **Raw Gene Score** ($S_{gene}$) is calculated. This score measures the quality of the alignment by combining sequence identity and coverage:
+### 1. Initial Gene Mapping
 
-$$S_{gene} = \text{Identity} \times \frac{\text{Alignment Length}}{\text{Expected Gene Length}}$$
+When Kaptive analyses a genome, it maps all genes from the reference database against the assembly using a highly optimized, minimap2-based banded dynamic programming aligner. For each alignment, Kaptive calculates two key metrics:
 
-*Where:*
+* **Alignment Score ($S_{DP}$):** The raw Smith-Waterman/Gotoh dynamic programming score with affine gap penalties, which accurately reflects the biological likelihood of the alignment.
+* **Gene Coverage ($Cov_{gene}$):** The proportion of the reference gene length that was successfully aligned.
 
-* **Identity:** The fraction of matching nucleotides between the genome sequence and the database gene.
-* **Alignment Length:** The length of the matching region.
-* **Expected Gene Length:** The full length of the gene as defined in the database.
+$$Cov_{gene} = \frac{\text{Alignment Length}}{\text{Expected Gene Length}}$$
 
-This ensures that partial fragments or highly divergent genes receive lower scores compared to full-length, identical matches.
+### 2. Gene Selection
 
-### 2. Gene Weighting (IDF)
-In many bacterial species (like *Klebsiella pneumoniae* or *Acinetobacter baumannii*), the capsular synthesis regions share highly conserved "core" genes (e.g., *galF*, *cpsACP*, or *gpi*). Because these genes are almost universally present regardless of the specific serotype, relying on them equally would artificially inflate the scores of incorrect loci.
+Since a single gene might map to multiple locations (e.g., duplicated elements or highly conserved core genes), Kaptive must determine the single "best" hit for each gene.
 
-To solve this, Kaptive applies an **Inverse Document Frequency (IDF)** weight to every gene. Rare genes (which are highly specific to a single or a few loci) are given much higher mathematical importance than common core genes.
+1. **Coverage Filter:** Any alignment covering less than 20% of the expected gene length is immediately discarded to prune noisy, spurious hits.
+2. **Primary Hit Selection:** The remaining valid alignments for a gene are ranked by their **Alignment Score ($S_{DP}$)**, with **Gene Coverage ($Cov_{gene}$)** used as a tie-breaker. The highest-ranking alignment is selected as the primary hit.
 
-$$W_{gene} = \log_2\left(\frac{N_{loci}}{N_{loci\_containing\_gene}}\right) + 1.0$$
-
-*Where:*
-
-* $N_{loci}$ is the total number of distinct loci in the database.
-* $N_{loci\_containing\_gene}$ is the number of loci that contain this specific gene or a highly homologous variant of it.
-* The $+ 1.0$ ensures that even the most universally conserved core genes still contribute a baseline value to the score.
-
-The final **Weighted Gene Score** is simply:
-
-$$\text{Weighted Score}_{gene} = S_{gene} \times W_{gene}$$
+> [!TIP]
+> Relying on robust DP scoring for primary hit selection inherently prioritizes identical, full-length gene variants over distant homologs or fragments, ensuring the highest quality matches are carried forward into the locus scoring phase.
 
 ### 3. Accumulating Locus Scores
-Once all genes are mapped and weighted, Kaptive evaluates every possible locus in the database independently to see how well it is represented in the genome.
 
-First, Kaptive calculates a **Core Score** ($S_{core}$) for each locus by summing the weighted scores of all the *expected* genes for that specific locus. (Note: genes designated as optional or "extra" in the database are excluded from this core summation).
+Once the primary hit for each gene is identified, Kaptive evaluates every possible locus in the database independently. 
 
-$$S_{core} = \sum_{gene \in \text{expected}} \text{Weighted Score}_{gene}$$
+It calculates a **Core Score** ($S_{core}$) for each locus by simply summing the Gene Coverage of the primary hits for all *expected* genes belonging to that locus. (Note: genes designated as optional or "extra" in the database are excluded from this core summation).
+
+$$S_{core} = \sum_{gene \in \text{expected}} Cov_{gene}$$
+
+> [!NOTE]
+> In earlier versions of Kaptive, an *Inverse Document Frequency (IDF)* weighting system was used to penalize universally conserved "core" genes. The current algorithm replaces IDF weighting entirely; the combination of strict DP-based hit selection and the exponential completeness penalty (described below) naturally and robustly separates true locus matches from false positives driven by core genes.
 
 ### 4. Locus Completeness Penalty
-A high Core Score alone is not enough to declare a match. A locus might accumulate a high score if a genome happens to contain many of its genes, but if the genome is missing key expected genes for that locus, it is likely the wrong match.
 
-To penalize loci with missing genes, Kaptive calculates a **Completeness** factor ($C$). Completeness represents the proportion of expected genes that were successfully found in the genome.
+A high Core Score alone is not enough to declare a match. A locus might accumulate a high score if a genome happens to contain highly-conserved core genes, but is missing the rare, specific genes that uniquely define that locus.
+
+To strongly penalize loci with missing genes, Kaptive calculates a **Completeness** factor ($C$):
 
 $$C = \frac{\text{Count}_{found}}{\text{Count}_{expected}}$$
 
 ### 5. Final Total Score and Selection
-The final score used to rank and select the best locus is the product of the Core Score and the Completeness factor. 
 
-$$\text{Score}_{total} = S_{core} \times C$$
+The final score used to rank and select the best locus is the product of the Core Score and the Completeness factor **cubed**.
 
-By multiplying the Core Score by the Completeness, Kaptive heavily penalizes loci that are missing expected genes. For example, if a locus has a fantastic Core Score because it shares many genes with the genome, but it is only 50% complete (missing half its defining genes), its final score will be halved.
+$$\text{Score}_{total} = S_{core} \times C^3$$
+
+> [!IMPORTANT]
+> By multiplying the Core Score by $C^3$, Kaptive applies an **exponential penalty** to loci missing expected genes. For example, a locus that is only 50% complete will have its score scaled down by a factor of 0.125 ($0.5^3$). This ensures that complete or near-complete loci will consistently out-score fragmented false positives.
 
 #### Summary of Selection
-After calculating $\text{Score}_{total}$ for every possible locus in the database, Kaptive ranks them in descending order. The locus with the highest $\text{Score}_{total}$ is chosen as the **Best match locus**. Following this algorithmic selection, a secondary "Phenotype Evaluation" phase may be triggered (e.g., checking specific *wzc* alleles) to refine the final serotype prediction.
+
+After calculating $\text{Score}_{total}$ for every possible locus in the database, Kaptive ranks them in descending order. The locus with the highest $\text{Score}_{total}$ is chosen as the **Best match locus**. Following this algorithmic selection, a secondary "Phenotype Evaluation" phase may be triggered (e.g., checking specific alleles or gene states) to refine the final serotype prediction.
 
 ## Phenotype Evaluation Logic
 

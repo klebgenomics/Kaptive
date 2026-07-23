@@ -270,6 +270,75 @@ class Command(ABC):
         """Override to return an ArgumentParser(add_help=False) containing arguments shared with children."""
         return None
 
+    def add_output_arguments(
+        self,
+        opts: argparse._ArgumentGroup,
+        tsv_flags: tuple[str, str] = ("-o", "--out"),
+        include_json: bool = True,
+    ):
+        """Helper to add standard output arguments for commands that generate output files."""
+        opts.add_argument(
+            tsv_flags[0],
+            tsv_flags[1],
+            metavar="FILE",
+            nargs="?" if tsv_flags[0] == "-t" else None,
+            default="stdout" if tsv_flags[0] == "-o" else None,
+            const="stdout" if tsv_flags[0] == "-t" else None,
+            help="Write serotyping results as a TSV report to a file (default: %(default)s)" if tsv_flags[0] == "-o" else "Write serotyping results as a TSV report to a file (default: %(const)s)",
+        )
+        opts.add_argument(
+            "-l",
+            "--loci",
+            metavar="DIR",
+            nargs="?",
+            const="./",
+            type=Path,
+            help="Write locus nucleotide fasta files to a directory (default: %(const)s)",
+        )
+        opts.add_argument(
+            "-g",
+            "--genes",
+            metavar="DIR",
+            nargs="?",
+            const="./",
+            type=Path,
+            help="Write gene nucleotide fasta files to a directory (default: %(const)s)",
+        )
+        opts.add_argument(
+            "-p",
+            "--proteins",
+            metavar="DIR",
+            nargs="?",
+            const="./",
+            type=Path,
+            help="Write translation amino-acid fasta files to a directory (default: %(const)s)",
+        )
+        if include_json:
+            opts.add_argument(
+                "-j",
+                "--json",
+                metavar="FILE",
+                nargs="?",
+                const="kaptive_results.jsonl",
+                help="Write serialised results to a newline-delimited JSON (default: %(const)s)",
+            )
+        opts.add_argument(
+            "--pha4ge",
+            metavar="FILE",
+            nargs="?",
+            const="kaptive_results.pha4ge",
+            type=Path,
+            help="Write PHA4GE-compliant serotyping report to a TSV file (default: %(const)s)",
+        )
+        opts.add_argument(
+            "--plots",
+            metavar="DIR",
+            nargs="?",
+            const="./",
+            type=Path,
+            help="Generate interactive locus plots to a directory (default: %(const)s)",
+        )
+
     def __call__(self, args: argparse.Namespace):
         """Override to __call__ the command's logic. If not overridden, command acts as a group/folder."""
         pass
@@ -627,64 +696,7 @@ class Type(Command):
         )
 
         opts = self.parser.add_argument_group(Colors.wrap("📤 Outputs", Colors.BOLD))
-        opts.add_argument(
-            "-o",
-            "--out",
-            metavar="FILE",
-            default="stdout",
-            help="Write serotyping results as a TSV report to a file (default: %(default)s)",
-        )
-        opts.add_argument(
-            "-l",
-            "--loci",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Write locus nucleotide fasta files to a directory (default: %(const)s)",
-        )
-        opts.add_argument(
-            "-g",
-            "--genes",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Write gene nucleotide fasta files to a directory (default: %(const)s)",
-        )
-        opts.add_argument(
-            "-p",
-            "--proteins",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Write translation amino-acid fasta files to a directory (default: %(const)s)",
-        )
-        opts.add_argument(
-            "-j",
-            "--json",
-            metavar="FILE",
-            nargs="?",
-            const="kaptive_results.jsonl",
-            help="Write serialised results to a newline-delimited JSON (default: %(const)s)",
-        )
-        opts.add_argument(
-            "--pha4ge",
-            metavar="FILE",
-            nargs="?",
-            const="kaptive_results.pha4ge",
-            type=Path,
-            help="Write PHA4GE-compliant serotyping report to a TSV file (default: %(const)s)",
-        )
-        opts.add_argument(
-            "--plots",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Generate interactive locus plots to a directory (default: %(const)s)",
-        )
+        self.add_output_arguments(opts, tsv_flags=("-o", "--out"), include_json=True)
 
         opts = self.parser.add_argument_group(
             Colors.wrap("🔬 Confidence options", Colors.BOLD)
@@ -755,57 +767,7 @@ class Convert(Command):
         )
 
         opts = self.parser.add_argument_group(Colors.wrap("📤 Outputs", Colors.BOLD))
-        opts.add_argument(
-            "-t",
-            "--tsv",
-            metavar="FILE",
-            nargs="?",
-            const="stdout",
-            help="Write serotyping results as a TSV report to a file (default: %(const)s)",
-        )
-        opts.add_argument(
-            "-l",
-            "--loci",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Write locus nucleotide fasta files to a directory (default: %(const)s)",
-        )
-        opts.add_argument(
-            "-g",
-            "--genes",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Write gene nucleotide fasta files to a directory (default: %(const)s)",
-        )
-        opts.add_argument(
-            "-p",
-            "--proteins",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Write translation amino-acid fasta files to a directory (default: %(const)s)",
-        )
-        opts.add_argument(
-            "--pha4ge",
-            metavar="FILE",
-            nargs="?",
-            const="kaptive_results.pha4ge",
-            type=Path,
-            help="Write PHA4GE-compliant serotyping report to a TSV file (default: %(const)s)",
-        )
-        opts.add_argument(
-            "--plots",
-            metavar="DIR",
-            nargs="?",
-            const="./",
-            type=Path,
-            help="Generate interactive locus plots to a directory (default: %(const)s)",
-        )
+        self.add_output_arguments(opts, tsv_flags=("-t", "--tsv"), include_json=False)
 
     def __call__(self, args: argparse.Namespace):
         try:

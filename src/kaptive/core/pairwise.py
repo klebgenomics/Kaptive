@@ -356,15 +356,14 @@ def _batched_banded_gotoh(
             k_local = max(k, abs(len1 - len2) + 1)
             offset = 0
 
-        # TODO: Look into allocating the dynamic programming matrices as (rows, 2*k_local + 3) rather than (rows, cols),
-        #  and addressing the columns using a sliding offset j_mapped = j - start_j.
-
-        M = np.empty((rows, cols), dtype=np.int32)
-        I = np.empty((rows, cols), dtype=np.int32)
-        D = np.empty((rows, cols), dtype=np.int32)
-        tb_M = np.empty((rows, cols), dtype=np.uint8)
-        tb_D = np.empty((rows, cols), dtype=np.uint8)
-        tb_I = np.empty((rows, cols), dtype=np.uint8)
+        # Allocate dynamic programming matrices as (rows, band_width) to save huge amounts of memory
+        band_width = 2 * k_local + 3
+        M = np.empty((rows, band_width), dtype=np.int32)
+        I = np.empty((rows, band_width), dtype=np.int32)
+        D = np.empty((rows, band_width), dtype=np.int32)
+        tb_M = np.empty((rows, band_width), dtype=np.uint8)
+        tb_D = np.empty((rows, band_width), dtype=np.uint8)
+        tb_I = np.empty((rows, band_width), dtype=np.uint8)
 
         # O(N * k_local) band-only initialization
         for i in range(rows):
@@ -376,10 +375,11 @@ def _batched_banded_gotoh(
                 continue
 
             for j in range(start_j, end_j):
-                M[i, j] = 0
-                I[i, j] = _INF
-                D[i, j] = _INF
-                tb_M[i, j] = 3  # 3 denotes the end of local alignment traceback
+                jm = j - start_j
+                M[i, jm] = 0
+                I[i, jm] = _INF
+                D[i, jm] = _INF
+                tb_M[i, jm] = 3  # 3 denotes the end of local alignment traceback
 
         max_score = 0
         max_i = 0
@@ -393,36 +393,45 @@ def _batched_banded_gotoh(
 
             if start_j >= cols or end_j <= 1:
                 continue
+                
+            start_j_prev = max(0, i - 1 - offset - k_local - 1)
+            start_j_curr = max(0, i - offset - k_local - 1)
 
             for j in range(start_j, end_j):
-                d_open = M[i - 1, j] - gap_open - gap_extend
-                d_ext = D[i - 1, j] - gap_extend
+                jm_top = j - start_j_prev
+                d_open = M[i - 1, jm_top] - gap_open - gap_extend
+                d_ext = D[i - 1, jm_top] - gap_extend
+                
+                jm = j - start_j_curr
                 if d_open >= d_ext:
-                    D[i, j], tb_D[i, j] = d_open, 0
+                    D[i, jm], tb_D[i, jm] = d_open, 0
                 else:
-                    D[i, j], tb_D[i, j] = d_ext, 1
+                    D[i, jm], tb_D[i, jm] = d_ext, 1
 
-                i_open = M[i, j - 1] - gap_open - gap_extend
-                i_ext = I[i, j - 1] - gap_extend
+                jm_left = j - 1 - start_j_curr
+                i_open = M[i, jm_left] - gap_open - gap_extend
+                i_ext = I[i, jm_left] - gap_extend
                 if i_open >= i_ext:
-                    I[i, j], tb_I[i, j] = i_open, 0
+                    I[i, jm], tb_I[i, jm] = i_open, 0
                 else:
-                    I[i, j], tb_I[i, j] = i_ext, 2
+                    I[i, jm], tb_I[i, jm] = i_ext, 2
 
-                m_diag = M[i - 1, j - 1] + matrix[seq1[i - 1], seq2[j - 1]]
+                jm_top_left = j - 1 - start_j_prev
+                m_diag = M[i - 1, jm_top_left] + matrix[seq1[i - 1], seq2[j - 1]]
+                
                 best, tb = m_diag, 0
-                if D[i, j] > best:
-                    best, tb = D[i, j], 1
-                if I[i, j] > best:
-                    best, tb = I[i, j], 2
+                if D[i, jm] > best:
+                    best, tb = D[i, jm], 1
+                if I[i, jm] > best:
+                    best, tb = I[i, jm], 2
 
                 # Local alignment condition: score resets to 0 if negative
                 if best <= 0:
-                    M[i, j] = 0
-                    tb_M[i, j] = 3
+                    M[i, jm] = 0
+                    tb_M[i, jm] = 3
                 else:
-                    M[i, j] = best
-                    tb_M[i, j] = tb
+                    M[i, jm] = best
+                    tb_M[i, jm] = tb
                     if best > max_score:
                         max_score = best
                         max_i = i
@@ -436,8 +445,11 @@ def _batched_banded_gotoh(
         end_i, end_j = i, j
 
         while i > 0 and j > 0:
+            start_j_curr = max(0, i - offset - k_local - 1)
+            jm = j - start_j_curr
+            
             if state == 0:
-                tb = tb_M[i, j]
+                tb = tb_M[i, jm]
                 if tb == 3:  # Reached the end of the local alignment
                     break
                 elif tb == 0:  # Came from diagonal.
@@ -450,14 +462,16 @@ def _batched_banded_gotoh(
                 else:  # Came from D or I.
                     state = tb
             elif state == 1:  # Current state: in D. Execute an upward move.
+                tb = tb_D[i, jm]
                 gaps += 1
                 i -= 1
-                if tb_D[i + 1, j] == 0:  # Gap open. We must have come from M.
+                if tb == 0:  # Gap open. We must have come from M.
                     state = 0
             elif state == 2:  # Current state: in I. Execute a leftward move.
+                tb = tb_I[i, jm]
                 gaps += 1
                 j -= 1
-                if tb_I[i, j + 1] == 0:  # Gap open. We must have come from M.
+                if tb == 0:  # Gap open. We must have come from M.
                     state = 0
 
         # After loop, i and j are the start coordinates

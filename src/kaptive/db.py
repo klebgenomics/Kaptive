@@ -636,9 +636,8 @@ class DatabaseManager:
         "kpsc_o": ("klebgenomics", "KpSC_surface_antigen_loci", "Klebsiella_pneumoniae_Species_Complex_O"),
         "kosc_k": ("klebgenomics", "KoSC-surface-antigen-loci", "Klebsiella_oxytoca_Species_Complex_K_locus_database"),
         "kosc_o": ("klebgenomics", "KoSC-surface-antigen-loci", "Klebsiella_oxytoca_Species_Complex_O_locus_database"),
-        "kaer_k": ("tomdstanton", "KAC_cps_reference", "KAC_k_locus_primary_reference"),
-        "ab_k": ("tomdstanton", "A_baumannii_Surface_Antigen_Loci", "Acinetobacter_baumannii_K"),
-        "ab_o": ("tomdstanton", "A_baumannii_Surface_Antigen_Loci", "Acinetobacter_baumannii_OC"),
+        "ab_k": ("johannajkenyon", "Abaumannii_surface_polysaccharide_loci", "Acinetobacter_baumannii_K"),
+        "ab_o": ("johannajkenyon", "Abaumannii_surface_polysaccharide_loci", "Acinetobacter_baumannii_OC"),
         "ecoli_kps": ("tomdstanton", "EC-K-typing", "EC-K-typing_group2and3"),
         "vpar_k": ("tomdstanton", "vibrio_parahaemolyticus_genomoserotyping", "VibrioPara_Kaptivedb_K"),
         "vpar_o": ("tomdstanton", "vibrio_parahaemolyticus_genomoserotyping", "VibrioPara_Kaptivedb_O"),
@@ -733,11 +732,11 @@ class DatabaseManager:
             kwd = cls.installed()
             if not kwd:
                 return
-                
+
         if isinstance(kwd, list):
             import concurrent.futures
-            
-            def _update_one(k: str) -> 'Database | None':
+
+            def _fetch_update_one(k: str):
                 db_path = cls._get_existing_db_path(k)
                 json_path = db_path.with_suffix('.json')
                 if json_path.is_file():
@@ -745,13 +744,14 @@ class DatabaseManager:
                 else:
                     meta = pickle.loads(db_path.read_bytes()).metadata
                 db_name = Path(meta.genbank).with_suffix('').name
-                return cls.add(meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta)
-                
+                return cls._fetch_files(meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta)
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future_to_db = {executor.submit(_update_one, k): k for k in kwd}
-                for future in concurrent.futures.as_completed(future_to_db):
-                    if (res := future.result()) is not None:
-                        yield res
+                fetched_list = list(executor.map(_fetch_update_one, kwd))
+
+            for fetched in fetched_list:
+                if fetched is not None:
+                    yield cls._compile_and_save(*fetched)
         else:
             db_path = cls._get_existing_db_path(kwd)
             json_path = db_path.with_suffix('.json')
@@ -785,18 +785,90 @@ class DatabaseManager:
 
         if isinstance(kwd, list):
             import concurrent.futures
-            
-            def _install_one(k: str) -> 'Database | None':
+
+            def _fetch_one(k: str):
                 if (known_info := cls._KNOWN.get(k, None)) is None:
                     raise DatabaseError(f'"{k}" is not a known database, choose from {list(cls._KNOWN.keys())}')
-                return cls.add(*known_info)
+                return cls._fetch_files(*known_info)
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                return list(executor.map(_install_one, kwd))
+                fetched_list = list(executor.map(_fetch_one, kwd))
+
+            results = []
+            for fetched in fetched_list:
+                if fetched is None:
+                    results.append(None)
+                else:
+                    results.append(cls._compile_and_save(*fetched))
+            return results
 
         if (known_info := cls._KNOWN.get(kwd, None)) is None:
             raise DatabaseError(f'"{kwd}" is not a known database, choose from {list(cls._KNOWN.keys())}')
         return cls.add(*known_info)
+
+    @classmethod
+    def _fetch_files(cls, owner: str, repo_name: str, db_name: str, branch: str = 'main',
+                     local_meta: DatabaseMetadata | None = None) -> tuple[str, bytes, bytes] | None:
+        base_url = f"https://raw.githubusercontent.com/{owner}/{repo_name}/{branch}"
+        toml_url = f"{base_url}/{db_name}.toml"
+        gbk_url = f"{base_url}/{db_name}.gbk"
+
+        try:
+            with urlopen(toml_url) as response:
+                toml_bytes = response.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise DatabaseError(f"Remote file not found: {toml_url}\n"
+                                    f"Ensure the repository branch, name, and owner are correct.") from e
+            raise DatabaseError(f"HTTP Error {e.code} fetching {toml_url}: {e.reason}") from e
+        except urllib.error.URLError as e:
+            raise DatabaseError(f"Network error: Failed to fetch {toml_url}."
+                                f"Ensure you have an active internet connection. ({e.reason})") from e
+
+        remote_meta_dict = tomllib.loads(toml_bytes.decode('utf-8'))
+        remote_meta = DatabaseMetadata.from_dict(remote_meta_dict)
+
+        db_keyword = remote_meta.keyword
+        db_path = cls._get_db_path(db_keyword)
+        json_path = db_path.with_suffix('.json')
+
+        if local_meta is None and db_path.is_file():
+            import json
+            if json_path.is_file():
+                local_meta = DatabaseMetadata.from_dict(json.loads(json_path.read_text()))
+            else:
+                local_db = pickle.loads(db_path.read_bytes())
+                local_meta = getattr(local_db, 'metadata', None)
+
+        if local_meta and local_meta.parsed_version >= remote_meta.parsed_version:
+            return None
+
+        try:
+            with urlopen(gbk_url) as response:
+                gbk_bytes = response.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise DatabaseError(f"Remote file not found: {gbk_url}\n"
+                                    f"Ensure the repository branch, name, and owner are correct.") from e
+            raise DatabaseError(f"HTTP Error {e.code} fetching {gbk_url}: {e.reason}") from e
+        except urllib.error.URLError as e:
+            raise DatabaseError(f"Network error: Failed to fetch {gbk_url}. "
+                                f"Ensure you have an active internet connection. ({e.reason})") from e
+
+        return db_name, gbk_bytes, toml_bytes
+
+    @classmethod
+    def _compile_and_save(cls, db_name: str, gbk_bytes: bytes, toml_bytes: bytes) -> 'Database':
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            gbk_path = tmp_path / f"{db_name}.gbk"
+            toml_path = tmp_path / f"{db_name}.toml"
+            gbk_path.write_bytes(gbk_bytes)
+            toml_path.write_bytes(toml_bytes)
+            db_obj = Database.from_genbank(gbk_path)
+
+        cls.save(db_obj)
+        return db_obj
 
     @classmethod
     def add(cls, owner: str, repo_name: str, db_name: str, branch: str = 'main',
@@ -828,66 +900,10 @@ class DatabaseManager:
             Database | None: The compiled `Database` object if an installation or update occurred.
                 Returns `None` if the local version was already up-to-date with the remote repository.
         """
-
-        base_url = f"https://raw.githubusercontent.com/{owner}/{repo_name}/{branch}"
-        toml_url = f"{base_url}/{db_name}.toml"
-        gbk_url = f"{base_url}/{db_name}.gbk"
-
-        # Fetch TOML first to quickly check version
-        try:
-            with urlopen(toml_url) as response:
-                toml_bytes = response.read()
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                raise DatabaseError(f"Remote file not found: {toml_url}\n"
-                                    f"Ensure the repository branch, name, and owner are correct.") from e
-            raise DatabaseError(f"HTTP Error {e.code} fetching {toml_url}: {e.reason}") from e
-        except urllib.error.URLError as e:
-            raise DatabaseError(f"Network error: Failed to fetch {toml_url}."
-                                f"Ensure you have an active internet connection. ({e.reason})") from e
-            
-        remote_meta_dict = tomllib.loads(toml_bytes.decode('utf-8'))
-        remote_meta = DatabaseMetadata.from_dict(remote_meta_dict)
-
-        db_keyword = remote_meta.keyword
-        db_path = cls._get_db_path(db_keyword)
-        json_path = db_path.with_suffix('.json')
-
-        if local_meta is None and db_path.is_file():
-            import json
-            if json_path.is_file():
-                local_meta = DatabaseMetadata.from_dict(json.loads(json_path.read_text()))
-            else:
-                local_db = pickle.loads(db_path.read_bytes())
-                local_meta = getattr(local_db, 'metadata', None)
-
-        if local_meta and local_meta.parsed_version >= remote_meta.parsed_version:
-            return  # Up to date
-
-        # Fetch GBK if update is needed
-        try:
-            with urlopen(gbk_url) as response:
-                gbk_bytes = response.read()
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                raise DatabaseError(f"Remote file not found: {gbk_url}\n"
-                                    f"Ensure the repository branch, name, and owner are correct.") from e
-            raise DatabaseError(f"HTTP Error {e.code} fetching {gbk_url}: {e.reason}") from e
-        except urllib.error.URLError as e:
-            raise DatabaseError(f"Network error: Failed to fetch {gbk_url}. "
-                                f"Ensure you have an active internet connection. ({e.reason})") from e
-
-        # Use temp directory for parsing since Database.from_genbank expects files
-        with TemporaryDirectory() as tmpdir:
-            tmp_path = Path(tmpdir)
-            gbk_path = tmp_path / f"{db_name}.gbk"
-            toml_path = tmp_path / f"{db_name}.toml"
-            gbk_path.write_bytes(gbk_bytes)
-            toml_path.write_bytes(toml_bytes)
-            db_obj = Database.from_genbank(gbk_path)
-
-        cls.save(db_obj)
-        return db_obj
+        fetched = cls._fetch_files(owner, repo_name, db_name, branch=branch, local_meta=local_meta)
+        if fetched is None:
+            return None
+        return cls._compile_and_save(*fetched)
 
     @classmethod
     def load(cls, kwd: str) -> 'Database':

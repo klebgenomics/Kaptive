@@ -8,7 +8,8 @@ from gzip import open as gzopen
 from lzma import open as lzopen
 from pathlib import Path
 from re import compile as re_compile
-from typing import IO, ClassVar, Self
+import threading
+from typing import IO, ClassVar, Self, Any
 
 from kaptive.core.seq import SeqRecord, Sequences
 
@@ -25,7 +26,10 @@ class FastaReader(Iterator):
 
     def __init__(self, handle: IO[bytes]):
         self._handle = handle
-        self._generator = self._parse_records()
+        import rammappy
+        # Read the entire stream and parse using rammappy's high-performance Rust parser
+        self._parsed = rammappy.fasta.parse_fasta_bytes(self._handle.read())
+        self._generator = (SeqRecord(seq=seq, id=name) for name, seq in self._parsed)
 
     def __enter__(self):
         return self
@@ -42,36 +46,6 @@ class FastaReader(Iterator):
     def __next__(self) -> SeqRecord:
         return next(self._generator)
 
-    def _parse_records(self) -> Iterator[SeqRecord]:
-        header: str = ""
-        seq_chunks: list[bytes] = []
-
-        # Local variable caching speeds up lookups inside the tight loop
-        join_bytes = b"".join
-
-        for line in self._handle:
-            # rstrip() is faster than strip() and removes \r\n or \n
-            line = line.rstrip()
-            if not line:
-                continue
-
-            # 62 is the ASCII integer value for '>'
-            if line[0] == 62:
-                if header:
-                    # Yield the previous record
-                    yield SeqRecord(seq=join_bytes(seq_chunks), id=header)
-
-                seq_chunks.clear()
-
-                decoded_line = line[1:].decode("utf-8", errors="replace")
-                header, _, _ = decoded_line.partition(" ")
-
-            else:
-                seq_chunks.append(line)
-
-        # Yield the final record once the loop ends
-        if header:
-            yield SeqRecord(seq=join_bytes(seq_chunks), id=header)
 
 
 @dataclass(slots=True, frozen=True)
@@ -92,6 +66,8 @@ class GenomeAssembly:
     id: str
     contigs: Sequences
     id_map: dict[str, int] = field(init=False, repr=False, hash=False, compare=False)
+    rammappy_index: Any = field(default=None, init=False, repr=False, hash=False, compare=False)
+    _index_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False, hash=False, compare=False)
 
     def __post_init__(self):
         object.__setattr__(self, 'id_map', {name: i for i, name in enumerate(self.contigs.ids)})
@@ -128,6 +104,17 @@ class GenomeAssembly:
         s = self.contigs.offsets[idx]
         l = self.contigs.lengths[idx]
         return self.contigs.seqs[s:s + l].tobytes()
+
+    def get_rammappy_index(self) -> Any:
+        """Lazy-builds and safely caches the rammappy.Index for this genome."""
+        if self.rammappy_index is None:
+            with self._index_lock:
+                if self.rammappy_index is None:
+                    import rammappy
+                    contig_seqs = [(c.id.encode(), c.seq) for c in self.contigs]
+                    idx = rammappy.Index.build(contig_seqs)
+                    object.__setattr__(self, 'rammappy_index', idx)
+        return self.rammappy_index
 
     @classmethod
     def from_file(cls, filepath: str | Path) -> Self:

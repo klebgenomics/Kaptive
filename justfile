@@ -23,16 +23,16 @@ test: install
 
 # Format Python code
 fmt:
-    uvx run black .
+    uv run black .
 
 # Check Python formatting
 fmt-check:
-    uvx run black --check .
+    uv run black --check .
 
 # Lint Python code
 lint:
-    uvx run ruff check .
-    uvx run ty check .
+    uv run ruff check .
+    uv run ty check .
 
 # Run the full CI pipeline locally (format check, lint, test)
 ci: fmt-check lint test

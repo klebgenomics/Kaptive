@@ -18,7 +18,6 @@ from kaptive.core.alignment import Alignments
 from kaptive.core.collections import BatchedContainer
 from kaptive.core.genome import GenomeAssembly
 from kaptive.core.interval import Intervals
-from kaptive.core.kmers import FracMinHashIndex
 from kaptive.core.pairwise import PairwiseAligner
 from kaptive.core.seq import Sequences
 from kaptive.db import Database
@@ -483,75 +482,81 @@ class Serotyper:
         # Count expected genes per locus for weighting
         self._expected_genes_per_locus = np.zeros(len(self._db.loci), dtype=np.float32)
         np.add.at(self._expected_genes_per_locus, self._db.gene_locus_indices[~self._db.extra_genes], 1.0)
-
         self._expected_genes_per_locus = np.maximum(self._expected_genes_per_locus, 1.0)
         
-        self._preset = preset
+        # Prepare metadata for alignment iterator parsing
+        self._gene_seqs = [
+            (str(i).encode(), bytes(self._db.genes.seqs[self._db.genes.offsets[i] : self._db.genes.offsets[i] + self._db.genes.lengths[i]]))
+            for i in range(len(self._db.genes))
+        ]
+        self._gene_meta = [(str(i), self._db.genes.lengths[i]) for i in range(len(self._db.genes))]
+
 
     def __call__(self, genome: GenomeAssembly | str | Path) -> SerotypingResult | None:
         genome = GenomeAssembly.ensure(genome)
 
-        genome_index = Index.build([(c.id.encode(), c.seq) for c in genome.contigs])
-        aligner = Aligner(index=genome_index, preset=self._preset, do_cigar=True, do_cs=False, do_md=False)
+        contig_index = genome.get_rammappy_index()
+        aligner = Aligner(index=contig_index, preset=None, do_cigar=True, do_cs=False, do_md=False)
         opts = aligner.options
         opts.filtering.best_n = 50000
         opts.filtering.pri_ratio = 0.0
         aligner.options = opts
 
-        queries_meta = [(str(i), self._db.genes.lengths[i]) for i in range(len(self._db.genes))]
-        q_seqs = [(b'%d' % i, bytes(self._db.genes.seqs[self._db.genes.offsets[i] : self._db.genes.offsets[i] + self._db.genes.lengths[i]])) for i in range(len(self._db.genes))]
-        gene_aln_batch = aligner.map_batch(q_seqs)
-        
-        # We do NOT swap_sides here, because query=gene and target=contig, which matches the required layout
-        gene_alns = Alignments.from_mapping_iterators(queries_meta, gene_aln_batch)
+        gene_aln_batch = aligner.map_batch(self._gene_seqs)
+        gene_alns = Alignments.from_mapping_iterators(self._gene_meta, gene_aln_batch)
 
-        # Scoring phase ------------------------------------------------------------------------------------------------
-        # Calculate total coverage per gene across all alignments (ignoring overlaps on the gene)
-        non_overlapping_q_alns = gene_alns.cull_overlaps(by_query=True, max_overlap_fraction=0.1)
-        q_indices = non_overlapping_q_alns.q_names.astype(np.int32)
-        q_lengths = non_overlapping_q_alns.q_ends - non_overlapping_q_alns.q_starts
-        
+        # Calculate total coverage per gene across all alignments for reporting
+        q_indices = gene_alns.q_names.astype(np.int32)
+        q_lengths = gene_alns.q_aln_lens
         total_q_covs = np.zeros(len(self._db.genes), dtype=np.float32)
         np.add.at(total_q_covs, q_indices, q_lengths)
         total_q_covs /= self._db.genes.lengths
-        
-        # Use all non-overlapping alignments for scoring instead of just the best one per gene
-        scoring_alns = non_overlapping_q_alns
-        scoring_gene_indices = scoring_alns.q_names.astype(np.int32)
-        
-        aln_locus_indices = self._db.gene_locus_indices[scoring_gene_indices]
-        not_extra_mask = ~self._db.extra_genes[scoring_gene_indices]
-        
-        # Only count genes that have sufficient total coverage
-        valid_coverage_mask = total_q_covs[scoring_gene_indices] >= self.min_gene_coverage
-        valid_scoring_mask = not_extra_mask & valid_coverage_mask
-        
-        scores_array = getattr(scoring_alns, self.scoring_metric)
-        
-        # Sum the scores of all non-overlapping valid alignments for each locus
-        locus_scores = np.zeros(len(self._db.loci), dtype=np.float64)
-        np.add.at(locus_scores, aln_locus_indices[valid_scoring_mask], scores_array[valid_scoring_mask])
-        
-        # For completeness, count each expected gene at most once per locus if it has sufficient coverage
-        locus_counts = np.zeros(len(self._db.loci), dtype=np.float32)
-        has_sufficient_coverage = total_q_covs >= self.min_gene_coverage
-        is_expected = ~self._db.extra_genes
-        matched_expected_mask = has_sufficient_coverage & is_expected
-        np.add.at(locus_counts, self._db.gene_locus_indices[matched_expected_mask], 1.0)
-        
-        locus_scores *= (locus_completeness := locus_counts / self._expected_genes_per_locus)
 
-        self._last_scores = locus_scores.copy()
+        # Scoring phase ------------------------------------------------------------------------------------------------
+        # Calculate alignment query coverage per alignment
+        q_covs = gene_alns.q_covs
+        valid_cov_mask = q_covs >= self.min_gene_coverage
+
+        valid_alns = gene_alns[valid_cov_mask]
+        valid_q_covs = q_covs[valid_cov_mask]
+        valid_gene_indices = valid_alns.q_names.astype(np.int32)
+
+        # Sort to find the best alignment per gene (highest q_cov, tie-breaker: highest score)
+        order = np.lexsort((-valid_alns.scores, -valid_q_covs, valid_gene_indices))
+        valid_alns = valid_alns[order]
+        valid_gene_indices = valid_gene_indices[order]
+        valid_q_covs = valid_q_covs[order]
+        
+        # Take the first (best) alignment for each gene
+        _, unique_indices = np.unique(valid_gene_indices, return_index=True)
+        best_alns = valid_alns[unique_indices]
+        best_gene_indices = valid_gene_indices[unique_indices]
+        best_q_covs = valid_q_covs[unique_indices]
+
+        valid_locus_indices = self._db.gene_locus_indices[best_gene_indices]
+        valid_not_extra = ~self._db.extra_genes[best_gene_indices]
+
+        # Calculate locus scores by summing best q_covs of valid expected genes
+        locus_scores = np.zeros(len(self._db.loci), dtype=np.float64)
+        np.add.at(locus_scores, valid_locus_indices[valid_not_extra], best_q_covs[valid_not_extra])
+
+        # Calculate completeness count per locus (unique expected genes matched per locus)
+        locus_counts = np.zeros(len(self._db.loci), dtype=np.float32)
+        matched_expected_genes = best_gene_indices[valid_not_extra]
+        np.add.at(locus_counts, self._db.gene_locus_indices[matched_expected_genes], 1.0)
+
+        locus_completeness = locus_counts / self._expected_genes_per_locus
+        final_locus_scores = locus_scores * (locus_completeness ** 3)
+
+        self._last_scores = final_locus_scores.copy()
         self._last_completeness = locus_completeness.copy()
         
-        best_locus_idx = np.argmax(locus_scores)
+        best_locus_idx = np.argmax(final_locus_scores)
         best_locus_name = self._db.loci.ids[best_locus_idx]
         best_locus_completeness = locus_completeness[best_locus_idx]
 
         # Reconstruction phase -----------------------------------------------------------------------------------------
-        # We don't filter by min_gene_coverage here because Old Kaptive allowed low coverage genes to count towards
-        # locus completeness, and simply marked them as 'truncated' (which don't count towards unexpected limits).
-        valid_alns = non_overlapping_q_alns
+        valid_alns = gene_alns
         
         # Cull alignments, prioritizing genes belonging to the best match locus
         valid_indices = valid_alns.q_names.astype(np.int32)
@@ -578,10 +583,15 @@ class Serotyper:
 
         # Identify the primary hit for each expected gene for bounding box calculation
         primary_expected = np.zeros(len(culled_alns), dtype=bool)
-        for g_idx in np.unique(culled_gene_indices[is_expected]):
-            hits = np.where((culled_gene_indices == g_idx) & is_expected)[0]
-            best_hit = hits[np.argmax(culled_alns.q_weighted_scores[hits])]
-            primary_expected[best_hit] = True
+        is_expected_hits = np.where(is_expected)[0]
+        if len(is_expected_hits) > 0:
+            exp_gene_indices = culled_gene_indices[is_expected_hits]
+            exp_scores = culled_alns.scores[is_expected_hits]
+            order = np.lexsort((-exp_scores, exp_gene_indices))
+            sorted_exp_gene_indices = exp_gene_indices[order]
+            _, unique_indices = np.unique(sorted_exp_gene_indices, return_index=True)
+            best_hits = is_expected_hits[order[unique_indices]]
+            primary_expected[best_hits] = True
 
         # Construct bounding locus pieces from valid pieces
         l_ctg_indices, l_starts, l_ends, l_strands = [], [], [], []

@@ -33,7 +33,9 @@ nav = [
     "serotyping/faqs.md",
   ] },
   { "Kaptive-Web" = [
-    "kaptive_web/installation.md"
+    { "Architecture" = "kaptive_web/implementation.md" },
+    { "Installation" = "kaptive_web/installation.md" },
+    { "Usage & Deployment" = "kaptive_web/usage.md" },
   ] },
 { "Development" = [
     "dev/conduct.md",
