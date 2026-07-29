@@ -1,216 +1,226 @@
+r"""Genomic interval representation, strand orientations, and vectorized Structure-of-Arrays operations.
+
+This module provides discrete coordinate intervals via [`Interval`][kaptive.core.interval.Interval],
+strand representations via [`Strand`][kaptive.core.interval.Strand], and high-performance,
+vectorized interval collections via [`Intervals`][kaptive.core.interval.Intervals].
+Includes JIT-compiled Numba kernels for 1D spatial/sequential clustering and overlap culling.
 """
-Genomic interval representation with strand and context, plus batched interval operations.
-"""
+
+from __future__ import annotations
+
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import IntEnum
 from re import Match
-from typing import Union
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 from numba import njit
+
 from kaptive.core.collections import BatchedContainer
 
 
 # Enums ----------------------------------------------------------------------------------------------------------------
 class Strand(IntEnum):
-    """
-    Integer representation of genomic strand orientation.
+    r"""Integer representation of genomic strand orientation.
 
-    Supports conversion from common string formats (+, -, 1, -1).
+    Supports conversion from common string formats (`'+'`, `'-'`, `'1'`, `'-1'`).
+
+    Attributes:
+        FORWARD (int): Forward strand (`+1`).
+        REVERSE (int): Reverse strand (`-1`).
+        UNSTRANDED (int): Unstranded or unknown orientation (`0`).
     """
+
     FORWARD = 1
     REVERSE = -1
     UNSTRANDED = 0
 
     @classmethod
-    def _missing_(cls, value):
+    def _missing_(cls, value: object) -> Strand:
+        r"""Coerce strings, bytes, or integers to a valid [`Strand`][kaptive.core.interval.Strand] instance.
+
+        Args:
+            value (object): Value to coerce (e.g. `'+'`, `'-'`, `b'+'`, `1`, `-1`).
+
+        Returns:
+            Strand: Corresponding [`Strand`][kaptive.core.interval.Strand] enum member.
+        """
         if isinstance(value, bytes):
-            value = value.decode('ascii')
+            value = value.decode("ascii")
         if isinstance(value, str):
-            if value == '+' or value == '1' or value == '+1':
+            if value in ("+", "1", "+1"):
                 return Strand.FORWARD
-            elif value == '-' or value == '-1':
+            elif value in ("-", "-1"):
                 return Strand.REVERSE
         return Strand.UNSTRANDED
 
-    def __str__(self):
+    def __str__(self) -> str:
+        r"""Return the string representation of the strand (`'+'`, `'-'`, or `'.'`).
+
+        Returns:
+            str: Single-character string representation.
+        """
         if self == Strand.FORWARD:
-            return '+'
+            return "+"
         if self == Strand.REVERSE:
-            return '-'
-        return '.'
+            return "-"
+        return "."
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
-IntervalLike = Union[slice, int, Match, 'Interval']  # Type alias
-
 
 @dataclass(frozen=True, slots=True)
 class Interval:
-    """A single genomic interval defined by start, end, and strand.
+    r"""A single 0-based, half-open genomic interval with strand orientation.
 
-    This class represents a discrete segment on a biological sequence, such as a gene on a chromosome.
-    It uses a 0-based, half-open coordinate system, where the `start` position is inclusive and the `end`
-    position is exclusive. This is consistent with Python's slicing and common bioinformatics formats.
-
-    The `strand` attribute indicates the orientation on the sequence, using the `Strand` enum
-    (FORWARD: 1, REVERSE: -1, UNSTRANDED: 0).
-
-    The class is implemented as a frozen dataclass with slots for high performance and immutability.
-    It supports basic interval arithmetic (containment, union) and geometric transformations
-    (shifting, expanding, reverse complementing).
+    Represents a discrete sequence segment defined by `start` (inclusive), `end` (exclusive),
+    and `strand` orientation.
 
     Attributes:
-        start (int): The 0-based starting position of the interval (inclusive).
-        end (int): The 0-based ending position of the interval (exclusive).
-        strand (Strand): The orientation of the interval on its parent sequence.
+        start (int): 0-based starting position (inclusive).
+        end (int): 0-based ending position (exclusive).
+        strand (Strand): Strand orientation [`Strand`][kaptive.core.interval.Strand].
     """
+
     start: int
     end: int
     strand: Strand = Strand.UNSTRANDED
 
     def __len__(self) -> int:
-        """Calculates the length of the interval (end - start)."""
+        r"""Calculate the length of the interval in base pairs (`end - start`).
+
+        Returns:
+            int: Interval length.
+        """
         return self.end - self.start
 
     def __contains__(self, item: IntervalLike) -> bool:
-        """Checks if a coordinate or another interval is fully contained within this one.
+        r"""Check if a coordinate or another interval is fully contained within this interval.
 
         Args:
-            item (IntervalLike): An integer coordinate or another interval-like object
-                (Interval, slice, regex Match).
+            item (IntervalLike): Integer coordinate, slice, regex Match, or
+                [`Interval`][kaptive.core.interval.Interval].
 
         Returns:
-            bool: True if the item is completely inside the interval's bounds.
+            bool: True if item is completely bounded within start and end coordinates.
         """
-        if isinstance(item, int): return self.start <= item < self.end
-        item = Interval.from_item(item)
-        return self.start <= item.start and self.end >= item.end
+        if isinstance(item, int):
+            return self.start <= item < self.end
+        interval_obj = Interval.from_item(item)
+        return self.start <= interval_obj.start and self.end >= interval_obj.end
 
-    def __add__(self, other: IntervalLike) -> 'Interval':
-        """Computes the minimal bounding interval that covers both this interval and another.
-
-        This is equivalent to finding the union of the two intervals' ranges. The strand of the
-        resulting interval is preserved only if both input intervals have the same strand; otherwise,
-        it becomes UNSTRANDED.
+    def __add__(self, other: IntervalLike) -> Interval:
+        r"""Compute the minimal bounding interval covering both this interval and another.
 
         Args:
-            other (IntervalLike): The interval to merge with this one.
+            other (IntervalLike): Interval-like object to merge with.
 
         Returns:
-            Interval: A new Interval representing the combined span.
+            Interval: A new [`Interval`][kaptive.core.interval.Interval] representing the combined span.
         """
-        other = Interval.from_item(other)
-        new_strand = self.strand if self.strand == other.strand else Strand.UNSTRANDED
-        return Interval(min(self.start, other.start), max(self.end, other.end), new_strand)
+        other_obj = Interval.from_item(other)
+        new_strand = self.strand if self.strand == other_obj.strand else Strand.UNSTRANDED
+        return Interval(min(self.start, other_obj.start), max(self.end, other_obj.end), new_strand)
 
-    def __radd__(self, other: IntervalLike) -> 'Interval':
-        """Reverse addition to support `other + self` syntax."""
+    def __radd__(self, other: IntervalLike) -> Interval:
+        r"""Reverse addition operator supporting `other + self`.
+
+        Args:
+            other (IntervalLike): Interval-like object to merge with.
+
+        Returns:
+            Interval: Combined bounding [`Interval`][kaptive.core.interval.Interval].
+        """
         return self.__add__(other)
 
-    def shift(self, x: int, y: int | None = None) -> 'Interval':
-        """Shifts the interval by a fixed distance.
-
-        This is useful for converting between coordinate systems (e.g., from local gene coordinates
-        to global contig coordinates).
+    def shift(self, x: int, y: int | None = None) -> Interval:
+        r"""Shift interval coordinates by fixed distances.
 
         Args:
-            x (int): The distance to shift the start position.
-            y (int, optional): The distance to shift the end position. If None, the end is shifted
-                by the same amount as the start (`x`). Defaults to None.
+            x (int): Distance to shift the start coordinate.
+            y (int | None): Distance to shift the end coordinate. If None, defaults to `x`.
 
         Returns:
-            Interval: A new Interval with the shifted coordinates.
+            Interval: A new shifted [`Interval`][kaptive.core.interval.Interval].
         """
         return Interval(self.start + x, self.end + (y if y is not None else x), self.strand)
 
-    def expand(self, left: int, right: int, clip_length: int | None = None) -> 'Interval':
-        """Expands or shrinks the interval by specified amounts on each side.
-
-        This method is useful for creating flanking regions or padding. The start coordinate is
-        automatically clipped at 0 to prevent negative values. The end coordinate can optionally
-        be clipped to a maximum length.
+    def expand(self, left: int, right: int, clip_length: int | None = None) -> Interval:
+        r"""Expand or shrink the interval by specified base-pair amounts.
 
         Args:
-            left (int): The amount to expand the start (subtract from `start`). Can be negative to shrink.
-            right (int): The amount to expand the end (add to `end`). Can be negative to shrink.
-            clip_length (int, optional): The maximum length of the parent sequence. If provided,
-                the new end coordinate will not exceed this value. Defaults to None.
+            left (int): Amount to extend start leftward (subtract from `start`).
+            right (int): Amount to extend end rightward (add to `end`).
+            clip_length (int | None): Maximum boundary constraint length.
 
         Returns:
-            Interval: A new, expanded Interval.
+            Interval: A new expanded [`Interval`][kaptive.core.interval.Interval].
         """
         new_start = max(0, self.start - left)
         new_end = self.end + right
         if clip_length is not None:
             new_end = min(new_end, clip_length)
-            
+
         return Interval(new_start, new_end, self.strand)
 
-    def reverse_complement(self, length: int | None = None) -> 'Interval':
-        """Calculates the coordinates of the interval on the opposite strand.
-
-        This operation mirrors the interval's position relative to a parent sequence of a given length
-        and inverts its strand. For example, an interval `(10, 20)` on a sequence of length 100 would
-        become `(80, 90)` on the reverse strand.
+    def reverse_complement(self, length: int | None = None) -> Interval:
+        r"""Calculate the mirrored coordinates of the interval on the opposite strand.
 
         Args:
-            length (int, optional): The length of the parent sequence (e.g., a contig). If not provided,
-                the interval's own end is used, which is suitable for intervals at the start of a sequence.
+            length (int | None): Total length of parent sequence. If None, defaults to `end`.
 
         Returns:
-            Interval: A new Interval with reverse-complemented coordinates and strand.
+            Interval: Mirrored [`Interval`][kaptive.core.interval.Interval] on opposite strand.
         """
         if length is None:
             length = self.end
         return Interval(length - self.end, length - self.start, Strand(self.strand * -1))
 
     @classmethod
-    def from_match(cls, item: Match, strand: Strand = Strand.UNSTRANDED) -> 'Interval':
-        """Creates an Interval from a regular expression `Match` object.
+    def from_match(cls, item: Match, strand: Strand = Strand.UNSTRANDED) -> Interval:
+        r"""Create an [`Interval`][kaptive.core.interval.Interval] from a regular expression match object.
 
         Args:
-            item (Match): The regex match object, which has `start()` and `end()` methods.
-            strand (Strand, optional): The strand to assign to the new interval. Defaults to UNSTRANDED.
+            item (Match): Regex match object containing `start()` and `end()`.
+            strand (Strand): Strand orientation [`Strand`][kaptive.core.interval.Strand].
 
         Returns:
-            Interval: A new Interval corresponding to the match's span.
+            Interval: A new [`Interval`][kaptive.core.interval.Interval].
         """
         return cls(item.start(), item.end(), strand)
 
     @classmethod
-    def from_int(cls, item: int, strand: Strand = Strand.UNSTRANDED, length: int | None = None) -> 'Interval':
-        """Creates a 1-base-pair Interval from an integer coordinate.
+    def from_int(cls, item: int, strand: Strand = Strand.UNSTRANDED, length: int | None = None) -> Interval:
+        r"""Create a 1-bp [`Interval`][kaptive.core.interval.Interval] from an integer coordinate.
 
         Args:
-            item (int): The 0-based coordinate. If negative, it's treated as an offset from `length`.
-            strand (Strand, optional): The strand to assign. Defaults to UNSTRANDED.
-            length (int, optional): The parent sequence length, for resolving negative coordinates.
+            item (int): 0-based coordinate.
+            strand (Strand): Strand orientation [`Strand`][kaptive.core.interval.Strand].
+            length (int | None): Parent sequence length to resolve negative indices.
 
         Returns:
-            Interval: A new Interval of length 1 at the specified position.
+            Interval: 1-bp [`Interval`][kaptive.core.interval.Interval].
         """
-        if item < 0 and length is not None: item += length
+        if item < 0 and length is not None:
+            item += length
         return cls(item, item + 1, strand)
 
     @classmethod
-    def from_slice(cls, item: slice, strand: Strand = Strand.UNSTRANDED, length: int | None = None) -> 'Interval':
-        """Creates an Interval from a Python `slice` object.
-
-        This allows for intuitive interval creation, e.g., `Interval.from_slice(10:20)`.
+    def from_slice(cls, item: slice, strand: Strand = Strand.UNSTRANDED, length: int | None = None) -> Interval:
+        r"""Create an [`Interval`][kaptive.core.interval.Interval] from a Python slice object.
 
         Args:
-            item (slice): The slice object with `start` and `stop` attributes.
-            strand (Strand, optional): The strand to assign. Defaults to UNSTRANDED.
-            length (int, optional): The parent sequence length, for resolving slices with `None` as the stop.
+            item (slice): Python slice with `start` and `stop` values.
+            strand (Strand): Strand orientation [`Strand`][kaptive.core.interval.Strand].
+            length (int | None): Parent sequence length for open-ended slices.
 
         Returns:
-            Interval: A new Interval corresponding to the slice's range.
+            Interval: A new [`Interval`][kaptive.core.interval.Interval].
 
         Raises:
-            ValueError: If the slice's `stop` is `None` and no `length` is provided.
+            ValueError: If slice `stop` is None and no `length` parameter is provided.
         """
         start, stop, step = item.start, item.stop, item.step
         if start is None:
@@ -224,26 +234,25 @@ class Interval:
         return cls(start, stop, strand)
 
     @classmethod
-    def from_item(cls, item: IntervalLike, strand: Strand = Strand.UNSTRANDED, length: int | None = None) -> 'Interval':
-        """A universal factory method to create an Interval from various common types.
-
-        This method acts as a type coercer, providing a single entry point for converting
-        different representations (e.g., `slice`, `int`, `Match`) into a standardized `Interval` object.
+    def from_item(
+        cls, item: IntervalLike, strand: Strand = Strand.UNSTRANDED, length: int | None = None
+    ) -> Interval:
+        r"""Universal factory coercing various representations into an [`Interval`][kaptive.core.interval.Interval].
 
         Args:
-            item (IntervalLike): The object to convert. Can be an Interval, slice, int, or regex Match.
-            strand (Strand, optional): The strand to assign if creating a new interval. Defaults to UNSTRANDED.
-            length (int, optional): The parent sequence length, for resolving relative coordinates.
+            item (IntervalLike): Object to convert (Interval, slice, int, or regex Match).
+            strand (Strand): Strand orientation [`Strand`][kaptive.core.interval.Strand].
+            length (int | None): Parent sequence length for coordinate resolution.
 
         Returns:
-            Interval: The resulting Interval object.
+            Interval: Standardized [`Interval`][kaptive.core.interval.Interval] instance.
 
         Raises:
-            TypeError: If the input `item` is of an unsupported type.
+            TypeError: If `item` is of an unsupported type.
         """
         if isinstance(item, cls):
             return item
-        if (interval := getattr(item, 'interval', None)) is not None:
+        if (interval := getattr(item, "interval", None)) is not None:
             return interval
         if isinstance(item, Match):
             return cls.from_match(item, strand)
@@ -254,108 +263,113 @@ class Interval:
         raise TypeError(item)
 
 
+IntervalLike = slice | int | Match | Interval
+
+
 @dataclass(frozen=True, slots=True)
-class Intervals(BatchedContainer[Interval, 'Intervals']):
-    """A high-performance, vectorized SoA collection of genomic intervals.
+class Intervals(BatchedContainer[Interval, "Intervals"]):
+    r"""A high-performance Structure-of-Arrays (SoA) collection of genomic intervals.
 
-    This class stores interval data in a Structure-of-Arrays (SoA) layout using NumPy arrays,
-    which provides significant performance advantages over a list of individual `Interval` objects.
-    By storing starts, ends, and strands in separate, contiguous arrays, this class enables:
-
-    1.  **Memory Efficiency:** Reduced memory overhead compared to many small Python objects.
-    2.  **Vectorized Operations:** NumPy's universal functions (ufuncs) can perform calculations
-        (e.g., `expand`, `project`) on all intervals simultaneously without Python loops.
-    3.  **Accelerated Queries:** Spatial queries are implemented with Numba-jitted kernels for C-like speed.
-
-    The class is immutable by design. All methods that modify data (e.g., `sort`, `filter`, `expand`)
-    return a new `Intervals` instance, leaving the original unchanged.
+    Stores starts, ends, strands, and original tracking indices as parallel 1D NumPy arrays
+    for memory-efficient vectorized operations and Numba spatial algorithms.
 
     Attributes:
-        starts (npt.NDArray[np.int32]): A 1D array of 0-based start coordinates (inclusive).
-        ends (npt.NDArray[np.int32]): A 1D array of 0-based end coordinates (exclusive).
-        strands (npt.NDArray[np.int8]): A 1D array of strand identifiers (1, -1, or 0).
-        original_indices (npt.NDArray[np.int32] | None): A 1D array tracking the original position of each
-            interval before any sorting or filtering. This is crucial for relating query results back to
-            their source data. If not provided, it's auto-generated as a simple range.
+        starts (npt.NDArray[np.int32]): 1D array of 0-based start coordinates.
+        ends (npt.NDArray[np.int32]): 1D array of 0-based end coordinates.
+        strands (npt.NDArray[np.int8]): 1D array of strand values (+1, -1, 0).
+        original_indices (npt.NDArray[np.int32] | None): 1D array tracking original item indices.
     """
+
     starts: npt.NDArray[np.int32]
     ends: npt.NDArray[np.int32]
     strands: npt.NDArray[np.int8]
     original_indices: npt.NDArray[np.int32] | None = None
 
-    def __post_init__(self):
-        """Initializes original_indices if they are not provided."""
+    def __post_init__(self) -> None:
+        r"""Initialize default `original_indices` array if not explicitly supplied."""
         if self.original_indices is None:
-            object.__setattr__(self, 'original_indices', np.arange(len(self.starts), dtype=np.int32))
+            object.__setattr__(self, "original_indices", np.arange(len(self.starts), dtype=np.int32))
 
     @classmethod
-    def empty(cls) -> 'Intervals':
-        """Creates an empty Intervals object with correctly typed, zero-length arrays.
+    def empty(cls) -> Intervals:
+        r"""Create an empty [`Intervals`][kaptive.core.interval.Intervals] object with zero-length arrays.
 
         Returns:
-            Intervals: An empty intervals instance.
+            Intervals: Empty [`Intervals`][kaptive.core.interval.Intervals] collection.
         """
         return cls(
             np.empty(0, dtype=np.int32),
             np.empty(0, dtype=np.int32),
             np.empty(0, dtype=np.int8),
-            np.empty(0, dtype=np.int32)
+            np.empty(0, dtype=np.int32),
         )
 
     @classmethod
-    def from_intervals(cls, intervals: Iterable[Interval]) -> 'Intervals':
-        """Creates an Intervals object from an iterable of individual `Interval` objects.
+    def from_intervals(cls, intervals: Iterable[Interval]) -> Intervals:
+        r"""Construct an [`Intervals`][kaptive.core.interval.Intervals] collection from individual intervals.
 
         Args:
-            intervals (Iterable[Interval]): A list, tuple, or generator of `Interval` objects.
+            intervals (Iterable[Interval]): Iterable of [`Interval`][kaptive.core.interval.Interval] instances.
 
         Returns:
-            Intervals: A new collection containing the data from the intervals.
+            Intervals: Vectorized [`Intervals`][kaptive.core.interval.Intervals] collection.
         """
         # OPTIMIZATION: Fast C-level list comprehension + zip extraction
         data = [(i.start, i.end, i.strand) for i in intervals]
         if not data:
             return cls.empty()
 
-        s, e, st = zip(*data, strict=False)
+        start_vals, end_vals, strand_vals = zip(*data, strict=False)
         return cls(
-            np.array(s, dtype=np.int32),
-            np.array(e, dtype=np.int32),
-            np.array(st, dtype=np.int8)
+            np.array(start_vals, dtype=np.int32),
+            np.array(end_vals, dtype=np.int32),
+            np.array(strand_vals, dtype=np.int8),
         )
 
     def __len__(self) -> int:
-        """Returns the number of intervals in the batch."""
-        return len(self.starts)
-
-    def to_dict(self) -> dict:
-        """Serializes the batch to a dictionary of lists."""
-        return {'starts': self.starts.tolist(), 'ends': self.ends.tolist(), 'strands': self.strands.tolist()}
-
-    @classmethod
-    def from_dict(cls, d: dict) -> 'Intervals':
-        """Deserializes intervals from a dictionary."""
-        return cls(
-            np.array(d['starts'], dtype=np.int32),
-            np.array(d['ends'], dtype=np.int32),
-            np.array(d['strands'], dtype=np.int8)
-        )
-
-    def __getitem__(self, item):
-        """Accesses intervals by index, slice, or boolean mask.
-
-        - If `item` is an integer, it returns a single `Interval` object for that position.
-        - If `item` is a slice, list of indices, or a boolean mask, it returns a new,
-          smaller `Intervals` collection containing only the selected intervals.
-
-        Args:
-            item: An integer index, slice, or boolean NumPy array.
+        r"""Return the number of intervals in the batch.
 
         Returns:
-            Interval | Intervals: A single interval or a new collection of intervals.
+            int: Total interval count.
+        """
+        return len(self.starts)
+
+    def to_dict(self) -> dict[str, list]:
+        r"""Serialize the interval batch into a dictionary of python lists.
+
+        Returns:
+            dict[str, list]: Dictionary containing `'starts'`, `'ends'`, and `'strands'`.
+        """
+        return {"starts": self.starts.tolist(), "ends": self.ends.tolist(), "strands": self.strands.tolist()}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> Intervals:
+        r"""Deserialize an [`Intervals`][kaptive.core.interval.Intervals] collection from a dictionary.
+
+        Args:
+            d (dict): Dictionary with `'starts'`, `'ends'`, and `'strands'` keys.
+
+        Returns:
+            Intervals: Restored [`Intervals`][kaptive.core.interval.Intervals] collection.
+        """
+        return cls(
+            np.array(d["starts"], dtype=np.int32),
+            np.array(d["ends"], dtype=np.int32),
+            np.array(d["strands"], dtype=np.int8),
+        )
+
+    def __getitem__(self, item: Any) -> Interval | Intervals:
+        r"""Access intervals by integer index, slice, or boolean/integer NumPy array.
+
+        Args:
+            item (Any): Integer index, slice, or NumPy mask array.
+
+        Returns:
+            Interval | Intervals: A single [`Interval`][kaptive.core.interval.Interval] or a
+                sliced [`Intervals`][kaptive.core.interval.Intervals] collection.
 
         Raises:
-            IndexError: If an integer index is out of range.
+            IndexError: If integer index is out of bounds.
         """
         if isinstance(item, (int, np.integer)):
             if item < 0:
@@ -368,181 +382,179 @@ class Intervals(BatchedContainer[Interval, 'Intervals']):
             self.starts[item],
             self.ends[item],
             self.strands[item],
-            self.original_indices[item] if self.original_indices is not None else None
+            self.original_indices[item] if self.original_indices is not None else None,
         )
 
     @classmethod
-    def concat(cls, batches: Iterable['Intervals']) -> 'Intervals':
-        """Concatenates multiple Intervals objects into a single, larger collection.
+    def concat(cls, batches: Iterable[Intervals]) -> Intervals:
+        r"""Concatenate multiple [`Intervals`][kaptive.core.interval.Intervals] collections into a single batch.
 
         Args:
-            batches (Iterable[Intervals]): A list or iterable of collections to concatenate.
+            batches (Iterable[Intervals]): Iterable of [`Intervals`][kaptive.core.interval.Intervals] objects to merge.
 
         Returns:
-            Intervals: A new, combined intervals object.
+            Intervals: Concatenated [`Intervals`][kaptive.core.interval.Intervals] collection.
 
         Raises:
-            ValueError: If the input list of batches is empty.
+            ValueError: If `batches` is empty.
         """
-        batches = list(batches)
-        if not batches:
+        batches_list = list(batches)
+        if not batches_list:
             raise ValueError("Cannot concatenate empty list of batches")
         return cls(
-            np.concatenate([b.starts for b in batches]),
-            np.concatenate([b.ends for b in batches]),
-            np.concatenate([b.strands for b in batches]),
-            np.concatenate([b.original_indices for b in batches]) if batches[0].original_indices is not None else None
+            np.concatenate([b.starts for b in batches_list]),
+            np.concatenate([b.ends for b in batches_list]),
+            np.concatenate([b.strands for b in batches_list]),
+            np.concatenate([b.original_indices for b in batches_list])
+            if batches_list[0].original_indices is not None
+            else None,
         )
 
-    def shift(self, x: int | npt.NDArray[np.int32], y: int | npt.NDArray[np.int32] | None = None) -> 'Intervals':
-        """Shifts all intervals in the collection by a given offset.
-        
+    def shift(self, x: int | npt.NDArray[np.int32], y: int | npt.NDArray[np.int32] | None = None) -> Intervals:
+        r"""Vectorized coordinate shift of all intervals in the collection.
+
         Args:
-            x (int | NDArray): The distance to shift the starts.
-            y (int | NDArray, optional): The distance to shift the ends. If None, uses x.
-            
+            x (int | npt.NDArray[np.int32]): Shift distance for starts.
+            y (int | npt.NDArray[np.int32] | None): Shift distance for ends. Defaults to `x`.
+
         Returns:
-            Intervals: A new Intervals collection with shifted coordinates.
+            Intervals: Shifted [`Intervals`][kaptive.core.interval.Intervals] collection.
         """
         if len(self) == 0:
             return self
-            
+
         new_starts = self.starts + x
         new_ends = self.ends + (y if y is not None else x)
-        
+
         return Intervals(
             np.asarray(new_starts, dtype=np.int32),
             np.asarray(new_ends, dtype=np.int32),
             self.strands,
-            self.original_indices
+            self.original_indices,
         )
 
-    def cull_overlaps(self, order: npt.NDArray[np.int32],
-                      max_overlap_fraction: float = 0.1,
-                      group_by: npt.NDArray[np.integer] | None = None,
-                      secondary_group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.bool_]:
-        """Greedily culls intervals that overlap significantly with higher-priority intervals.
-        
+    def cull_overlaps(
+        self,
+        order: npt.NDArray[np.int32],
+        max_overlap_fraction: float = 0.1,
+        group_by: npt.NDArray[np.integer] | None = None,
+        secondary_group_by: npt.NDArray[np.integer] | None = None,
+    ) -> npt.NDArray[np.bool_]:
+        r"""Greedily cull overlapping intervals based on prior ordering and max overlap thresholds.
+
         Args:
-            order (npt.NDArray[np.int32]): An array of indices specifying the greedy selection order.
-            max_overlap_fraction (float): The maximum allowable overlap as a fraction of an interval's length.
-            group_by (npt.NDArray[np.integer], optional): First grouping array. Overlaps are only checked within groups.
-            secondary_group_by (npt.NDArray[np.integer], optional): Second grouping array.
-            
+            order (npt.NDArray[np.int32]): Priority evaluation order indices.
+            max_overlap_fraction (float): Maximum allowable overlap ratio. Defaults to 0.1.
+            group_by (npt.NDArray[np.integer] | None): Primary grouping array (e.g. contig ID).
+            secondary_group_by (npt.NDArray[np.integer] | None): Secondary grouping array.
+
         Returns:
-            npt.NDArray[np.bool_]: A boolean mask indicating which intervals are kept.
+            npt.NDArray[np.bool_]: Boolean mask array indicating kept intervals.
         """
         n = len(self)
         if n == 0:
             return np.empty(0, dtype=np.bool_)
-            
+
         if group_by is None:
-            group_by = np.zeros(n, dtype=np.int32)
+            group_by_arr = np.zeros(n, dtype=np.int32)
         else:
-            group_by = np.asarray(group_by, dtype=np.int32)
-            
+            group_by_arr = np.asarray(group_by, dtype=np.int32)
+
         if secondary_group_by is None:
-            secondary_group_by = np.zeros(n, dtype=np.int32)
+            secondary_group_by_arr = np.zeros(n, dtype=np.int32)
         else:
-            secondary_group_by = np.asarray(secondary_group_by, dtype=np.int32)
-            
+            secondary_group_by_arr = np.asarray(secondary_group_by, dtype=np.int32)
+
         return _cull_overlaps_kernel(
-            order, group_by, secondary_group_by, self.starts, self.ends, max_overlap_fraction, n
+            order, group_by_arr, secondary_group_by_arr, self.starts, self.ends, max_overlap_fraction, n
         )
 
-    def cluster_spatial(self, tolerance: int = 0,
-                        group_by: npt.NDArray[np.integer] | None = None) -> npt.NDArray[np.int32]:
-        """Clusters intervals that are within a spatial tolerance of one another.
-
-        This performs a highly optimized 1D single-linkage clustering. It is ideal for
-        grouping spatially close genes (e.g., into operons or BGCs) on a genome.
+    def cluster_spatial(
+        self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None
+    ) -> npt.NDArray[np.int32]:
+        r"""Perform fast 1D single-linkage spatial clustering of intervals.
 
         Args:
-            tolerance (int, optional): The maximum distance in base pairs between two intervals
-                for them to be considered part of the same cluster. Defaults to 0.
-            group_by (npt.NDArray[np.integer], optional): An integer array of the same length as
-                the batch. Intervals will only be clustered together if they share the same
-                group ID (e.g., the same contig). Defaults to None.
+            tolerance (int): Maximum base-pair distance threshold for clustering. Defaults to 0.
+            group_by (npt.NDArray[np.integer] | None): Grouping array (e.g. contig ID).
 
         Returns:
-            npt.NDArray[np.int32]: A 1D array of cluster IDs parallel to the original intervals.
+            npt.NDArray[np.int32]: 1D array of cluster IDs parallel to original intervals.
         """
         n = len(self)
         if n == 0:
             return np.empty(0, dtype=np.int32)
 
         if group_by is None:
-            group_by = np.zeros(n, dtype=np.int32)
+            group_by_arr = np.zeros(n, dtype=np.int32)
         else:
-            group_by = np.asarray(group_by, dtype=np.int32)
+            group_by_arr = np.asarray(group_by, dtype=np.int32)
 
-        order = np.lexsort((self.ends, self.starts, group_by)).astype(np.int32)
-        return _cluster_kernel(self.starts, self.ends, group_by, tolerance, order)
+        order = np.lexsort((self.ends, self.starts, group_by_arr)).astype(np.int32)
+        return _cluster_kernel(self.starts, self.ends, group_by_arr, tolerance, order)
 
-    def cluster_sequential(self, tolerance: int = 0, group_by: npt.NDArray[np.integer] | None = None,
-                           enforce_strand: bool = False) -> npt.NDArray[np.int32]:
-        """Clusters intervals based on their sequential index rather than physical distance.
-
-        This performs 1D single-linkage clustering using the `original_indices` of the batch.
-        It is ideal for grouping items like genes/ORFs by the number of intervening items between
-        them, robustly bypassing large physical gaps (like IS elements).
+    def cluster_sequential(
+        self,
+        tolerance: int = 0,
+        group_by: npt.NDArray[np.integer] | None = None,
+        enforce_strand: bool = False,
+    ) -> npt.NDArray[np.int32]:
+        r"""Perform index-based sequential clustering independent of physical base-pair distance.
 
         Args:
-            tolerance (int, optional): The maximum number of allowed intervening intervals.
-                A tolerance of 0 means intervals must be exactly adjacent. Defaults to 0.
-            group_by (npt.NDArray[np.integer], optional): An integer array of the same length as
-                the batch. Intervals will only be clustered together if they share the same
-                group ID (e.g., the same contig). Defaults to None.
-            enforce_strand (bool, optional): If True, intervals must also be on the same
-                strand to be clustered together. Defaults to False.
+            tolerance (int): Maximum allowed intervening item count. Defaults to 0.
+            group_by (npt.NDArray[np.integer] | None): Grouping array (e.g. contig ID).
+            enforce_strand (bool): If True, restricts clustering to identical strands.
 
         Returns:
-            npt.NDArray[np.int32]: A 1D array of cluster IDs parallel to the original intervals.
+            npt.NDArray[np.int32]: 1D array of cluster IDs parallel to original intervals.
         """
         n = len(self)
         if n == 0:
             return np.empty(0, dtype=np.int32)
 
         if group_by is None:
-            group_by = np.zeros(n, dtype=np.int32)
+            group_by_arr = np.zeros(n, dtype=np.int32)
         else:
-            group_by = np.asarray(group_by, dtype=np.int32)
+            group_by_arr = np.asarray(group_by, dtype=np.int32)
 
         indices = self.original_indices if self.original_indices is not None else np.zeros(n, dtype=np.int32)
 
         if enforce_strand:
-            order = np.lexsort((indices, self.strands, group_by)).astype(np.int32)
+            order = np.lexsort((indices, self.strands, group_by_arr)).astype(np.int32)
         else:
-            order = np.lexsort((indices, group_by)).astype(np.int32)
+            order = np.lexsort((indices, group_by_arr)).astype(np.int32)
 
-        return _cluster_by_index_kernel(indices, group_by, self.strands, 
-                                        tolerance, enforce_strand, order)
+        return _cluster_by_index_kernel(indices, group_by_arr, self.strands, tolerance, enforce_strand, order)
 
-    def arrange(self, indices: npt.NDArray[np.integer],
-                order: npt.NDArray[np.integer],
-                starts: npt.NDArray[np.int32],
-                ends: npt.NDArray[np.int32],
-                strands: npt.NDArray[np.int8],
-                gap: int = 500) -> 'Intervals':
-        """Arranges interval coordinates across multiple disjoint pieces (e.g., contigs).
-        
+    def arrange(
+        self,
+        indices: npt.NDArray[np.integer],
+        order: npt.NDArray[np.integer],
+        starts: npt.NDArray[np.int32],
+        ends: npt.NDArray[np.int32],
+        strands: npt.NDArray[np.int8],
+        gap: int = 500,
+    ) -> Intervals:
+        r"""Arrange interval coordinates across disjoint contig/piece layouts into a 1D space.
+
         Args:
-            indices: Array mapping each interval to its piece index (0 to N-1).
-            order: Array defining the layout order of the pieces.
-            starts: Start coordinate of each piece.
-            ends: End coordinate of each piece.
-            strands: Orientation of each piece (1 for forward, -1 for reverse-complement).
-            gap: Base pairs to insert between pieces.
-            
+            indices (npt.NDArray[np.integer]): Piece index mapping for each interval.
+            order (npt.NDArray[np.integer]): Piece layout order.
+            starts (npt.NDArray[np.int32]): Piece start coordinates.
+            ends (npt.NDArray[np.int32]): Piece end coordinates.
+            strands (npt.NDArray[np.int8]): Piece orientations (+1 or -1).
+            gap (int): Base-pair padding between adjacent pieces. Defaults to 500.
+
         Returns:
-            A new Intervals object with 1D arranged coordinates.
+            Intervals: Transformed 1D arranged [`Intervals`][kaptive.core.interval.Intervals] collection.
         """
         if len(self) == 0:
             return self
 
         n_pieces = len(starts)
         piece_plot_starts = np.zeros(n_pieces, dtype=np.int32)
-        
+
         current_x = 0
         for i in order:
             p_len = ends[i] - starts[i]
@@ -558,16 +570,16 @@ class Intervals(BatchedContainer[Interval, 'Intervals']):
             mask = indices == i
             if not np.any(mask):
                 continue
-                
+
             p_s = starts[i]
             p_e = ends[i]
             orient = Strand(strands[i])
             offset = piece_plot_starts[i]
-            
+
             g_s = self.starts[mask]
             g_e = self.ends[mask]
             g_str = self.strands[mask]
-            
+
             if orient >= 0:
                 new_starts[mask] = offset + (g_s - p_s)
                 new_ends[mask] = offset + (g_e - p_s)
@@ -582,13 +594,29 @@ class Intervals(BatchedContainer[Interval, 'Intervals']):
 
 # Kernels --------------------------------------------------------------------------------------------------------------
 @njit(cache=True, nogil=True)
-def _cluster_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32],
-                    groups: npt.NDArray[np.int32], tolerance: int,
-                    order: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
-    """Numba-accelerated 1D spatial clustering."""
+def _cluster_kernel(
+    starts: npt.NDArray[np.int32],
+    ends: npt.NDArray[np.int32],
+    groups: npt.NDArray[np.int32],
+    tolerance: int,
+    order: npt.NDArray[np.int32],
+) -> npt.NDArray[np.int32]:
+    r"""Numba-accelerated 1D spatial clustering.
+
+    Args:
+        starts (npt.NDArray[np.int32]): Start coordinates array.
+        ends (npt.NDArray[np.int32]): End coordinates array.
+        groups (npt.NDArray[np.int32]): Grouping identifiers array.
+        tolerance (int): Maximum base pair distance allowed.
+        order (npt.NDArray[np.int32]): Sorted order index array.
+
+    Returns:
+        npt.NDArray[np.int32]: Cluster IDs parallel to original intervals.
+    """
     n = len(starts)
     cluster_ids = np.empty(n, dtype=np.int32)
-    if n == 0: return cluster_ids
+    if n == 0:
+        return cluster_ids
 
     curr_cluster = 0
     first_idx = order[0]
@@ -613,13 +641,31 @@ def _cluster_kernel(starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32],
 
 
 @njit(cache=True, nogil=True)
-def _cluster_by_index_kernel(indices: npt.NDArray[np.int32], groups: npt.NDArray[np.int32],
-                             strands: npt.NDArray[np.int8], tolerance: int,
-                             enforce_strand: bool, order: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
-    """Numba-accelerated 1D index-based clustering."""
+def _cluster_by_index_kernel(
+    indices: npt.NDArray[np.int32],
+    groups: npt.NDArray[np.int32],
+    strands: npt.NDArray[np.int8],
+    tolerance: int,
+    enforce_strand: bool,
+    order: npt.NDArray[np.int32],
+) -> npt.NDArray[np.int32]:
+    r"""Numba-accelerated 1D index-based clustering.
+
+    Args:
+        indices (npt.NDArray[np.int32]): Original item tracking indices.
+        groups (npt.NDArray[np.int32]): Grouping identifiers array.
+        strands (npt.NDArray[np.int8]): Strand orientations (+1, -1, 0).
+        tolerance (int): Maximum allowed intervening item count.
+        enforce_strand (bool): Whether to enforce identical strands.
+        order (npt.NDArray[np.int32]): Sorted order index array.
+
+    Returns:
+        npt.NDArray[np.int32]: Cluster IDs parallel to original intervals.
+    """
     n = len(indices)
     cluster_ids = np.empty(n, dtype=np.int32)
-    if n == 0: return cluster_ids
+    if n == 0:
+        return cluster_ids
 
     curr_cluster = 0
     first_idx = order[0]
@@ -634,7 +680,7 @@ def _cluster_by_index_kernel(indices: npt.NDArray[np.int32], groups: npt.NDArray
         g = groups[idx]
         st = strands[idx]
 
-        same_group = (g == curr_g)
+        same_group = g == curr_g
         same_strand = (st == curr_st) if enforce_strand else True
 
         if same_group and same_strand and (abs(val_i - curr_i) <= tolerance + 1):
@@ -651,12 +697,31 @@ def _cluster_by_index_kernel(indices: npt.NDArray[np.int32], groups: npt.NDArray
 
 
 @njit(cache=True, nogil=True)
-def _cull_overlaps_kernel(order: npt.NDArray[np.int32], group1: npt.NDArray[np.int32], group2: npt.NDArray[np.int32],
-                          starts: npt.NDArray[np.int32], ends: npt.NDArray[np.int32], 
-                          max_overlap_fraction: float, n: int) -> npt.NDArray[np.bool_]:
-    """Numba-accelerated greedy overlap culling."""
+def _cull_overlaps_kernel(
+    order: npt.NDArray[np.int32],
+    group1: npt.NDArray[np.int32],
+    group2: npt.NDArray[np.int32],
+    starts: npt.NDArray[np.int32],
+    ends: npt.NDArray[np.int32],
+    max_overlap_fraction: float,
+    n: int,
+) -> npt.NDArray[np.bool_]:
+    r"""Numba-accelerated greedy overlap culling.
+
+    Args:
+        order (npt.NDArray[np.int32]): Evaluation order indices.
+        group1 (npt.NDArray[np.int32]): Primary group IDs.
+        group2 (npt.NDArray[np.int32]): Secondary group IDs.
+        starts (npt.NDArray[np.int32]): Start coordinates.
+        ends (npt.NDArray[np.int32]): End coordinates.
+        max_overlap_fraction (float): Maximum allowed overlap ratio.
+        n (int): Number of intervals.
+
+    Returns:
+        npt.NDArray[np.bool_]: Boolean mask array of kept intervals.
+    """
     kept_mask = np.zeros(n, dtype=np.bool_)
-    
+
     for i in range(n):
         idx = order[i]
         g1 = group1[idx]
@@ -664,24 +729,24 @@ def _cull_overlaps_kernel(order: npt.NDArray[np.int32], group1: npt.NDArray[np.i
         s = starts[idx]
         e = ends[idx]
         length = e - s
-        
+
         if length <= 0:
             continue
-            
+
         overlap_found = False
         # Check against previously kept intervals in O(N^2) (Very fast in pure C)
         for j in range(i):
             prev_idx = order[j]
             if not kept_mask[prev_idx] or group1[prev_idx] != g1 or group2[prev_idx] != g2:
                 continue
-                
+
             ks, ke = starts[prev_idx], ends[prev_idx]
             overlap = min(e, ke) - max(s, ks)
             if overlap > 0 and (overlap / min(length, ke - ks)) > max_overlap_fraction:
                 overlap_found = True
                 break
-                
+
         if not overlap_found:
             kept_mask[idx] = True
-            
+
     return kept_mask

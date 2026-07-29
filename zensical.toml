@@ -16,11 +16,11 @@ watch = ["src"]
 
 nav = [
 { "Home" = "index.md" },
+{ "Quickstart" = "quickstart.md" },
 "installation.md",
   { Databases = [
     "db/overview.md",
     "db/curation.md",
-    "db/creation.md",
     { "CLI Usage" = "db/cli.md" },
     { "API Reference" = "db/api.md" },
   ] },
@@ -32,14 +32,13 @@ nav = [
     { "API Reference" = "serotyping/api.md" },
     "serotyping/faqs.md",
   ] },
-  { "Kaptive-Web" = [
-    { "Architecture" = "kaptive_web/implementation.md" },
-    { "Installation" = "kaptive_web/installation.md" },
-    { "Usage & Deployment" = "kaptive_web/usage.md" },
-  ] },
-{ "Development" = [
-    "dev/conduct.md",
-    "dev/contributing.md",
+{ Development = [
+    "conduct.md",
+    "contributing.md",
+    "releases.md",
+    { "Core API" = "core/api.md" },
+    { "Compare API" = "compare/api.md" },
+    { "BGC API" = "bgc/api.md" },
   ] },
 ]
 
@@ -86,16 +85,18 @@ features = [
     "navigation.top",
     "navigation.footer",
     "navigation.tabs",
+    "navigation.tabs.sticky",
     "navigation.tracking",
     "navigation.sections",
     "navigation.expand",
     "navigation.instant",
     "navigation.instant.progress",
+    "navigation.path",
     "search.suggest",
     "search.highlight",
     "search.share",
     "toc.follow",
-    "toc.integrate",
+    # "toc.integrate",
 ]
 
 [project.extra]

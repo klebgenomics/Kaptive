@@ -9,3 +9,7 @@ categories:
 ---
 
 ::: kaptive.serotyping
+::: kaptive.serotyping.cli
+::: kaptive.serotyping.core
+::: kaptive.serotyping.io
+::: kaptive.serotyping.models

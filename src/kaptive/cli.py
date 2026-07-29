@@ -1,26 +1,46 @@
+r"""Command line interface framework and root runner for Kaptive.
+
+This module provides ANSI color utilities ([`Colors`][kaptive.cli.Colors]), customized
+argparse formatters ([`KaptiveHelpFormatter`][kaptive.cli.KaptiveHelpFormatter]), error-handling
+parsers ([`HelpOnErrorParser`][kaptive.cli.HelpOnErrorParser]), the core application host
+([`Cli`][kaptive.cli.Cli]), and the abstract command specification ([`Command`][kaptive.cli.Command]).
+"""
+
 import argparse
 import os
 import re
 import sys
 from abc import ABC
-from collections.abc import Iterable, Sized
-from importlib import metadata
+from collections.abc import Iterable
 from pathlib import Path
-from typing import IO
+from typing import IO, Any
+
+from kaptive import __version__
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class Colors:
-    """A non-instantiable namespace for ANSI escape sequences.
+    r"""Namespace for ANSI terminal color escape sequences.
 
-    This class provides a collection of string constants for terminal text styling.
-    It is designed as a pure namespace and cannot be instantiated.
+    Provides constants and styling utility methods for terminal text formatting.
+    This class is designed as a pure namespace and cannot be instantiated.
+
+    Attributes:
+        ENABLED (bool): Flag indicating whether ANSI color output is active.
+        RESET (str): ANSI reset escape sequence.
+        BOLD (str): ANSI bold text formatting sequence.
+        BOLD_RED (str): ANSI bold red text sequence.
+        BOLD_CYAN (str): ANSI bold cyan text sequence.
     """
 
     ENABLED = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 
-    def __init__(self):
-        """Prevents instantiation of this namespace class."""
+    def __init__(self) -> None:
+        r"""Prevent instantiation of namespace class.
+
+        Raises:
+            TypeError: Always raised when instantiated.
+        """
         raise TypeError("The Colors class is a namespace and cannot be instantiated.")
 
     # --- Static Attributes ---
@@ -30,27 +50,58 @@ class Colors:
     BOLD_CYAN = "\033[1;36m"
 
     @classmethod
-    def wrap(cls, text: str, *styles: str) -> "str":
-        """Wraps text in the specified color(s)/style(s) and appends the reset sequence."""
+    def wrap(cls, text: str, *styles: str) -> str:
+        r"""Wrap text in specified ANSI styling escape sequences.
+
+        Appends reset sequence at the end if color output is enabled.
+
+        Args:
+            text (str): Input text string to format.
+            *styles (str): ANSI style escape sequences to apply.
+
+        Returns:
+            str: Styled text string, or original text if ANSI color is disabled.
+        """
         if not cls.ENABLED:
             return text
         return f"{''.join(styles)}{text}{cls.RESET}"
 
 
 class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom formatter to add ANSI colors to argparse output!"""
+    r"""Custom argparse help formatter adding ANSI colors and layout enhancements.
 
-    def _format_usage(self, usage, actions, groups, prefix):
+    Inherits from [`argparse.RawTextHelpFormatter`][argparse.RawTextHelpFormatter] to preserve
+    raw multiline descriptions while adding styled section headings and usage placeholders.
+    """
+
+    def _format_usage(
+        self,
+        usage: str | None,
+        actions: Iterable[argparse.Action],
+        groups: Iterable[argparse._ArgumentGroup],
+        prefix: str | None,
+    ) -> str:
+        r"""Format usage syntax string with ANSI color highlights.
+
+        Args:
+            usage (str | None): Custom usage message pattern.
+            actions (Iterable[argparse.Action]): Sequence of argument actions.
+            groups (Iterable[argparse._ArgumentGroup]): Sequence of argument groups.
+            prefix (str | None): Usage line prefix string (defaults to "usage: ").
+
+        Returns:
+            str: Colorized usage string.
+        """
         # Filter out optional actions to cleanly generate the positional usage string
         positionals = [a for a in actions if not a.option_strings]
         result = super()._format_usage(usage, positionals, groups, prefix)
 
         # Replace the subcommand set {add,install,...} with [subcommand]
         result = re.sub(r'\{[a-zA-Z0-9_,\.-]+\}', Colors.wrap('[subcommand]', Colors.BOLD_CYAN), result)
-        
+
         actual_prefix = prefix if prefix is not None else "usage: "
         target = f"{actual_prefix}{self._prog}"
-        
+
         if result.startswith(target):
             # Inject [options] cleanly if any optional actions exist
             if any(a.option_strings for a in actions):
@@ -58,15 +109,28 @@ class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
                 result = result.replace(target, f"{target} {colored_options}", 1)
             # Colorize prefix
             result = result.replace(actual_prefix, Colors.wrap(actual_prefix, Colors.BOLD_CYAN), 1)
-            
+
         return result
 
-    def start_section(self, heading):
+    def start_section(self, heading: str | None) -> None:
+        r"""Start a new help output section with a colorized heading.
+
+        Args:
+            heading (str | None): Title heading string for the section.
+        """
         if heading:
             heading = Colors.wrap(heading, Colors.BOLD_CYAN)
         super().start_section(heading)
 
-    def _format_action(self, action):
+    def _format_action(self, action: argparse.Action) -> str:
+        r"""Format help output text for a single argument action.
+
+        Args:
+            action (argparse.Action): Argument action instance being formatted.
+
+        Returns:
+            str: Formatted action description string.
+        """
         result = super()._format_action(action)
         # Remove the set string (e.g. {add,install,...}) from the subcommands header
         if type(action).__name__ == '_SubParsersAction':
@@ -77,27 +141,52 @@ class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
 
 
 class HelpOnErrorParser(argparse.ArgumentParser):
-    """An ArgumentParser that prints full help on error."""
-    
-    def error(self, message):
+    r"""Argument parser that outputs full help text and suggestions on error.
+
+    Extends [`argparse.ArgumentParser`][argparse.ArgumentParser] to print help menu to
+    `sys.stderr` when invalid arguments or choices are encountered, suggesting close matches.
+    """
+
+    def error(self, message: str) -> None:
+        r"""Print help text and error message before terminating CLI session.
+
+        Args:
+            message (str): Error message string reported by parser.
+
+        Raises:
+            SystemExit: Exits process with status code 2.
+        """
         if match := re.search(r"invalid choice: '?([^']+)'? \(choose from (.*)\)", message):
             invalid = match.group(1)
             choices = [c.strip("'").strip() for c in match.group(2).split(", ")]
             from difflib import get_close_matches
             if matches := get_close_matches(invalid, choices):
                 message += f"\n    💡 Did you mean '{Colors.wrap(matches[0], Colors.BOLD_CYAN)}'?"
-                
+
         self.print_help(sys.stderr)
-        self.exit(2,
-                  f"\n{Colors.wrap('❌ Error:', Colors.BOLD_RED)} {message}\n")
+        self.exit(2, f"\n{Colors.wrap('❌ Error:', Colors.BOLD_RED)} {message}\n")
 
 
 class Cli:
-    """
-    Class defining the root Kaptive CLI
+    r"""Root Command Line Interface runner and context manager for Kaptive.
+
+    Coordinates global option parsing, subcommand registration, safe file handle
+    tracking, error trapping, and progress updates.
+
+    Attributes:
+        verbose (bool): Flag indicating whether verbose logging is enabled.
+        global_parser (HelpOnErrorParser): Parser handling shared global options.
+        parser (HelpOnErrorParser): Main argument parser for application commands.
+        subparsers (argparse._SubParsersAction): Subparser registry for subcommands.
     """
 
-    def __init__(self, description: str | None = None, epilog: str | None = None):
+    def __init__(self, description: str | None = None, epilog: str | None = None) -> None:
+        r"""Initialize root CLI application instance.
+
+        Args:
+            description (str | None): Header description text displayed in top-level help.
+            epilog (str | None): Footer epilog text displayed in top-level help.
+        """
         self.verbose = False
         self.global_parser = HelpOnErrorParser(add_help=False)
         self.global_parser.add_argument(
@@ -112,11 +201,6 @@ class Cli:
             parents=[self.global_parser],
             formatter_class=KaptiveHelpFormatter,
         )
-
-        try:
-            __version__ = metadata.version("kaptive")
-        except metadata.PackageNotFoundError:
-            __version__ = "unknown"
 
         self.parser.add_argument(
             "-v",
@@ -133,15 +217,26 @@ class Cli:
         self.subparsers = self.parser.add_subparsers(
             title=Colors.wrap("💬 Commands", Colors.BOLD), dest="command", required=True
         )
-        self._open_handles = []
+        self._open_handles: list[IO] = []
 
-    def add_command(self, command: "Command"):
-        """Builds and attaches a top-level Command to the root CLI."""
+    def add_command(self, command: "Command") -> None:
+        r"""Build and attach top-level command to root CLI subparsers.
+
+        Args:
+            command (Command): Subcommand instance implementing [`Command`][kaptive.cli.Command].
+        """
         command.cli = self
         command.build(self.subparsers, parent_parsers=[self.global_parser])
 
-    def run(self, args: list[str] | None = None):
-        """Parses arguments and automatically executes the bound command."""
+    def run(self, args: list[str] | None = None) -> None:
+        r"""Parse arguments and execute bound subcommand handler.
+
+        Args:
+            args (list[str] | None): Command line arguments to parse. Defaults to `sys.argv[1:]`.
+
+        Raises:
+            SystemExit: If database error or web client error occurs during command execution.
+        """
         parsed_args = self.parser.parse_args(args)
         self.verbose = getattr(parsed_args, "verbose", False)
 
@@ -156,10 +251,30 @@ class Cli:
         else:
             self.parser.print_help()
 
-    def __enter__(self):
+    def __enter__(self) -> "Cli":
+        r"""Enter context manager scope returning CLI instance.
+
+        Returns:
+            Cli: The active CLI host instance.
+        """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any | None,
+    ) -> None:
+        r"""Exit context manager scope and clean up allocated resources.
+
+        Args:
+            exc_type (type[BaseException] | None): Exception type raised within context, if any.
+            exc_val (BaseException | None): Exception instance raised within context, if any.
+            exc_tb (Any | None): Traceback object associated with exception, if any.
+
+        Raises:
+            SystemExit: Terminates process with standard exit codes for handled signals.
+        """
         self.cleanup()
         if exc_type is KeyboardInterrupt:
             self.msg("\n🛑 Cancelled by user.")
@@ -175,34 +290,49 @@ class Cli:
             self.msg(f"📄 File not found: {exc_val}")
             sys.exit(1)
 
-    def exit(self, msg: str, code: int = 1):
-        """Prints a message to stderr and cleanly exits."""
+    def exit(self, msg: str, code: int = 1) -> None:
+        r"""Print error message to stderr and terminate process.
+
+        Args:
+            msg (str): Error message string to report.
+            code (int): Process exit code to pass to `sys.exit`. Defaults to 1.
+
+        Raises:
+            SystemExit: Exits process with specified status code.
+        """
         self.msg(f"❌ {msg}")
         sys.exit(code)
 
-    def __del__(self):
+    def __del__(self) -> None:
+        r"""Clean up resource handles upon garbage collection."""
         self.cleanup()
 
-    def cleanup(self):
-        """Safely close any open file handles managed by this CLI."""
+    def cleanup(self) -> None:
+        r"""Close any open file handles tracked by this CLI instance."""
         for handle in self._open_handles:
             if handle not in (sys.stdout, sys.stdin, sys.stderr):
                 handle.close()
         self._open_handles.clear()
 
-    def msg(self, msg: str | None, **kwargs) -> None:
-        """
-        Prints an informational message to stderr.
+    def msg(self, msg: str | None, **kwargs: Any) -> None:
+        r"""Print informational message to stderr if verbose mode is enabled.
 
-        Informational messages are routed to stderr by default to keep stdout clean
-        for data piping and redirection. The message is only printed if the --verbose flag was provided.
+        Args:
+            msg (str | None): Message string to print.
+            **kwargs (Any): Additional keyword arguments passed to `print`.
         """
         if self.verbose:
             print(msg, file=sys.stderr, **kwargs)
 
     def progress(self, iterable: Iterable, msg: str) -> Iterable:
-        """
-        Wraps an iterable to show a progress message when verbose is True.
+        r"""Wrap iterable to display live progress counter on stderr when verbose mode is active.
+
+        Args:
+            iterable (Iterable): Source collection or generator to iterate over.
+            msg (str): Prefix status message displayed during iteration.
+
+        Returns:
+            Iterable: Generator yielding items from original iterable while rendering progress.
         """
         try:
             total = len(iterable)
@@ -218,9 +348,17 @@ class Cli:
             print(file=sys.stderr)
 
     def open_file(self, file: str, mode: str = "rb") -> IO:
+        r"""Open file path or return standard stdout stream handle with tracking.
+
+        Args:
+            file (str): File path string or `"-"` / `"stdout"` for standard output stream.
+            mode (str): File open mode flag. Defaults to `"rb"`.
+
+        Returns:
+            IO: Open file handle or system stream object.
+        """
         if file == "-" or file == "stdout":  # If the path is '-', return stdout
             return sys.stdout.buffer if "b" in mode else sys.stdout
-            # We don't add stdout/stdin to _open_handles
 
         handle = open(file, mode)
         self._open_handles.append(handle)
@@ -228,9 +366,19 @@ class Cli:
 
 
 class Command(ABC):
-    """
-    Abstract base class for Kaptive CLI Commands.
-    Provides a Click-like interface for nesting commands and sharing arguments using argparse.
+    r"""Abstract base class for Kaptive CLI subcommands.
+
+    Provides a declarative structure for defining CLI argument options, nested subcommands,
+    and command execution handlers.
+
+    Attributes:
+        name (str): Identifier name used to trigger command on CLI.
+        aliases (list[str]): Alternative trigger names or abbreviations for command.
+        description (str): Detailed text explanation shown in command help.
+        help_text (str): Brief single-line summary shown in parent subparser tables.
+        parser (argparse.ArgumentParser | None): Bound argument parser instance.
+        subcommands (list[Command]): Child subcommand instances.
+        cli (Cli | None): Parent root CLI host application reference.
     """
 
     name: str = ""
@@ -238,9 +386,10 @@ class Command(ABC):
     description: str = ""
     help_text: str = ""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        r"""Initialize command instance and populate metadata attributes."""
         self.parser: argparse.ArgumentParser | None = None
-        self.subcommands: list["Command"] = []
+        self.subcommands: list[Command] = []
         self.cli: Cli | None = None
 
         # Auto-populate name from the class name
@@ -250,7 +399,7 @@ class Command(ABC):
         # Auto-populate description from class docstring
         if not self.description:
             if type(self).__doc__ and type(self).__doc__ != Command.__doc__:
-                self.description = type(self).__doc__  # cleandoc(type(self).__doc__)
+                self.description = type(self).__doc__
 
         # Auto-populate short help text from the first line of the description
         if not self.help_text and self.description:
@@ -258,16 +407,20 @@ class Command(ABC):
 
         self.register_subcommands()
 
-    def register_subcommands(self):
-        """Override to populate self.subcommands with child Command instances."""
+    def register_subcommands(self) -> None:
+        r"""Register child subcommand instances into `subcommands` list."""
         pass
 
-    def setup_arguments(self):
-        """Override to add specific arguments to self.parser."""
+    def setup_arguments(self) -> None:
+        r"""Configure argument flags and positional parameters on `self.parser`."""
         pass
 
     def get_shared_parser(self) -> argparse.ArgumentParser | None:
-        """Override to return an ArgumentParser(add_help=False) containing arguments shared with children."""
+        r"""Return shared parent parser containing options passed to subcommands.
+
+        Returns:
+            argparse.ArgumentParser | None: Shared non-help argument parser or `None`.
+        """
         return None
 
     def add_output_arguments(
@@ -275,8 +428,21 @@ class Command(ABC):
         opts: argparse._ArgumentGroup,
         tsv_flags: tuple[str, str] = ("-o", "--out"),
         include_json: bool = True,
-    ):
-        """Helper to add standard output arguments for commands that generate output files."""
+    ) -> None:
+        r"""Add standard report and FASTA file output options to argument group.
+
+        Args:
+            opts (argparse._ArgumentGroup): Target argument group to populate.
+            tsv_flags (tuple[str, str]): Short and long flag options for TSV report output.
+                Defaults to `("-o", "--out")`.
+            include_json (bool): Flag indicating whether to include `--json` argument option.
+                Defaults to `True`.
+        """
+        help_msg = (
+            "Write serotyping results as a TSV report to a file (default: %(default)s)"
+            if tsv_flags[0] == "-o"
+            else "Write serotyping results as a TSV report to a file (default: %(const)s)"
+        )
         opts.add_argument(
             tsv_flags[0],
             tsv_flags[1],
@@ -284,7 +450,7 @@ class Command(ABC):
             nargs="?" if tsv_flags[0] == "-t" else None,
             default="stdout" if tsv_flags[0] == "-o" else None,
             const="stdout" if tsv_flags[0] == "-t" else None,
-            help="Write serotyping results as a TSV report to a file (default: %(default)s)" if tsv_flags[0] == "-o" else "Write serotyping results as a TSV report to a file (default: %(const)s)",
+            help=help_msg,
         )
         opts.add_argument(
             "-l",
@@ -339,16 +505,25 @@ class Command(ABC):
             help="Generate interactive locus plots to a directory (default: %(const)s)",
         )
 
-    def __call__(self, args: argparse.Namespace):
-        """Override to __call__ the command's logic. If not overridden, command acts as a group/folder."""
+    def __call__(self, args: argparse.Namespace) -> None:
+        r"""Execute command business logic for parsed arguments.
+
+        Args:
+            args (argparse.Namespace): Parsed command line argument namespace.
+        """
         pass
 
     def build(
         self,
         subparsers: argparse._SubParsersAction,
         parent_parsers: list[argparse.ArgumentParser] | None = None,
-    ):
-        """Wires the command and its children into the argparse structure."""
+    ) -> None:
+        r"""Wire command parser and subcommands into parent argparse hierarchy.
+
+        Args:
+            subparsers (argparse._SubParsersAction): Target subparser action registry.
+            parent_parsers (list[argparse.ArgumentParser] | None): Parent shared parsers to inherit.
+        """
         parents = parent_parsers or []
 
         self.parser = subparsers.add_parser(
@@ -395,404 +570,11 @@ class Command(ABC):
                 cmd.build(sub_action, parent_parsers=child_parents)
 
 
-# List command ---------------------------------------------------------------------------------------------------------
-class List(Command):
-    """📋 Lists installed databases"""
+def main() -> None:
+    r"""Execute main entry point for the Kaptive CLI application."""
+    from kaptive.db.cli import Database
+    from kaptive.serotyping.cli import Convert, Type
 
-    aliases = ["ls"]
-
-    def __call__(self, args: argparse.Namespace):
-        from kaptive.db import DatabaseManager
-
-        if installed := DatabaseManager.installed():
-            print("\n".join(installed))
-        else:
-            self.cli.msg("❌ No databases installed")
-
-
-# Database command -----------------------------------------------------------------------------------------------------
-class Database(Command):
-    """📦 Manage Kaptive databases"""
-
-    aliases = ["db"]
-
-    def register_subcommands(self):
-        self.subcommands = [List(), Add(), Install(), Update(), Reset(), Extract(), Metadata()]
-
-
-class Install(Command):
-    """📦 Install a known database via keyword (or 'all')."""
-
-    def setup_arguments(self):
-        opts = self.parser.add_argument_group("📥 Inputs")
-        opts.add_argument("database", help="Database keyword (see: `kaptive db list`) or 'all'")
-
-    def __call__(self, args: argparse.Namespace):
-        if args.database == "all":
-            self.cli.msg("📥 Installing all known databases concurrently...")
-        else:
-            self.cli.msg(f"📥 Installing database '{args.database}'...")
-            
-        from kaptive.db import DatabaseManager
-        DatabaseManager.install(args.database)
-        
-        if args.database == "all":
-            self.cli.msg("✅ Successfully installed all known databases.")
-        else:
-            self.cli.msg(f"✅ Successfully installed '{args.database}'.")
-
-
-class Update(Command):
-    """🔄 Update installed databases from their remote repositories."""
-
-    def setup_arguments(self):
-        opts = self.parser.add_argument_group("📥 Inputs")
-        opts.add_argument(
-            "database",
-            nargs="?",
-            default="all",
-            help="Database keyword (see: `kaptive db list`) or 'all' (default: all)"
-        )
-
-    def __call__(self, args: argparse.Namespace):
-        if args.database == "all":
-            self.cli.msg("🔄 Checking all installed databases for updates concurrently...")
-        else:
-            self.cli.msg(f"🔄 Checking '{args.database}' for updates...")
-            
-        from kaptive.db import DatabaseManager
-        updated = False
-        for db in DatabaseManager.update(args.database):
-            self.cli.msg(
-                f"✅ Updated {db.metadata.name} to version {db.metadata.version}"
-            )
-            updated = True
-            
-        if not updated:
-            self.cli.msg("🎉 All databases are already up to date.")
-
-
-class Reset(Command):
-    """🧹 Uninstall all local databases and clear the cache."""
-
-    def __call__(self, args: argparse.Namespace):
-        self.cli.msg("🧹 Uninstalling all local databases...")
-        from kaptive.db import DatabaseManager
-
-        DatabaseManager.reset()
-        self.cli.msg("✅ All local databases have been uninstalled and reset.")
-
-
-class Add(Command):
-    """🔗 Add a new database from a GitHub repository."""
-
-    def setup_arguments(self):
-        opts = self.parser.add_argument_group("📥 Inputs")
-        opts.add_argument("database", help="Name for the new database")
-
-        opts = self.parser.add_argument_group(
-            Colors.wrap("🌐 GitHub Details", Colors.BOLD)
-        )
-        opts.add_argument("owner", help="GitHub repository owner")
-        opts.add_argument("repo_name", help="GitHub repository name")
-        opts.add_argument(
-            "-b",
-            "--branch",
-            help="GitHub repository branch (default: main)",
-            default="main",
-            nargs="?",
-        )
-
-    def __call__(self, args: argparse.Namespace):
-        from kaptive.db import DatabaseManager
-
-        self.cli.msg( f"⤵️ Adding {args.database} from {args.owner}/{args.repo_name}/{args.branch}")
-        if db := DatabaseManager.add(
-            args.owner, args.repo_name, args.database, args.branch
-        ):
-            self.cli.msg(f"✅ Added {db.metadata.name} v{db.metadata.version} successfully!")
-        else:
-            self.cli.msg("❌ Failed to add database! Is it already installed?")
-
-
-class Metadata(Command):
-    """📊 Print metadata of a database"""
-
-    aliases = ['info']
-
-    def setup_arguments(self):
-        opts = self.parser.add_argument_group("📥 Inputs")
-        opts.add_argument("database", help="Database path or keyword (see: `kaptive db list`)")
-
-    def __call__(self, args: argparse.Namespace):
-        from kaptive.db import Database
-
-        db = Database.load(args.database)
-        meta = db.metadata
-        fields = [
-            ("Organism", meta.organism),
-            ("Taxon", str(meta.taxon)),
-            ("Antigen", meta.antigen),
-            ("Pathway", meta.pathway),
-            ("Version", meta.version),
-            ("Keyword", meta.keyword),
-            ("Threshold", f"{meta.id_threshold}%"),
-            ("GenBank", meta.genbank),
-            ("DOIs", ", ".join(meta.doi) if meta.doi else "None"),
-            ("Repository", f"https://github.com/{meta.owner}/{meta.repo}/tree/{meta.branch}"),
-            ("Contact", ", ".join(f"{k} <{v}>" for k, v in meta.contact.items())),
-        ]
-
-        max_len = max(len(k) for k, v in fields)
-        print(
-            Colors.wrap(f"\n📊 Metadata for {meta.name}\n", Colors.BOLD_CYAN) +
-            '\n'.join(f"  {Colors.wrap(k.ljust(max_len), Colors.BOLD)}  {v}" for k, v in fields) +
-            '\n'
-        )
-
-
-class Extract(Command):
-    """📤 Extract records from a known database."""
-
-    def register_subcommands(self):
-        self.subcommands = [Loci(), Genes(), Proteins()]
-
-    def get_shared_parser(self) -> argparse.ArgumentParser:
-        parser = argparse.ArgumentParser(add_help=False)
-
-        opts = parser.add_argument_group("📥 Inputs")
-        opts.add_argument("database", help="Database path or keyword (see: `kaptive db list`)")
-
-        opts = parser.add_argument_group("📤 Outputs")
-        opts.add_argument(
-            "-o",
-            "--out",
-            default=sys.stdout.buffer,
-            metavar="FILE",
-            help="Output file to write fasta to (default: stdout)",
-        )
-        opts.add_argument(
-            "--use-indices",
-            action="store_true",
-            help="Use numeric indices instead of string IDs for fasta headers",
-        )
-        return parser
-
-
-class Loci(Command):
-    """🧬 Extracts locus sequences from the database in fasta format."""
-
-    def __call__(self, args: argparse.Namespace):
-        self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
-
-        db = Database.load(args.database)
-        out_handle = self.cli.open_file(args.out, "wb")
-        self.cli.msg("📤 Extracting loci...")
-        out_handle.write(db.loci.to_fasta(args.use_indices))
-        self.cli.msg(f"✅ Written locus sequences to {args.out}.")
-
-
-class Genes(Command):
-    """🧩 Extracts gene sequences from the database in fasta format."""
-
-    def __call__(self, args: argparse.Namespace):
-        self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
-
-        db = Database.load(args.database)
-        out_handle = self.cli.open_file(args.out, "wb")
-        self.cli.msg("📤 Extracting genes...")
-        out_handle.write(db.genes.to_fasta(args.use_indices))
-        self.cli.msg(f"✅ Written gene sequences to {args.out}.")
-
-
-class Proteins(Command):
-    """🧶 Extracts protein sequences from the database in fasta format."""
-
-    def __call__(self, args: argparse.Namespace):
-        self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
-
-        db = Database.load(args.database)
-        out_handle = self.cli.open_file(args.out, "wb")
-        self.cli.msg("📤 Extracting proteins...")
-        out_handle.write(db.translations.to_fasta(args.use_indices))
-        self.cli.msg(f"✅ Written protein sequences to {args.out}.")
-
-
-# Exporter -------------------------------------------------------------------------------------------------------------
-class ResultExporter:
-    """
-    Evaluates CLI arguments once and sets up a pipeline of output writers.
-    This eliminates conditional branching inside the processing loop and allows
-    reusability between the 'Type' and 'Convert' commands.
-    """
-    file_suffix = 'kaptive_results'
-    def __init__(self, cli: Cli, args: argparse.Namespace):
-        self.writers = []
-
-        if tsv_file := getattr(args, "out", getattr(args, "tsv", None)):
-            from kaptive.serotyping import KaptiveRow
-            tsv_handle = cli.open_file(tsv_file, mode="wb")
-            tsv_handle.write(KaptiveRow.header())
-            self.writers.append(lambda r: tsv_handle.write(bytes(KaptiveRow.from_result(r))))
-
-        if pha4ge_file := getattr(args, "pha4ge", None):
-            from kaptive.serotyping import Pha4geRow
-            pha4ge_handle = cli.open_file(pha4ge_file, mode="wb")
-            pha4ge_handle.write(Pha4geRow.header())
-            self.writers.append(lambda r: pha4ge_handle.write(bytes(Pha4geRow.from_result(r))))
-
-        if json_file := getattr(args, "json", None):
-            try:
-                from orjson import dumps, OPT_SERIALIZE_NUMPY, OPT_APPEND_NEWLINE
-            except ImportError:
-                cli.exit("orjson not installed. Please run: pip install kaptive[json]")
-            json_handle = cli.open_file(json_file, mode="wb")
-            self.writers.append(
-                lambda r: json_handle.write(dumps(r.to_dict(), option=OPT_SERIALIZE_NUMPY | OPT_APPEND_NEWLINE))
-            )
-
-        if loci_dir := getattr(args, "loci", None):  # type: Path
-            self.writers.append(lambda r: (loci_dir / f"{r.genome}_{self.file_suffix}.fna"
-                                           ).write_bytes(r.locus_seqs.to_fasta()))
-
-        if genes_dir := getattr(args, "genes", None):  # type: Path
-            self.writers.append(lambda r: (genes_dir / f"{r.genome}_{self.file_suffix}.ffn"
-                                           ).write_bytes(r.gene_seqs.to_fasta()))
-
-        if proteins_dir := getattr(args, "proteins", None):  # type: Path
-            self.writers.append(lambda r: (proteins_dir / f"{r.genome}_{self.file_suffix}.faa"
-                                           ).write_bytes(r.translations.to_fasta()))
-
-        if plot_dir := getattr(args, "plots", None):  # type: Path
-            try:
-                from kaptive.plotting import SerotypingResultPlotter
-            except ImportError:
-                cli.exit("plotly not installed. Please run: pip install kaptive[plot]")
-            self.writers.append(lambda r: SerotypingResultPlotter(r).write_html(
-                plot_dir / f"{r.genome}_{self.file_suffix}.html", include_plotlyjs=False, full_html=True))
-
-    def __call__(self, result):
-        """Pass the result to all registered output writers."""
-        for write in self.writers:
-            write(result)
-
-
-# Type command ---------------------------------------------------------------------------------------------------------
-class Type(Command):
-    """💉 In silico serotyping of assemblies."""
-
-    aliases = ["assembly"]  # Backwards compatibility with < v3.3
-
-    def setup_arguments(self):
-        opts = self.parser.add_argument_group(Colors.wrap("📥 Inputs", Colors.BOLD))
-        opts.add_argument("database", help="Database path or keyword (see: `kaptive db list`)")
-        opts.add_argument(
-            "genomes",
-            nargs="+",
-            help="Genome assemblies in fasta format; can be compressed",
-        )
-
-        opts = self.parser.add_argument_group(Colors.wrap("📤 Outputs", Colors.BOLD))
-        self.add_output_arguments(opts, tsv_flags=("-o", "--out"), include_json=True)
-
-        opts = self.parser.add_argument_group(
-            Colors.wrap("🔬 Confidence options", Colors.BOLD)
-        )
-        opts.add_argument(
-            "--max-other-genes",
-            type=int,
-            metavar="",
-            default=1,
-            help="Typeable if <= other genes (default: %(default)s)",
-        )
-        opts.add_argument(
-            "--min-completeness",
-            type=float,
-            metavar="",
-            default=0.5,
-            help="Typeable if >= completeness (default: %(default)s)",
-        )
-        opts.add_argument(
-            "--below-threshold",
-            action="store_true",
-            help="Typeable if any genes in locus are below threshold (default: False)",
-        )
-
-        opts = self.parser.add_argument_group(
-            Colors.wrap("🔧 Other options", Colors.BOLD)
-        )
-        opts.add_argument(
-            "-t",
-            "--threads",
-            type=int,
-            default=0,
-            metavar="",
-            help="Number threads or 0 for all available (default: 0)",
-        )
-
-    def __call__(self, args: argparse.Namespace):
-        self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
-        from kaptive.serotyping import Serotyper
-
-        db = Database.load(args.database)
-        exporter = ResultExporter(self.cli, args)
-
-        serotyper = Serotyper(
-            db=db,
-            max_other_genes=args.max_other_genes,
-            min_completeness=args.min_completeness,
-            allow_below_threshold=args.below_threshold,
-        )
-        for genome in self.cli.progress(args.genomes, "💉 Serotyping genomes..."):
-            if result := serotyper(genome):
-                exporter(result)
-
-        self.cli.msg(f"✅ Serotyping complete. Results written to '{args.out}'.")
-
-
-# Client command -------------------------------------------------------------------------------------------------------
-class Convert(Command):
-    """💱 Convert serialized Kaptive results into different formats."""
-
-    def setup_arguments(self):
-        opts = self.parser.add_argument_group(Colors.wrap("📥 Inputs", Colors.BOLD))
-        opts.add_argument(
-            "jsonl",
-            default='stdin',
-            help="Serialised results in JSON-lines format (default: stdin)",
-        )
-
-        opts = self.parser.add_argument_group(Colors.wrap("📤 Outputs", Colors.BOLD))
-        self.add_output_arguments(opts, tsv_flags=("-t", "--tsv"), include_json=False)
-
-    def __call__(self, args: argparse.Namespace):
-        try:
-            from orjson import loads
-        except ImportError:
-            self.cli.exit("orjson not installed. Please run: pip install kaptive[json]")
-
-        from kaptive.serotyping import SerotypingResult
-
-        exporter = ResultExporter(self.cli, args)
-
-        handle = self.cli.open_file(args.jsonl, mode="rb")
-        for line in self.cli.progress(handle, "💱 Converting results..."):
-            line = line.strip()
-            if not line:
-                continue
-            
-            result = SerotypingResult.from_dict(loads(line))
-            exporter(result)
-            
-        self.cli.msg("✅ Conversion complete.")
-
-
-def main():
-    """Main entry point for the Kaptive CLI."""
     description = (
         "🦠 Kaptive: The tool for in silico serotyping of surface antigen loci."
     )
@@ -807,3 +589,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

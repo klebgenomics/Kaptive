@@ -37,18 +37,20 @@ lint:
 # Run the full CI pipeline locally (format check, lint, test)
 ci: fmt-check lint test
 
-# Build and serve the documentation locally
-docs-build: install
+prep-docs: install
     uv run scripts/generate_cli_docs.py
+    uv run scripts/generate_release_notes.py
+    uv run scripts/fetch_announcement.py
+
+# Build and serve the documentation locally
+docs-build: prep-docs
     uv run --group docs zensical build
 
 # Test if documentation can be built without warnings or errors
-docs-test: install
-    uv run scripts/generate_cli_docs.py
+docs-test: prep-docs
     uv run --group docs zensical build -s
 
-serve: install
-    uv run scripts/generate_cli_docs.py
+serve: prep-docs
     uv run --group docs zensical serve
 
 # Build the Python package

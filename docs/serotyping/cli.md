@@ -35,8 +35,13 @@ usage: kaptive type [options] database genomes [genomes ...]
 
 🔧 Other options:
   -t, --threads         Number threads or 0 for all available (default: 0)
+  --partial-edge-tolerance 
+                        Tolerance in bases from contig edge to call a partial gene (default: 5)
 
 🌎 Global options:
   -h, --help            show this help message and exit
   -V, --verbose         Enable verbose output/progress
 ```
+
+<a id="kaptive-convert"></a>
+

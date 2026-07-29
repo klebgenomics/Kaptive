@@ -9,3 +9,7 @@ categories:
 ---
 
 ::: kaptive.db
+::: kaptive.db.cli
+::: kaptive.db.core
+::: kaptive.db.manager
+::: kaptive.db.models

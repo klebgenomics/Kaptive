@@ -1,5 +1,3 @@
-docs/source
-
 # From https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore
 
 # Byte-compiled / optimized / DLL files
@@ -209,6 +207,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Custom
+.agents/
 scratch/
 docs/javascripts/deepl-api-config.js
-KLproblems.pdf
+docs/kaptive_web/
+docs/bgc/
+scripts/train_ml_model.py
+src/kaptive/bgc/

@@ -11,7 +11,8 @@ categories:
 📦 Manage Kaptive databases
 
 ```text
-usage: kaptive database [options] [subcommand] ...
+usage: kaptive database [options]
+                        [subcommand] ...
 
 📦 Manage Kaptive databases
 
