@@ -29,7 +29,9 @@ responsible for the polysaccharide structural diversity are expected to
 be more variable. The specific identity thresholds vary across species.
 
 
-## :lucide-database: Known Databases
+## :lucide-database: Available Databases
+
+Below is a list of Kaptive databases you can install using their keyword:
 
 | Species | Locus | Keyword |
 |:-:|:-:|:-:|
@@ -39,8 +41,7 @@ be more variable. The specific identity thresholds vary across species.
 | [_Klebsiella oxytoca_ Species Complex](https://github.com/klebgenomics/KoSC-surface-antigen-loci) | O | `kosc_o` |
 | [_Acinetobacter baumannii_](https://github.com/johannajkenyon/Abaumannii_surface_polysaccharide_loci) | K | `ab_k` |
 | [_Acinetobacter baumannii_](https://github.com/johannajkenyon/Abaumannii_surface_polysaccharide_loci) | OC | `ab_o` |
-| [_Vibrio parahaemolyticus_](https://github.com/tomdstanton/vibrio_parahaemolyticus_genomoserotyping) | K | `vpar_k` |
-| [_Vibrio parahaemolyticus_](https://github.com/tomdstanton/vibrio_parahaemolyticus_genomoserotyping) | O | `vpar_o` |
+| [_Escherichia coli_](https://github.com/rgladstone/EC-K-typing) | Group 2 + 3 CPS | `ecoli_kps` |
 
 ### :lucide-terminal: Managing Databases via the CLI
 
