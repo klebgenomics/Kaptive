@@ -67,9 +67,7 @@ class DatabaseManager:
         "kosc_o": ("klebgenomics", "KoSC-surface-antigen-loci", "Klebsiella_oxytoca_Species_Complex_O_locus_database"),
         "ab_k": ("johannajkenyon", "Abaumannii_surface_polysaccharide_loci", "Acinetobacter_baumannii_K"),
         "ab_o": ("johannajkenyon", "Abaumannii_surface_polysaccharide_loci", "Acinetobacter_baumannii_OC"),
-        "ecoli_kps": ("tomdstanton", "EC-K-typing", "EC-K-typing_group2and3"),
-        "vpar_k": ("tomdstanton", "vibrio_parahaemolyticus_genomoserotyping", "VibrioPara_Kaptivedb_K"),
-        "vpar_o": ("tomdstanton", "vibrio_parahaemolyticus_genomoserotyping", "VibrioPara_Kaptivedb_O"),
+        "ecoli_kps": ("rgladstone", "EC-K-typing", "EC-K-typing_group2and3"),
     }
     _DB_DIR = Path(os.environ.get("KAPTIVE_DB_DIR", Path.home() / ".kaptive"))
     _DB_DIR.mkdir(parents=True, exist_ok=True)

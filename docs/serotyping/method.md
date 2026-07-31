@@ -1,5 +1,5 @@
 ---
-title: Serotyping with Kaptive
+title: Method
 author: Tom Stanton
 comments: true
 tags: [serotyping]
@@ -8,13 +8,13 @@ categories:
   - Serotyping
 ---
 
-## Serotyping Overview
+## :lucide-microscope: Serotyping Overview
 
-The [`Serotyper`](api.md#kaptive.serotyping.Serotyper) executes a highly-optimized, multi-phase pipeline to analyze a
-genome assembly and produce a [SerotypingResult](api.md#kaptive.serotyping.SerotypingResult). 
+The [`Serotyper`](../reference/serotyping/core.html#kaptive.serotyping.core.Serotyper) executes a highly-optimized, multi-phase pipeline to analyze a
+genome assembly and produce a [SerotypingResult](../reference/serotyping/models.html#kaptive.serotyping.models.SerotypingResult). 
 
 
-## Locus Scoring Algorithm
+## :lucide-calculator: Locus Scoring Algorithm
 
 This provides a detailed overview of the mathematical scoring algorithm that Kaptive uses to determine the best-matching locus for a given genome assembly. The algorithm is designed to be highly accurate and computationally efficient, utilizing dynamic programming alignment scores and strict completeness penalties to resolve locus identities.
 
@@ -34,8 +34,8 @@ Since a single gene might map to multiple locations (e.g., duplicated elements o
 1. **Coverage Filter:** Any alignment covering less than 20% of the expected gene length is immediately discarded to prune noisy, spurious hits.
 2. **Primary Hit Selection:** The remaining valid alignments for a gene are ranked by their **Alignment Score ($S_{DP}$)**, with **Gene Coverage ($Cov_{gene}$)** used as a tie-breaker. The highest-ranking alignment is selected as the primary hit.
 
-> [!TIP]
-> Relying on robust DP scoring for primary hit selection inherently prioritizes identical, full-length gene variants over distant homologs or fragments, ensuring the highest quality matches are carried forward into the locus scoring phase.
+!!! tip
+    Relying on robust DP scoring for primary hit selection inherently prioritizes identical, full-length gene variants over distant homologs or fragments, ensuring the highest quality matches are carried forward into the locus scoring phase.
 
 ### 3. Accumulating Locus Scores
 
@@ -45,16 +45,16 @@ It calculates a **Core Score** ($S_{core}$) for each locus by simply summing the
 
 $$S_{core} = \sum_{gene \in \text{expected}} Cov_{gene}$$
 
-> [!NOTE]
-> In earlier versions of Kaptive, an *Inverse Document Frequency (IDF)* weighting system was used to penalize universally conserved "core" genes. The current algorithm replaces IDF weighting entirely; the combination of strict DP-based hit selection and the exponential completeness penalty (described below) naturally and robustly separates true locus matches from false positives driven by core genes.
+!!! note
+    In earlier versions of Kaptive, an *Inverse Document Frequency (IDF)* weighting system was used to penalize universally conserved "core" genes. The current algorithm replaces IDF weighting entirely; the combination of strict DP-based hit selection and the exponential completeness penalty (described below) naturally and robustly separates true locus matches from false positives driven by core genes.
 
 ### 4. Locus Completeness Penalty
 
-A high Core Score alone is not enough to declare a match. A locus might accumulate a high score if a genome happens to contain highly-conserved core genes, but is missing the rare, specific genes that uniquely define that locus.
+A high Core Score alone is not enough to declare a match. A locus might accumulate a high score if a genome happens to contain highly-conserved core genes elsewhere in the assembly, but is missing the rare, specific genes that uniquely define that locus.
 
-To strongly penalize loci with missing genes, Kaptive calculates a **Completeness** factor ($C$):
+To strongly penalize loci with missing genes, Kaptive calculates a **Completeness** factor ($C$). Crucially, this completeness is evaluated strictly within the **reconstructed locus boundaries**—an expected gene is only counted as "found" if it physically overlaps the assembled locus region.
 
-$$C = \frac{\text{Count}_{found}}{\text{Count}_{expected}}$$
+$$C = \frac{\text{Count}_{found\_inside}}{\text{Count}_{expected}}$$
 
 ### 5. Final Total Score and Selection
 
@@ -62,14 +62,14 @@ The final score used to rank and select the best locus is the product of the Cor
 
 $$\text{Score}_{total} = S_{core} \times C^3$$
 
-> [!IMPORTANT]
-> By multiplying the Core Score by $C^3$, Kaptive applies an **exponential penalty** to loci missing expected genes. For example, a locus that is only 50% complete will have its score scaled down by a factor of 0.125 ($0.5^3$). This ensures that complete or near-complete loci will consistently out-score fragmented false positives.
+!!! tip
+    By multiplying the Core Score by $C^3$, Kaptive applies an **exponential penalty** to loci missing expected genes. For example, a locus that is only 50% complete will have its score scaled down by a factor of 0.125 ($0.5^3$). This ensures that complete or near-complete loci will consistently out-score fragmented false positives.
 
 #### Summary of Selection
 
 After calculating $\text{Score}_{total}$ for every possible locus in the database, Kaptive ranks them in descending order. The locus with the highest $\text{Score}_{total}$ is chosen as the **Best match locus**. Following this algorithmic selection, a secondary "Phenotype Evaluation" phase may be triggered (e.g., checking specific alleles or gene states) to refine the final serotype prediction.
 
-## Phenotype Evaluation Logic
+## :lucide-flask-conical: Phenotype Evaluation Logic
 
 While predicting the "best match locus" is heavily reliant on quantitative metrics (Core Score and Completeness), the final biological prediction of what the genome actually *does* or *looks like* requires qualitative logic. We refer to this as the **Phenotype Evaluation Phase**.
 
@@ -80,12 +80,12 @@ Kaptive uses a highly-optimized Boolean rule engine to apply these nuanced biolo
 ### 1. Determining Gene States
 Before any phenotype rules can be evaluated, Kaptive must assess the "health" of every gene found in the locus. 
 
-Each gene is translated into its corresponding amino acid sequence and aligned to the database reference. Based on this alignment, it is assigned a **Gene State**:
+Each gene is translated into its corresponding amino acid sequence (truncating at the first stop codon to prevent downstream frameshifts from skewing the identity score) and aligned to the database reference. Based on this alignment and coverage, it is assigned a **Gene State**:
 
 * **NORMAL**: The gene is fully intact and its sequence identity exceeds the database's minimum identity threshold.
 * **PARTIAL**: The gene was cut off by the edge of a fragmented assembly contig. Because we cannot know if the missing portion is intact, we assume it is functional for the sake of caution.
-* **TRUNCATED**: The gene contains a premature stop codon, frameshift, or massive internal deletion, indicating it is definitively broken.
-* **NOVEL**: The gene is fully present, but its sequence identity falls below the database threshold, suggesting it may be a novel variant with potentially different function.
+* **TRUNCATED**: The gene's translated protein sequence covers less than 90% of the expected reference protein length, indicating a premature stop codon, frameshift, or massive internal deletion.
+* **NOVEL**: The gene is fully present, but its sequence identity falls below the database threshold, suggesting it may be a novel variant with potentially different function. Spurious homologous genes found *outside* the locus boundaries that fall below this identity threshold are completely ignored.
 
 ### 2. Defining "Active" Gene Clusters
 In Kaptive's logic, a gene cluster (a group of homologous genes) is considered **Active** in the genome only if a corresponding gene is found in a `NORMAL` or `PARTIAL` state.

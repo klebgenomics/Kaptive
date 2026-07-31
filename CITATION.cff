@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use Kaptive in your work, please cite it using the following metadata."
+title: "Fast and accurate in silico antigen typing with Kaptive 3"
+authors:
+  - family-names: "Stanton"
+    given-names: "Thomas David"
+  - family-names: "Hetland"
+    given-names: "Marit A.K."
+  - family-names: "Löhr"
+    given-names: "Iren H."
+  - family-names: "Holt"
+    given-names: "Kathryn E."
+  - family-names: "Wyres"
+    given-names: "Kelly L."
+type: software
+url: "https://klebgenomics.github.io/Kaptive/"
+repository-code: "https://github.com/klebgenomics/Kaptive"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Stanton"
+      given-names: "Thomas David"
+    - family-names: "Hetland"
+      given-names: "Marit A.K."
+    - family-names: "Löhr"
+      given-names: "Iren H."
+    - family-names: "Holt"
+      given-names: "Kathryn E."
+    - family-names: "Wyres"
+      given-names: "Kelly L."
+  title: "Fast and accurate in silico antigen typing with Kaptive 3"
+  journal: "Microbial Genomics"
+  year: 2025
+  volume: 11
+  issue: 6
+  doi: "10.1099/mgen.0.001428"
+  url: "https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.001428"

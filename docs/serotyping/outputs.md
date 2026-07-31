@@ -8,10 +8,10 @@ categories:
   - Serotyping
 ---
 
-## Tabular
+## :lucide-table: Tabular
 
 The main output of the assembly typing mode is a tab-delimited table of
-the results. See [the api](api.md#kaptive.serotyping.KaptiveRow) for an
+the results. See [the api][kaptive.serotyping.KaptiveRow] for an
 explanation of the column content.
 
 The default is to print this table to **stdout**. You can use UNIX
@@ -28,7 +28,7 @@ To disable the tabular output, simply redirect the output to
 
 <a id="fasta"></a>
 
-## Fasta
+## :lucide-file-text: Fasta
 
 The `-f/--fasta` flag produces a fasta file of the region(s) of the
 assembly which correspond to the best locus match. This may be a single
@@ -59,11 +59,11 @@ or for a single file, both are valid:
 
 <a id="json"></a>
 
-## JSON
+## :lucide-braces: JSON
 
 The `-j/--json` flag produces a JSON file of the results which allows
 Kaptive to reconstruct the `TypingResult` objects after a run which can
-be used with [kaptive-convert](cli.md#kaptive-convert). Unlike
+be used with [kaptive-convert](../cli/serotyping.md). Unlike
 previous version (2 and below), this is a JSON lines file (or "-" for
 `stdout`), where each line is a JSON object representing the results for
 a single assembly. If the file already exists, Kaptive will append to it

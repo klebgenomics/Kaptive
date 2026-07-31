@@ -13,50 +13,73 @@ Copyright &copy; 2026 <a href="https://tomdstanton.com" target="_blank">Tom Stan
 docs_dir = "docs"
 site_dir = "site"
 watch = ["src"]
+generator = false
 
 nav = [
-{ "Home" = "index.md" },
-{ "Quickstart" = "quickstart.md" },
-"installation.md",
-  { Databases = [
-    "db/overview.md",
-    "db/curation.md",
-    { "CLI Usage" = "db/cli.md" },
-    { "API Reference" = "db/api.md" },
-  ] },
-  { Serotyping = [
-    "serotyping/method.md",
-    "serotyping/outputs.md",
-    "serotyping/results.md",
-    { "CLI Usage" = "serotyping/cli.md" },
-    { "API Reference" = "serotyping/api.md" },
-    "serotyping/faqs.md",
-  ] },
-{ Development = [
-    "conduct.md",
-    "contributing.md",
-    "releases.md",
-    { "Core API" = "core/api.md" },
-    { "Compare API" = "compare/api.md" },
-    { "BGC API" = "bgc/api.md" },
-  ] },
+    { Home = "index.md" },
+    { Databases = [
+        "db/overview.md",
+        "db/curation.md",
+    ] },
+    { Serotyping = [
+        "serotyping/method.md",
+        "serotyping/outputs.md",
+        "serotyping/results.md",
+    ] },
+    { "CLI Usage" = [
+        "cli/db.md",
+        "cli/serotyping.md",
+        "cli/convert.md",
+    ] },
+    
+    { "API Reference" = [
+        "reference/index.md",
+        "reference/compare.md",
+        { core = [
+            "reference/core/index.md",
+            "reference/core/alignment.md",
+            "reference/core/collections.md",
+            "reference/core/genome.md",
+            "reference/core/interval.md",
+            "reference/core/kmers.md",
+            "reference/core/pairwise.md",
+            "reference/core/seq.md",
+        ] },
+        { db = [
+            "reference/db/index.md",
+            "reference/db/cli.md",
+            "reference/db/core.md",
+            "reference/db/manager.md",
+            "reference/db/models.md",
+        ] },
+        { serotyping = [
+            "reference/serotyping/index.md",
+            "reference/serotyping/cli.md",
+            "reference/serotyping/core.md",
+            "reference/serotyping/io.md",
+            "reference/serotyping/models.md",
+        ] }
+    ] },
+
+    { Development = [
+        "conduct.md",
+        "contributing.md",
+        "releases.md",
+      ] },
 ]
 
 plugins = [
-  "search",
-  { mkdocstrings = { handlers = { python = { options = { docstring_style = "google" } } } } },
-  { api-autonav = { modules = ["src/kaptive"], nav_section_title = "API Reference" } },
-  { reading-time = { words_per_minute = 200 } },
-  "include-markdown",
-  "offline",
+    "search",
+    { reading-time = { words_per_minute = 200 } },
+    "include-markdown",
+    "offline",
+    { mkdocstrings = { handlers = { python = { paths = ["src"], inventories = ["https://docs.python.org/3/objects.inv"], options = { docstring_style = "google", docstring_section_style = "list", relative_crossrefs = true, scoped_crossrefs = true, signature_crossrefs = true, unwrap_annotated = true, filters = "public", inherited_members = true, summary = true, heading_level = 2, parameter_headings = true, type_parameter_headings = true, show_root_heading = false, show_root_full_path = false, show_symbol_type_heading = true, show_symbol_type_toc = true, line_length = 88, merge_init_into_class = true, separate_signature = true, show_signature_annotations = true, show_signature_type_parameters = true, backlinks = "tree", show_bases = false, show_inheritance_diagram = true, docstring_options = { ignore_init_summary = true } } } } } }
 ]
+
 
 extra_javascript = [
     "javascripts/mathjax.js",
     "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
-    "javascripts/deepl-config.js",
-    "javascripts/deepl-translate.js",
-    "javascripts/deepl-api-config.js", # Dynamically generated configuration containing the key
 ]
 
 [project.theme]
@@ -65,8 +88,8 @@ logo = "assets/logo.png"
 favicon = "assets/favicon.png"
 custom_dir = "overrides"
 icon.repo = "fontawesome/brands/github"
-font.text = "Roboto Slab" #"DM Sans"
-font.code = "JetBrains Mono"
+# font.text = "Roboto Slab"
+# font.code = "JetBrains Mono"
 
 palette = [
     { media = "(prefers-color-scheme)", toggle = { icon = "lucide/sun-moon", name = "Switch to light mode" } },
@@ -87,8 +110,8 @@ features = [
     "navigation.tabs",
     "navigation.tabs.sticky",
     "navigation.tracking",
-    "navigation.sections",
-    "navigation.expand",
+    # "navigation.sections",
+    # "navigation.expand",
     "navigation.instant",
     "navigation.instant.progress",
     "navigation.path",
@@ -107,11 +130,13 @@ social = [
     { icon = "lucide/book-open-text", link = "https://klebgenomics.github.io/Kaptive" },
     { icon = "lucide/globe", link = "https://kaptive-web.erc.monash.edu/" },
 ]
+
 alternate = [
-    { name = "Español", link = "#deepl-translate-es", lang = "es" },
-    { name = "Français", link = "#deepl-translate-fr", lang = "fr" },
-    { name = "中文", link = "#deepl-translate-zh", lang = "zh" },
-    { name = "日本語", link = "#deepl-translate-ja", lang = "ja" },
+    { name = "English", link = "/Kaptive/", lang = "en" },
+    { name = "Español", link = "/Kaptive/es/", lang = "es" },
+    { name = "Français", link = "/Kaptive/fr/", lang = "fr" },
+    { name = "中文", link = "/Kaptive/zh/", lang = "zh" },
+    { name = "日本語", link = "/Kaptive/ja/", lang = "ja" },
 ]
 
 [project.markdown_extensions]

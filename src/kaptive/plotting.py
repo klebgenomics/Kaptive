@@ -210,8 +210,7 @@ class SerotypingResultPlotter(BasePlotter):
             ),
         }
 
-    @classmethod
-    def __call__(cls, result: SerotypingResult, dark_mode: bool = False) -> go.Figure:
+    def __call__(self, result: SerotypingResult, dark_mode: bool = False) -> go.Figure:
         r"""Render an interactive Plotly diagram for a serotyping result.
 
         Args:
@@ -298,12 +297,12 @@ class SerotypingResultPlotter(BasePlotter):
 
         y_positions = np.zeros(N, dtype=np.float64)
 
-        x_coords, y_coords = cls._generate_gene_coordinates(
+        x_coords, y_coords = self._generate_gene_coordinates(
             plot_starts, plot_ends, plot_strands, y_positions, head_lens, is_rect
         )
 
         # Group traces by cluster and state
-        cluster_names = genes.cluster_names
+        cluster_names = np.char.decode(genes.cluster_names)
         traces_data = defaultdict(list)
         for i in range(N):
             traces_data[(cluster_names[i], states[i])].append(i)
@@ -357,9 +356,9 @@ class SerotypingResultPlotter(BasePlotter):
             y_vals = y_coords[idxs].flatten().tolist()
 
             cluster_name = c_name
-            color = cls._get_cluster_color(c_name)
+            color = self._get_cluster_color(c_name)
 
-            styles = cls._get_state_styles(dark_mode)
+            styles = self._get_state_styles(dark_mode)
             style = styles.get(st, dict())
 
             show_leg = cluster_name not in seen_clusters
@@ -389,7 +388,7 @@ class SerotypingResultPlotter(BasePlotter):
             f"<b>Location:</b> {start}-{end} ({strand})<br>"
             f"<b>Coverage:</b> {cov:.1f}%<br>"
             f"<b>Identity:</b> {ident:.1f}%<br>"
-            f"<b>State:</b> {cls.STATE_NAMES[s]}<br>"
+            f"<b>State:</b> {self.STATE_NAMES[s]}<br>"
             f"<b>Product:</b> {d}"
             for g, c, start, end, strand, cov, ident, s, d in zip(
                 np.char.decode(genes.gene_ids),
@@ -404,7 +403,7 @@ class SerotypingResultPlotter(BasePlotter):
             )
         ]
 
-        hover_colors = [cls._get_cluster_color(c) for c in np.char.decode(genes.cluster_names)]
+        hover_colors = [self._get_cluster_color(c) for c in np.char.decode(genes.cluster_names)]
 
         fig.add_trace(
             go.Scatter(
@@ -544,9 +543,8 @@ class LocusComparisonPlotter(BasePlotter):
 
         return offsets.astype(np.int32)
 
-    @classmethod
     def __call__(
-        cls,
+        self,
         comparisons: LocusComparisons,
         offsets: Sequence[int] | None = None,
         align_loci: bool = True,

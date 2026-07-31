@@ -262,7 +262,10 @@ class Pha4geRow(ReportRow):
     r"""Report row representation adhering to Public Health Alliance for Genomic Epidemiology (PHA4GE) standards.
 
     Encapsulates sample metadata, taxonomy, software versioning, genotype calls, and confidence values in tab-separated
-    binary format standardized for public health surveillance data exchange.
+    binary format standardized for public health surveillance data exchange. 
+    
+    For more information on the rationale and specifics of the PHA4GE genotyping specification, 
+    please see: https://github.com/pha4ge/genotyping-specification
 
     Attributes:
         sample (bytes): Sample identifier taken from genome assembly filename.

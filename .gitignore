@@ -213,6 +213,5 @@ __marimo__/
 scratch/
 docs/javascripts/deepl-api-config.js
 docs/kaptive_web/
-docs/bgc/
 scripts/train_ml_model.py
 src/kaptive/bgc/

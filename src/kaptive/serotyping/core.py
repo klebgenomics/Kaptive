@@ -439,10 +439,26 @@ class Serotyper:
                 ]
                 q_active[active_clusters] = True
 
-            # Vectorized rule evaluation
+            # Vectorized rule evaluation using BLAS matrix multiplication
             locus_match = phenotypes.locus_masks[:, best_locus_idx]
-            extra_match = (phenotypes.extra_masks & ~q_active).sum(axis=1) == 0
-            inactive_match = (phenotypes.inactive_masks & q_active).sum(axis=1) == 0
+            q_active_int = q_active.astype(np.int8)
+            extra_match = np.dot(phenotypes.extra_masks, q_active_int) == phenotypes.extra_counts
+            
+            has_inactive_rule = phenotypes.inactive_masks.sum(axis=1) > 0
+            
+            expected_mask = np.zeros(len(self._db.cluster_keys), dtype=np.int8)
+            offset = self._db.locus_gene_offsets[best_locus_idx]
+            length = self._db.locus_gene_lengths[best_locus_idx]
+            expected_clusters = self._db.gene_cluster_ids[offset:offset+length]
+            expected_mask[expected_clusters] = 1
+            
+            applicable_inactive_masks = phenotypes.inactive_masks & expected_mask
+            has_applicable_inactive = applicable_inactive_masks.sum(axis=1) > 0
+            
+            q_inactive_int = (~q_active).astype(np.int8)
+            inactive_hits = np.dot(applicable_inactive_masks, q_inactive_int)
+            
+            inactive_match = (~has_inactive_rule) | (has_applicable_inactive & (inactive_hits > 0))
 
             if np.any(valid_mask := locus_match & extra_match & inactive_match):
                 valid_indices = np.where(valid_mask)[0]
@@ -452,13 +468,13 @@ class Serotyper:
                     best_rep_idx = replacements[
                         np.argmax(phenotypes.priorities[replacements])
                     ]
-                    base_phenotype = phenotypes.ids[best_rep_idx]
+                    base_phenotype = phenotypes.ids[best_rep_idx].decode("utf-8")
 
                 if len(suffixes := valid_indices[is_suffix]) > 0:
                     sorted_suffixes = suffixes[
                         np.argsort(-phenotypes.priorities[suffixes])
                     ]
-                    suffix_strs = [phenotypes.ids[i] for i in sorted_suffixes]
+                    suffix_strs = [phenotypes.ids[i].decode("utf-8") for i in sorted_suffixes]
                     base_phenotype = f"{base_phenotype}{''.join(suffix_strs)}"
 
         # Confidence evaluation phase ----------------------------------------------------------------------------------

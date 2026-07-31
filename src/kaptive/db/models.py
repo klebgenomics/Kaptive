@@ -177,17 +177,19 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
     Attributes:
         ids (npt.NDArray[np.bytes_]): 1D byte string array (e.g. `S32`) of phenotype identifier strings.
         locus_masks (npt.NDArray[np.bool_]): 2D boolean array of shape `(N, num_loci)` indicating locus requirements.
-        extra_masks (npt.NDArray[np.bool_]): 2D boolean array of shape `(N, num_extra_genes)` for required extra genes.
-        inactive_masks (npt.NDArray[np.bool_]): 2D boolean array of shape `(N, num_inactive_genes)` for forbidden
+        extra_masks (npt.NDArray[np.int8]): 2D integer array of shape `(N, num_extra_genes)` for required extra genes.
+        inactive_masks (npt.NDArray[np.int8]): 2D integer array of shape `(N, num_inactive_genes)` for forbidden
             inactive genes.
+        extra_counts (npt.NDArray[np.int8]): 1D integer array storing the sum of extra required genes per phenotype.
         priorities (npt.NDArray[np.int8]): 1D integer array of shape `(N,)` indicating resolution priority values.
         as_suffix (npt.NDArray[np.bool_]): 1D boolean array of shape `(N,)` indicating if phenotype is used as a suffix.
     """
 
     ids: npt.NDArray[np.bytes_]
     locus_masks: npt.NDArray[np.bool_]
-    extra_masks: npt.NDArray[np.bool_]
-    inactive_masks: npt.NDArray[np.bool_]
+    extra_masks: npt.NDArray[np.int8]
+    inactive_masks: npt.NDArray[np.int8]
+    extra_counts: npt.NDArray[np.int8]
     priorities: npt.NDArray[np.int8]
     as_suffix: npt.NDArray[np.bool_]
 
@@ -220,6 +222,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
             locus_masks=self.locus_masks[item],
             extra_masks=self.extra_masks[item],
             inactive_masks=self.inactive_masks[item],
+            extra_counts=self.extra_counts[item],
             priorities=self.priorities[item],
             as_suffix=self.as_suffix[item],
         )
@@ -235,9 +238,10 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
         return cls(
             ids=np.empty(0, dtype="S32"),
             locus_masks=np.empty((0, 0), dtype=bool),
-            extra_masks=np.empty((0, 0), dtype=bool),
-            inactive_masks=np.empty((0, 0), dtype=bool),
-            priorities=np.empty(0, dtype=np.int32),
+            extra_masks=np.empty((0, 0), dtype=np.int8),
+            inactive_masks=np.empty((0, 0), dtype=np.int8),
+            extra_counts=np.empty(0, dtype=np.int8),
+            priorities=np.empty(0, dtype=np.int8),
             as_suffix=np.empty(0, dtype=bool),
         )
 
@@ -261,6 +265,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
             locus_masks=np.concatenate([b.locus_masks for b in batches]),
             extra_masks=np.concatenate([b.extra_masks for b in batches]),
             inactive_masks=np.concatenate([b.inactive_masks for b in batches]),
+            extra_counts=np.concatenate([b.extra_counts for b in batches]),
             priorities=np.concatenate([b.priorities for b in batches]),
             as_suffix=np.concatenate([b.as_suffix for b in batches]),
         )
@@ -277,6 +282,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
             "locus_masks": self.locus_masks,
             "extra_masks": self.extra_masks,
             "inactive_masks": self.inactive_masks,
+            "extra_counts": self.extra_counts,
             "priorities": self.priorities,
             "as_suffix": self.as_suffix,
         }

@@ -1,4 +1,3 @@
-
 import os
 import sys
 
@@ -6,9 +5,9 @@ import sys
 os.environ["NO_COLOR"] = "1"
 sys.argv[0] = "kaptive"
 
-from kaptive.cli import Cli, Database, Type
+from kaptive.cli import Cli
 
-def generate_command_docs(cmd_class, output_path, category):
+def generate_command_docs(cmd_class, output_path, category, icon):
     cli = Cli()
     cmd = cmd_class()
     cli.add_command(cmd)
@@ -38,7 +37,7 @@ title: {cmd_title}
 author: Tom Stanton
 comments: true
 tags: [markdown, documentation, web]
-icon: lucide/terminal
+icon: {icon}
 categories:
   - {category}
 ---
@@ -49,8 +48,12 @@ categories:
 """)
 
 def main():
-    generate_command_docs(Database, 'docs/db/cli.md', 'Databases')
-    generate_command_docs(Type, 'docs/serotyping/cli.md', 'Serotyping')
+    from kaptive.db.cli import Database
+    generate_command_docs(Database, 'docs/cli/db.md', 'Databases', 'lucide/database')
+
+    from kaptive.serotyping.cli import Type, Convert
+    generate_command_docs(Type, 'docs/cli/serotyping.md', 'Serotyping', 'lucide/syringe')
+    generate_command_docs(Convert, 'docs/cli/convert.md', 'Serotyping', 'lucide/arrow-left-right')
 
 if __name__ == '__main__':
     main()

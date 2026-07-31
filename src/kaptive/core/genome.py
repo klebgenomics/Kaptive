@@ -103,7 +103,7 @@ class GenomeAssembly:
     """
 
     _SEQUENCE_FILE_REGEX = re_compile(
-        r"\.(" r"f(asta|a|na|fn|as)|" r")\.?(?P<compression>(gz|bz2|xz))?$"
+        r"\.(?P<ext>f(asta|a|na|fn|as))(\.(?P<compression>gz|bz2|xz))?$"
     )
     _OPENERS: ClassVar[dict[str, Callable]] = {"gz": gzopen, "bz2": bzopen, "xz": lzopen}
     id: str
@@ -213,7 +213,7 @@ class GenomeAssembly:
             raise NotImplementedError(f"Unsupported format: {filepath}")
 
         with cls._OPENERS.get(m.group("compression"), open)(filepath, mode="rb") as handle:
-            return cls.from_stream(handle, filepath.name.rstrip(m.group()))
+            return cls.from_stream(handle, filepath.name.removesuffix(m.group()))
 
     @classmethod
     def from_stream(cls, handle: IO[bytes], id_: str | None = None) -> Self:

@@ -35,7 +35,7 @@ categories:
                     date = release.get("published_at", "")[:10]  # Extracts YYYY-MM-DD
                     body = release.get("body", "")
                     
-                    doc.write(f"## {name}\n")
+                    doc.write(f"# {name}\n")
                     doc.write(f"*Published on {date}*\n\n")
                     doc.write(f"{body}\n\n")
                     doc.write("---\n\n")

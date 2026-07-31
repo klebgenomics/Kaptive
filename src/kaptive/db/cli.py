@@ -10,6 +10,7 @@ Classes:
     Install: Install remote database by keyword ([`Install`][kaptive.db.cli.Install]).
     Update: Update installed databases ([`Update`][kaptive.db.cli.Update]).
     Reset: Uninstall local databases and clear cache ([`Reset`][kaptive.db.cli.Reset]).
+    Available: List available known databases to install ([`Available`][kaptive.db.cli.Available]).
     Add: Add database from GitHub repository ([`Add`][kaptive.db.cli.Add]).
     Metadata: Display database metadata ([`Metadata`][kaptive.db.cli.Metadata]).
     Extract: Parent command for sequence extraction ([`Extract`][kaptive.db.cli.Extract]).
@@ -24,17 +25,42 @@ import sys
 from kaptive.cli import Colors, Command
 
 
+# Database command -----------------------------------------------------------------------------------------------------
+class Database(Command):
+    r"""📦 Manage local and remote Kaptive databases
+
+    Aggregates subcommands for listing, installing, updating, resetting, adding,
+    extracting, and displaying metadata for Kaptive databases.
+
+    Aliases:
+        db
+    """
+
+    aliases = ["db"]
+
+    def register_subcommands(self) -> None:
+        r"""Registers subcommands for database management."""
+        self.subcommands = [
+            List(),
+            Available(),
+            Add(),
+            Install(),
+            Update(),
+            Reset(),
+            Extract(),
+            Metadata(),
+        ]
+
+
+
 class List(Command):
-    r"""📋 Command for listing all currently installed local databases.
+    r"""📋 List all currently installed local databases
 
     Displays the keywords of all compiled `.pkl` databases found in the user's
     local Kaptive directory (`~/.kaptive`).
 
     Aliases:
         ls
-
-    See Also:
-        [`DatabaseManager.installed`][kaptive.db.manager.DatabaseManager.installed]
     """
 
     aliases = ["ls"]
@@ -56,47 +82,47 @@ class List(Command):
             self.cli.msg("❌ No databases installed")
 
 
-# Database command -----------------------------------------------------------------------------------------------------
-class Database(Command):
-    r"""📦 Parent command for managing local and remote Kaptive databases.
+class Available(Command):
+    r"""🌐 List all available official databases for installation
 
-    Aggregates subcommands for listing, installing, updating, resetting, adding,
-    extracting, and displaying metadata for Kaptive databases.
+    Displays the keywords of all officially supported databases curated in GitHub repositories
+    that can be installed via `kaptive db install <keyword>`.
 
     Aliases:
-        db
+        avail
     """
 
-    aliases = ["db"]
+    aliases = ["avail"]
 
-    def register_subcommands(self) -> None:
-        r"""Registers subcommands for database management."""
-        self.subcommands = [
-            List(),
-            Add(),
-            Install(),
-            Update(),
-            Reset(),
-            Extract(),
-            Metadata(),
-        ]
+    def __call__(self, args: argparse.Namespace) -> None:
+        r"""Executes the `available` command to print known database keywords.
+
+        Args:
+            args (argparse.Namespace): Parsed command-line arguments.
+
+        See Also:
+            [`DatabaseManager.known`][kaptive.db.manager.DatabaseManager.known]
+        """
+        from kaptive.db import DatabaseManager
+
+        if known := DatabaseManager.known():
+            print("\n".join(known))
+        else:
+            self.cli.msg("❌ No available databases found")
 
 
 class Install(Command):
-    r"""📦 Command for installing known reference databases via keyword.
+    r"""📦 Install known reference databases via keyword
 
     Downloads GenBank and TOML definition files from official repositories, compiles
     them into vectorized [`Database`][kaptive.db.core.Database] objects, and caches
     them locally.
-
-    See Also:
-        [`DatabaseManager.install`][kaptive.db.manager.DatabaseManager.install]
     """
 
     def setup_arguments(self) -> None:
         r"""Configures argument parser options for the `install` subcommand."""
         opts = self.parser.add_argument_group("📥 Inputs")
-        opts.add_argument("database", help="Database keyword (see: `kaptive db list`) or 'all'")
+        opts.add_argument("database", help="Database keyword (see: `kaptive db avail`) or 'all'")
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Executes database installation for a specific keyword or 'all'.
@@ -127,13 +153,10 @@ class Install(Command):
 
 
 class Update(Command):
-    r"""🔄 Command for updating installed local databases from remote repositories.
+    r"""🔄 Update installed local databases from remote repositories
 
     Checks installed databases against their source GitHub repositories for newer
     versions defined in TOML metadata and re-compiles modified databases.
-
-    See Also:
-        [`DatabaseManager.update`][kaptive.db.manager.DatabaseManager.update]
     """
 
     def setup_arguments(self) -> None:
@@ -172,12 +195,9 @@ class Update(Command):
 
 
 class Reset(Command):
-    r"""🧹 Command for uninstalling all local databases and resetting local cache.
+    r"""🧹 Uninstall all local databases and reset local cache
 
     Deletes all compiled `.pkl` and metadata `.json` files from the local Kaptive cache directory.
-
-    See Also:
-        [`DatabaseManager.reset`][kaptive.db.manager.DatabaseManager.reset]
     """
 
     def __call__(self, args: argparse.Namespace) -> None:
@@ -197,13 +217,10 @@ class Reset(Command):
 
 
 class Add(Command):
-    r"""🔗 Command for adding a custom reference database from a GitHub repository.
+    r"""🔗 Add a custom reference database from a GitHub repository
 
     Fetches GenBank and TOML metadata files from any specified GitHub owner/repo/branch,
     compiles the database, and registers it in the local cache.
-
-    See Also:
-        [`DatabaseManager.add`][kaptive.db.manager.DatabaseManager.add]
     """
 
     def setup_arguments(self) -> None:
@@ -242,17 +259,13 @@ class Add(Command):
 
 
 class Metadata(Command):
-    r"""📊 Command for printing detailed metadata of a Kaptive database.
+    r"""📊 Print detailed metadata of a Kaptive database
 
     Displays summary information including organism, taxon ID, antigen type, synthesis pathway,
     version, identity threshold, GenBank filename, DOIs, repository URL, and curator contacts.
 
     Aliases:
         info
-
-    See Also:
-        [`Database.load`][kaptive.db.core.Database.load],
-        [`DatabaseMetadata`][kaptive.db.models.DatabaseMetadata]
     """
 
     aliases = ["info"]
@@ -274,9 +287,9 @@ class Metadata(Command):
         See Also:
             [`Database.load`][kaptive.db.core.Database.load]
         """
-        from kaptive.db import Database
+        from kaptive.db import DatabaseManager
 
-        db = Database.load(args.database)
+        db = DatabaseManager.get(args.database)
         meta = db.metadata
         fields = [
             ("Organism", meta.organism),
@@ -301,7 +314,7 @@ class Metadata(Command):
 
 
 class Extract(Command):
-    r"""📤 Parent command for extracting database records in FASTA format.
+    r"""📤 Extract database records in FASTA format
 
     Aggregates subcommands for extracting locus nucleotide sequences (`loci`), gene
     coding sequences (`genes`), and translated amino acid sequences (`proteins`).
@@ -326,7 +339,7 @@ class Extract(Command):
         opts.add_argument(
             "-o",
             "--out",
-            default=sys.stdout.buffer,
+            default="-",
             metavar="FILE",
             help="Output file to write fasta to (default: stdout)",
         )
@@ -339,11 +352,7 @@ class Extract(Command):
 
 
 class Loci(Command):
-    r"""🧬 Command for extracting locus nucleotide sequences in FASTA format.
-
-    See Also:
-        [`Database.load`][kaptive.db.core.Database.load],
-        [`Sequences.to_fasta`][kaptive.core.seq.Sequences.to_fasta]
+    r"""🧬 Extract locus nucleotide sequences in FASTA format
     """
 
     def __call__(self, args: argparse.Namespace) -> None:
@@ -357,9 +366,9 @@ class Loci(Command):
             [`Database.load`][kaptive.db.core.Database.load]
         """
         self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
+        from kaptive.db import DatabaseManager
 
-        db = Database.load(args.database)
+        db = DatabaseManager.get(args.database)
         out_handle = self.cli.open_file(args.out, "wb")
         self.cli.msg("📤 Extracting loci...")
         out_handle.write(db.loci.to_fasta(args.use_indices))
@@ -367,11 +376,7 @@ class Loci(Command):
 
 
 class Genes(Command):
-    r"""🧩 Command for extracting gene coding sequences in FASTA format.
-
-    See Also:
-        [`Database.load`][kaptive.db.core.Database.load],
-        [`Sequences.to_fasta`][kaptive.core.seq.Sequences.to_fasta]
+    r"""🧩 Extract gene coding sequences in FASTA format
     """
 
     def __call__(self, args: argparse.Namespace) -> None:
@@ -385,9 +390,9 @@ class Genes(Command):
             [`Database.load`][kaptive.db.core.Database.load]
         """
         self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
+        from kaptive.db import DatabaseManager
 
-        db = Database.load(args.database)
+        db = DatabaseManager.get(args.database)
         out_handle = self.cli.open_file(args.out, "wb")
         self.cli.msg("📤 Extracting genes...")
         out_handle.write(db.genes.to_fasta(args.use_indices))
@@ -395,11 +400,7 @@ class Genes(Command):
 
 
 class Proteins(Command):
-    r"""🧶 Command for extracting translated protein sequences in FASTA format.
-
-    See Also:
-        [`Database.load`][kaptive.db.core.Database.load],
-        [`Sequences.to_fasta`][kaptive.core.seq.Sequences.to_fasta]
+    r"""🧶 Extract translated protein sequences in FASTA format
     """
 
     def __call__(self, args: argparse.Namespace) -> None:
@@ -413,9 +414,9 @@ class Proteins(Command):
             [`Database.load`][kaptive.db.core.Database.load]
         """
         self.cli.msg(f"💽 Loading database {args.database}...")
-        from kaptive.db import Database
+        from kaptive.db import DatabaseManager
 
-        db = Database.load(args.database)
+        db = DatabaseManager.get(args.database)
         out_handle = self.cli.open_file(args.out, "wb")
         self.cli.msg("📤 Extracting proteins...")
         out_handle.write(db.translations.to_fasta(args.use_indices))

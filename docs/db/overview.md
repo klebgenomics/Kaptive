@@ -10,7 +10,7 @@ categories:
 
 <a id="locus-definition"></a>
 
-## What is a locus?
+## :lucide-help-circle: What is a locus?
 
 A locus in the Kaptive sense refers to a biosynthetic gene cluster that
 is responsible for the synthesis of a bacterial surface polysaccharide,
@@ -29,7 +29,7 @@ responsible for the polysaccharide structural diversity are expected to
 be more variable. The specific identity thresholds vary across species.
 
 
-## Known Databases
+## :lucide-database: Known Databases
 
 | Species | Locus | Keyword |
 |:-:|:-:|:-:|
@@ -42,9 +42,9 @@ be more variable. The specific identity thresholds vary across species.
 | [_Vibrio parahaemolyticus_](https://github.com/tomdstanton/vibrio_parahaemolyticus_genomoserotyping) | K | `vpar_k` |
 | [_Vibrio parahaemolyticus_](https://github.com/tomdstanton/vibrio_parahaemolyticus_genomoserotyping) | O | `vpar_o` |
 
-### Managing Databases via the CLI
+### :lucide-terminal: Managing Databases via the CLI
 
-Kaptive provides a dedicated command group, [`kaptive db`](cli.md), for managing your local databases.
+Kaptive provides a dedicated command group, [`kaptive db`](../cli/db.md), for managing your local databases.
 
 ??? example "Install a Known Database"
     === "Specific database"
@@ -92,11 +92,11 @@ Kaptive provides a dedicated command group, [`kaptive db`](cli.md), for managing
 
 ---
 
-### Managing Databases via the Python API
+### :lucide-code: Managing Databases via the Python API
 
 If you are using Kaptive programmatically as a Python library, you can interact with the database system using the 
-[`Database`](api.md#kaptive.db.Database) or [`DatabaseManager`](api.md#kaptive.db.DatabaseManager) classes from 
-the [`kaptive.db`](api.md) module.
+[`Database`][kaptive.db.Database] or [`DatabaseManager`][kaptive.db.DatabaseManager] classes from
+the [`kaptive.db`][kaptive.db] module.
 
 ??? example "Installing and Loading"
     ```python

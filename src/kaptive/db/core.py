@@ -440,21 +440,21 @@ class Database:
         # Initialize Phenotype SoA arrays
         n_pheno, n_loci, n_clusters = len(phenotype_objs), len(loci), len(cluster_keys)
         pheno_ids = []
+        locus_vocab = {name: i for i, name in enumerate(loci.ids)}
         locus_masks = np.zeros((n_pheno, n_loci), dtype=bool)
-        extra_masks = np.zeros((n_pheno, n_clusters), dtype=bool)
-        inactive_masks = np.zeros((n_pheno, n_clusters), dtype=bool)
+        extra_masks = np.zeros((n_pheno, n_clusters), dtype=np.int8)
+        inactive_masks = np.zeros((n_pheno, n_clusters), dtype=np.int8)
         priorities = np.zeros(n_pheno, dtype=np.int8)
         as_suffix = np.zeros(n_pheno, dtype=bool)
 
-        locus_vocab = {name: i for i, name in enumerate(loci.ids)}
         for i, p in enumerate(phenotype_objs):
             pheno_ids.append(p.id)
             for loc in p.loci:
                 locus_masks[i, locus_vocab[loc]] = True
             for ext in p.extra_genes:
-                extra_masks[i, cluster_vocab[ext]] = True
+                extra_masks[i, cluster_vocab[ext]] = 1
             for ina in p.inactive_genes:
-                inactive_masks[i, cluster_vocab[ina]] = True
+                inactive_masks[i, cluster_vocab[ina]] = 1
             priorities[i] = p.priority
             as_suffix[i] = p.as_suffix
 
@@ -483,6 +483,7 @@ class Database:
                 locus_masks=locus_masks,
                 extra_masks=extra_masks,
                 inactive_masks=inactive_masks,
+                extra_counts=extra_masks.sum(axis=1, dtype=np.int8),
                 priorities=priorities,
                 as_suffix=as_suffix,
             ),

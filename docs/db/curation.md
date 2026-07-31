@@ -1,5 +1,5 @@
 ---
-title: Database Curation
+title: Curation
 author: Tom Stanton
 comments: true
 tags: [databases]
@@ -8,7 +8,7 @@ categories:
   - Databases
 ---
 
-## Nomenclature
+## :lucide-tag: Nomenclature
 
 In constructing the databases included with Kaptive, we have used the
 following nomenclature rules:
@@ -37,7 +37,7 @@ following nomenclature rules:
 !!! danger
     Databases **must** follow this nomenclature system for integration with Kaptive.
 
-## Reference Loci
+## :lucide-book: Reference Loci
 
 Kaptive databases are curated in Genbank format consisting of **unique** loci
 each with a single record with the following requirements:
@@ -75,13 +75,13 @@ each with a single record with the following requirements:
                     /gene="galF"
     ```
 
-## Metadata
+## :lucide-file-json: Metadata
 
 All Kaptive databases now must be accompanied by a metadata [TOML file](https://toml.io/) with the **same name** as the corresponding Genbank file, 
 with a `.toml` extension in place of the `.gbk` extension.
 
 ??? example "Example Metadata TOML"
-    An explanation of each metadata field can be found in the [API reference](api.md#kaptive.db.DatabaseMetadata).
+    An explanation of each metadata field can be found in the [API reference][kaptive.db.DatabaseMetadata].
     ```toml
     name = "Klebsiella_pneumoniae_Species_Complex_K"
     keyword = "kpsc_k"
@@ -100,7 +100,7 @@ with a `.toml` extension in place of the `.gbk` extension.
     contact = { "Kelly Wyres" = "kaptive.typing@gmail.com" }
     ```
 
-### Phenotype Logic
+### :lucide-network: Phenotype Logic
 
 Phenotype logic (previously called "special logic") is a set of rules
 that Kaptive uses to predict the polysaccharide phenotype based on the
@@ -162,7 +162,7 @@ For these reasons, it also made sense to define the phenotype logic here too!
 !!! tip
     We developed an [app](https://kaptive-database-validator.streamlit.app/) to help you validate your database GenBank file, generate the metadata TOML and create phenotype logic.
 
-## Distribution
+## :lucide-share-2: Distribution
 
 Kaptive 3 introduces a decentralized database system. Instead of bundling massive database files directly into the Kaptive application source code, databases are now decoupled and hosted in their own independent GitHub repositories. This provides several major advantages:
 
@@ -170,7 +170,7 @@ Kaptive 3 introduces a decentralized database system. Instead of bundling massiv
 - **Custom Databases**: Users can easily create and maintain their own private or public databases in GitHub and add them directly to their local Kaptive installation.
 - **Smaller Application Footprint**: You only download the databases you actually need, keeping Kaptive's base installation lightweight.
 
-### How It Works Behind the Scenes
+### :lucide-settings: How It Works Behind the Scenes
 
 When you install or update a database, Kaptive performs the following sequence of operations under the hood (managed in `kaptive.db.DatabaseManager`):
 
@@ -181,7 +181,7 @@ When you install or update a database, Kaptive performs the following sequence o
 5. **Caching**: The compiled database is serialized (pickled) and saved to your local cache directory (`~/.kaptive/<keyword>.pkl`), alongside a lightweight JSON file (`~/.kaptive/<keyword>.json`) used for ultra-fast version checking on subsequent runs.
 
 
-## Database Versioning & Release Workflow
+## :lucide-git-branch: Database Versioning & Release Workflow
 This repository uses a fully automated Continuous Integration / Continuous Deployment (CI/CD) pipeline to manage database versions.
 
 You do not need to manually edit version numbers or create Git tags. The pipeline relies on Semantic Versioning (SemVer) and reads your 
@@ -201,7 +201,7 @@ We follow the [Conventional Commits standard](https://www.conventionalcommits.or
     Any commit missing the above tags will be skipped by the release automation.
 
 
-### Example Workflows
+### :lucide-workflow: Example Workflows
 
 ??? example "Updating an Existing Database"
 

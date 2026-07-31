@@ -3,17 +3,24 @@ title: type (assembly)
 author: Tom Stanton
 comments: true
 tags: [markdown, documentation, web]
-icon: lucide/terminal
+icon: lucide/syringe
 categories:
   - Serotyping
 ---
 
-💉 In silico serotyping of assemblies.
+💉 In silico serotyping of genome assemblies
+
+Aliases:
+    assembly
+
 
 ```text
 usage: kaptive type [options] database genomes [genomes ...]
 
-💉 In silico serotyping of assemblies.
+💉 In silico serotyping of genome assemblies
+
+Aliases:
+    assembly
 
 📥 Inputs:
   database              Database path or keyword (see: `kaptive db list`)
@@ -42,6 +49,3 @@ usage: kaptive type [options] database genomes [genomes ...]
   -h, --help            show this help message and exit
   -V, --verbose         Enable verbose output/progress
 ```
-
-<a id="kaptive-convert"></a>
-

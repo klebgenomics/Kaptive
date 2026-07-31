@@ -34,16 +34,9 @@ jobs:
       - name: Install package and dependencies
         run: just install
 
-      - name: Fetch Latest Announcement
+      - name: Build docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python fetch_announcement.py
-
-      - name: Generate DeepL API Config
-        run: |
-          echo "window.DEEPL_API_KEY = '${{ secrets.DEEPL_API_KEY }}';" > docs/javascripts/deepl-api-config.js
-
-      - name: Build docs
         run: just docs-build
 
       - name: Setup Pages
@@ -64,13 +57,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-
-
-
-
-
-
-
-
-

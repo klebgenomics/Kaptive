@@ -13,7 +13,7 @@ Classes:
 """
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum, IntFlag, auto
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -510,17 +510,9 @@ class SerotypingResult:
     phenotype: str
     typeable: bool
     missing_expected_genes: tuple[str, ...]
+    problems: SerotypingProblem = field(init=False)
 
-    @property
-    def problems(self) -> SerotypingProblem:
-        r"""Evaluate and return bitwise quality problems for serotyping call.
-
-        Inspects locus fragmentation, unexpected genes, missing genes, novel genes, and truncated genes
-        to compute combined [`SerotypingProblem`][kaptive.serotyping.models.SerotypingProblem] flag.
-
-        Returns:
-            SerotypingProblem: Bitflag enum representing quality issues in serotyping call.
-        """
+    def __post_init__(self) -> None:
         p = SerotypingProblem.NONE
         if len(self.locus_pieces) > 1:
             p |= SerotypingProblem.FRAGMENTED
@@ -550,7 +542,8 @@ class SerotypingResult:
             )
         ):
             p |= SerotypingProblem.TRUNCATED_GENES
-        return p
+            
+        object.__setattr__(self, "problems", p)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SerotypingResult":
@@ -632,7 +625,7 @@ class SerotypingResult:
             "phenotype": self.phenotype,
             "typeable": self.typeable,
             "missing_expected_genes": self.missing_expected_genes,
-            "problems": int(self.problems),
+            "problems": self.problems,
             "locus_pieces": self.locus_pieces.to_dict(),
             "gene_hits": self.gene_hits.to_dict(),
             "gene_states": self.gene_states,

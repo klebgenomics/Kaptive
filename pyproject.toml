@@ -39,7 +39,13 @@ train = ["scikit-learn"]
 
 [dependency-groups]
 test = ["kaptive[plot,json]", "pytest>=9.0.0", "pytest-cov"]
-docs = ["kaptive[plot,json]", "zensical", "mkdocstrings[python]"]
+docs = [
+    "kaptive[plot,json]",
+    "zensical",
+    "mkdocstrings[python]",
+    "mkdocs-api-autonav>=0.4.0",
+    "deepl>=1.20",
+]
 dev = [
     { include-group = "test" },
     { include-group = "docs" },
@@ -74,10 +80,17 @@ testpaths = ["tests", "src"]
 
 [tool.ruff]
 line-length = 120
+exclude = [".agents", ".git", ".venv", "__pycache__"]
 target-version = "py311"
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "D"]
+extend-select = ["ANN", "PYI"]
+preview = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ty.rules]
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"

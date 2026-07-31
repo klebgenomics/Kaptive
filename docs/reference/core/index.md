@@ -1,0 +1,3 @@
+# kaptive.core
+
+::: kaptive.core

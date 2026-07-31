@@ -246,7 +246,7 @@ class Cli:
             try:
                 parsed_args.func(parsed_args)
             except (DatabaseError, KaptiveWebClientError) as e:
-                self.msg(f"❌ {e}")
+                print(f"❌ {e}", file=sys.stderr)
                 sys.exit(1)
         else:
             self.parser.print_help()
@@ -277,17 +277,17 @@ class Cli:
         """
         self.cleanup()
         if exc_type is KeyboardInterrupt:
-            self.msg("\n🛑 Cancelled by user.")
+            print("\n🛑 Cancelled by user.", file=sys.stderr)
             sys.exit(1)
         elif exc_type is BrokenPipeError:
             devnull = os.open(os.devnull, os.O_WRONLY)
             os.dup2(devnull, sys.stdout.fileno())
             sys.exit(130)
         elif exc_type is PermissionError:
-            self.msg(f"🔒 Permission denied: {exc_val}")
+            print(f"🔒 Permission denied: {exc_val}", file=sys.stderr)
             sys.exit(1)
         elif exc_type is FileNotFoundError:
-            self.msg(f"📄 File not found: {exc_val}")
+            print(f"📄 File not found: {exc_val}", file=sys.stderr)
             sys.exit(1)
 
     def exit(self, msg: str, code: int = 1) -> None:
@@ -300,7 +300,7 @@ class Cli:
         Raises:
             SystemExit: Exits process with specified status code.
         """
-        self.msg(f"❌ {msg}")
+        print(f"❌ {msg}", file=sys.stderr)
         sys.exit(code)
 
     def __del__(self) -> None:

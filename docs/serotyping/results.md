@@ -9,7 +9,7 @@ categories:
 ---
 
 The four most important columns in the Kaptive
-[tabular](api.md#kaptive.serotyping.KaptiveRow) output:
+[tabular][kaptive.serotyping.KaptiveRow] output:
 
 - `Best match locus` indicating the locus that is best supported by the
   available sequence data
@@ -30,11 +30,11 @@ The four most important columns in the Kaptive
 
 <a id="confidence-score"></a>
 
-## Confidence score
+## :lucide-star: Confidence score
 
 Kaptive will indicate the best matching locus and its confidence in the
 locus match. The critera mentioned below can be tweaked using the
-[confidence options](cli.md).
+[confidence options](../cli/serotyping.md).
 
 ### Typeable loci
 
@@ -68,7 +68,7 @@ fragmented, because it can be difficult to distinguish genuine from
 spurious matches for fragmented genes. Fragmentation is common among *K.
 pneumoniae* K loci, particularly when the genomes were sequenced using
 the Illumina technology with the Illumina XT library prep (see
-[FAQs](faqs.md#fragmented-klebs-faq) for more details).
+FAQs for more details).
 
 ### Untypeable loci
 
@@ -76,7 +76,7 @@ These are loci that do not meet the above criteria. **We recommend that
 users do not accept these results** unless they are able to perform
 manual exploration of the data.
 
-## Problems
+## :lucide-alert-triangle: Problems
 
 - `?` = the match was in a multiple pieces, possibly due to a poor match
   or discontiguous assembly. The number of pieces is indicated by the
@@ -87,7 +87,7 @@ manual exploration of the data.
   identity below the minimum threshold.
 - `!` = one or more genes was found but truncated.
 
-## Exploring the other columns
+## :lucide-search: Exploring the other columns
 
 Many users will not want or need to look beyond the columns described
 above. However, the rest of the Kaptive output may be useful for those
@@ -101,7 +101,7 @@ variation in more detail. Interesting features include:
   discrepancies of \>700bp often indicate insertion sequence insertions
   resulting in so called 'IS variants' of the locus.
 - Other genes inside the locus may indicate a novel locus (with some
-  exceptions, see the [FAQs](faqs.md#extra-genes-faq))
+  exceptions, see the FAQs)
 - Truncated genes may have an impact on the resultant phenotype. Kaptive
   will consider truncations when reporting predicting phenotypes, but it
   currently considers only gene truncations for which there is good

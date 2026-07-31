@@ -1,0 +1,3 @@
+# kaptive.serotyping
+
+::: kaptive.serotyping

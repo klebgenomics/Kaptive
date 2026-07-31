@@ -8,7 +8,7 @@ categories:
   - Development
 ---
 
-## v3.2.2
+# v3.2.2
 *Published on 2026-07-16*
 
 ## What's Changed
@@ -24,7 +24,7 @@ categories:
 
 ---
 
-## v3.2.1
+# v3.2.1
 *Published on 2026-03-04*
 
 ## What's Changed
@@ -35,7 +35,7 @@ categories:
 
 ---
 
-## v3.2.0
+# v3.2.0
 *Published on 2026-02-23*
 
 ## What's Changed
@@ -50,7 +50,7 @@ categories:
 
 ---
 
-## v3.1.0
+# v3.1.0
 *Published on 2025-04-10*
 
 ## What's Changed
@@ -71,7 +71,7 @@ categories:
 
 ---
 
-## v3.0.0b6
+# v3.0.0b6
 *Published on 2024-10-28*
 
 - Fixes #37 and #39: thanks @katholt and @CorinYeatsCGPS!

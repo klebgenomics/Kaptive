@@ -37,6 +37,9 @@ class ResultExporter:
         Inspects output flags in `args` and registers appropriate serialization callbacks
         for TSV, PHA4GE TSV, JSON, locus nucleotide FASTA, gene nucleotide FASTA,
         translated protein FASTA, and interactive HTML plots.
+        
+        The PHA4GE TSV output adheres to the Public Health Alliance for Genomic Epidemiology
+        genotyping specification (https://github.com/pha4ge/genotyping-specification).
 
         Args:
             cli (Cli): Parent `Cli` execution context.
@@ -101,9 +104,9 @@ class ResultExporter:
             except ImportError:
                 cli.exit("plotly not installed. Please run: pip install kaptive[plot]")
             self.writers.append(
-                lambda r: SerotypingResultPlotter(r).write_html(
+                lambda r: SerotypingResultPlotter()(r).write_html(
                     plot_dir / f"{r.genome}_{self.file_suffix}.html",
-                    include_plotlyjs=False,
+                    include_plotlyjs="cdn",
                     full_html=True,
                 )
             )
@@ -121,13 +124,10 @@ class ResultExporter:
 
 # Type command ---------------------------------------------------------------------------------------------------------
 class Type(Command):
-    r"""Subcommand for *in silico* serotyping of genome assemblies.
+    r"""💉 In silico serotyping of genome assemblies
 
-    Performs surface antigen locus identification and serotype calling against a specified
-    locus database for input assembly files.
-
-    Attributes:
-        aliases (list[str]): Alias command names for backwards compatibility (`["assembly"]`).
+    Aliases:
+        assembly
     """
 
     aliases = ["assembly"]  # Backwards compatibility with < v3.3
@@ -224,7 +224,7 @@ class Type(Command):
 
 # Client command -------------------------------------------------------------------------------------------------------
 class Convert(Command):
-    r"""Subcommand for converting serialized Kaptive results into different formats.
+    r"""🔄 Convert serialized Kaptive results into different formats
 
     Reads serialized JSON-lines serotyping output records and converts them into tabular
     TSV, PHA4GE TSV, or sequence FASTA files without re-running the serotyping pipeline.
