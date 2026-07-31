@@ -1,7 +1,6 @@
 <div align="center">
   <img src="docs/assets/logo.png" alt="Kaptive" width="400">
   <p>The tool for <em>in silico</em> serotyping</p>
-  <br></br>
   <a href="https://pypi.org/project/kaptive/">
     <img src="https://img.shields.io/pypi/pyversions/kaptive" alt="PyPI - Python Version">
   </a>&nbsp;
@@ -15,6 +14,8 @@
     <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json" alt="ty">
   </a>&nbsp;
 </div>
+
+---
 
 For full **documentation**, including install and usage instructions, **click [here](https://klebgenomics.github.io/Kaptive)**.
 
