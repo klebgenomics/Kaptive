@@ -18,7 +18,8 @@ Aliases:
 
 
 ```text
-usage: kaptive database [options] [subcommand] ...
+usage: kaptive database [options]
+                        [subcommand] ...
 
 📦 Manage local and remote Kaptive databases
 

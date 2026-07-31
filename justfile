@@ -66,7 +66,7 @@ prep-docs: install
 
 # Build the documentation locally
 docs-build: prep-docs
-    # uv run scripts/build_sites.py
+    uv run --group docs zensical build
 
 # Translate documentation locally (Requires DEEPL_API_KEY environment variable)
 translate: prep-docs
