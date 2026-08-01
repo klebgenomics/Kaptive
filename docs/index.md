@@ -4,10 +4,12 @@ description: The tool for _in silico_ serotyping
 author: Tom Stanton
 comments: true
 icon: lucide/home
+hide:
+  - title
 ---
 
 <div align="center">
-  <img src="docs/assets/logo.png" alt="Kaptive" width="400">
+  <img src="assets/logo.png" alt="Kaptive" width="400">
   <p>The tool for <em>in silico</em> serotyping</p>
   <a href="https://pypi.org/project/kaptive/">
     <img src="https://img.shields.io/pypi/pyversions/kaptive" alt="PyPI - Python Version">
