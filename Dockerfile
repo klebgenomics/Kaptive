@@ -19,12 +19,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy the rest of the project source
 COPY src ./src
 COPY README.md LICENSE ./
-COPY .git ./.git
+# Accept the version explicitly to avoid needing git installed in the slim container
+ARG SETUPTOOLS_SCM_PRETEND_VERSION
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}
 
 # Install the project
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra plot --extra json && \
-    rm -rf .git
+    uv sync --frozen --no-dev --extra plot --extra json
 
 # Add the virtual environment to the PATH so the 'kaptive' command is available globally
 ENV PATH="/app/.venv/bin:$PATH"

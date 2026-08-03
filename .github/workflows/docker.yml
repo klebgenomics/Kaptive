@@ -53,3 +53,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            SETUPTOOLS_SCM_PRETEND_VERSION=${{ github.ref_name }}
