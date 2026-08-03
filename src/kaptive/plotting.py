@@ -1,11 +1,14 @@
 r"""Interactive Plotly visualization components for Kaptive serotyping and comparison maps.
 
-Provides abstract base plotting utilities and concrete visualization implementations for:
-- Serotyping locus gene diagrams ([`SerotypingResultPlotter`][kaptive.plotting.SerotypingResultPlotter])
+Provides modular OOP plotting components for:
+- Single-locus serotyping results ([`SerotypingResultPlotter`][kaptive.plotting.SerotypingResultPlotter])
 - Multi-locus comparative synteny maps ([`LocusComparisonPlotter`][kaptive.plotting.LocusComparisonPlotter])
 
 Classes:
-    [`BasePlotter`][kaptive.plotting.BasePlotter]: Abstract base class providing color palette and geometry helpers.
+    [`BasePlotter`][kaptive.plotting.BasePlotter]: Abstract base class providing color palette and layout helpers.
+    [`GeneStyleManager`][kaptive.plotting.GeneStyleManager]: Manager for gene state visual styles and state names.
+    [`GeneGlyphPlotter`][kaptive.plotting.GeneGlyphPlotter]: Component for rendering gene polygon glyphs and hover markers.
+    [`LocusBackbonePlotter`][kaptive.plotting.LocusBackbonePlotter]: Component for rendering locus backbone lines.
     [`SerotypingResultPlotter`][kaptive.plotting.SerotypingResultPlotter]: Plotter for single-locus serotyping results.
     [`LocusComparisonPlotter`][kaptive.plotting.LocusComparisonPlotter]: Plotter for multi-locus comparison graphs.
 """
@@ -14,7 +17,7 @@ import zlib
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, ClassVar
 
 import numba
 import numpy as np
@@ -28,7 +31,7 @@ from kaptive.serotyping import GeneState, SerotypingResult
 
 # Classes --------------------------------------------------------------------------------------------------------------
 class BasePlotter(ABC):
-    r"""Abstract base plotter providing common styling and geometry utilities.
+    r"""Abstract base plotter providing common color palette and layout helpers.
 
     Attributes:
         PALETTE: Categorical color palette used for cluster and gene styling.
@@ -51,7 +54,7 @@ class BasePlotter(ABC):
                 return "#D3D3D3"
             idx = cluster_id_or_name % len(cls.PALETTE)
         else:
-            idx = zlib.crc32(cluster_id_or_name.encode()) % len(cls.PALETTE)
+            idx = zlib.crc32(str(cluster_id_or_name).encode()) % len(cls.PALETTE)
         return cls.PALETTE[idx]
 
     @classmethod
@@ -64,10 +67,133 @@ class BasePlotter(ABC):
         Returns:
             tuple[int, int, int]: RGB color tuple.
         """
-        hex_col = hex_col.lstrip('#')
+        hex_col = hex_col.lstrip("#")
         if len(hex_col) == 6:
             return tuple(int(hex_col[i : i + 2], 16) for i in (0, 2, 4))
         return (128, 128, 128)
+
+    @classmethod
+    def _generate_gene_coordinates(
+        cls,
+        starts: np.ndarray,
+        ends: np.ndarray,
+        strands: np.ndarray,
+        y_positions: np.ndarray,
+        head_lens: np.ndarray,
+        is_rect: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        r"""Generate 2D polygon vertex coordinates for drawing gene glyphs.
+
+        Delegates to [`GeneGlyphPlotter._generate_gene_coordinates`][kaptive.plotting.GeneGlyphPlotter._generate_gene_coordinates].
+
+        Args:
+            starts (np.ndarray): Gene start coordinates.
+            ends (np.ndarray): Gene end coordinates.
+            strands (np.ndarray): Gene strand orientations (+1 for forward, -1 for reverse).
+            y_positions (np.ndarray): Baseline Y-axis positions for genes.
+            head_lens (np.ndarray): Arrowhead lengths.
+            is_rect (np.ndarray | None): Boolean mask specifying rectangular rendering per gene.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: X and Y coordinate matrices of shape (N, 9).
+        """
+        return GeneGlyphPlotter._generate_gene_coordinates(
+            starts, ends, strands, y_positions, head_lens, is_rect=is_rect
+        )
+
+    @classmethod
+    def _apply_standard_layout(
+        cls,
+        fig: go.Figure,
+        title: str | None = None,
+        xaxis: dict[str, Any] | None = None,
+        yaxis: dict[str, Any] | None = None,
+        dark_mode: bool = False,
+    ) -> None:
+        r"""Apply standard Plotly figure layout updates.
+
+        Args:
+            fig (go.Figure): Target Plotly figure.
+            title (str | None): Optional figure title.
+            xaxis (dict[str, Any] | None): Optional X-axis configuration dictionary.
+            yaxis (dict[str, Any] | None): Optional Y-axis configuration dictionary.
+            dark_mode (bool): Whether dark mode styling should be applied.
+        """
+        layout_kwargs: dict[str, Any] = dict(
+            template="plotly_dark" if dark_mode else "plotly_white",
+            paper_bgcolor="rgba(0,0,0,0)" if dark_mode else "white",
+            plot_bgcolor="rgba(0,0,0,0)" if dark_mode else "white",
+            hovermode="closest",
+        )
+        if title is not None:
+            layout_kwargs["title"] = title
+        if xaxis is not None:
+            layout_kwargs["xaxis"] = xaxis
+        if yaxis is not None:
+            layout_kwargs["yaxis"] = yaxis
+
+        fig.update_layout(**layout_kwargs)
+
+    @abstractmethod
+    def __call__(self, *args: Any, **kwargs: Any) -> go.Figure:
+        r"""Abstract call interface for rendering a Plotly figure.
+
+        Returns:
+            go.Figure: Interactive Plotly figure.
+        """
+        pass
+
+
+class GeneStyleManager:
+    r"""Manages visual attributes (colors, opacities, stroke styles) for gene states.
+
+    Attributes:
+        STATE_NAMES (ClassVar[dict[int, str]]): Mapping from GeneState integer value to human-readable string.
+    """
+
+    STATE_NAMES: ClassVar[dict[int, str]] = {s.value: s.name for s in GeneState}
+
+    @classmethod
+    def get_state_style(cls, state: int | GeneState | str, dark_mode: bool = False) -> dict[str, Any]:
+        r"""Get Plotly line and opacity style dict for a given gene state.
+
+        Args:
+            state (int | GeneState | str): GeneState value, integer, or name.
+            dark_mode (bool): Whether dark theme line colors should be used.
+
+        Returns:
+            dict[str, Any]: Dictionary containing 'opacity' (float) and 'line' (dict).
+        """
+        if isinstance(state, GeneState):
+            st_val = state.value
+        elif isinstance(state, str):
+            try:
+                st_val = GeneState[state].value
+            except KeyError:
+                st_val = int(state) if state.isdigit() else 0
+        else:
+            st_val = int(state)
+
+        line_color = "white" if dark_mode else "black"
+        styles = {
+            GeneState.NORMAL.value: dict(
+                opacity=1.0, line=dict(width=1, dash="solid", color=line_color)
+            ),
+            GeneState.NOVEL.value: dict(
+                opacity=0.5, line=dict(width=1, dash="dot", color=line_color)
+            ),
+            GeneState.PARTIAL.value: dict(
+                opacity=0.7, line=dict(width=1, dash="dash", color="red")
+            ),
+            GeneState.TRUNCATED.value: dict(
+                opacity=0.7, line=dict(width=1, dash="dash", color="orange")
+            ),
+        }
+        return styles.get(st_val, dict(opacity=1.0, line=dict(width=1, dash="solid", color=line_color)))
+
+
+class GeneGlyphPlotter:
+    r"""Component for generating and rendering gene polygon glyphs and hover markers in Plotly figures."""
 
     @classmethod
     def _generate_gene_coordinates(
@@ -164,14 +290,169 @@ class BasePlotter(ABC):
 
         return x_coords, y_coords
 
-    @abstractmethod
-    def __call__(self, *args: Any, **kwargs: Any) -> go.Figure:
-        r"""Abstract call interface for rendering a Plotly figure.
+    @classmethod
+    def render(
+        cls,
+        fig: go.Figure,
+        starts: np.ndarray,
+        ends: np.ndarray,
+        strands: np.ndarray,
+        y_positions: np.ndarray,
+        cluster_keys: Sequence[Any],
+        states: np.ndarray | None,
+        hover_texts: Sequence[str],
+        legend_names: Sequence[str] | None = None,
+        dark_mode: bool = False,
+        seen_clusters: set[str] | None = None,
+        showlegend: bool = True,
+    ) -> set[str]:
+        r"""Render gene glyph polygons and invisible hover markers onto a Plotly figure.
+
+        Args:
+            fig (go.Figure): Target Plotly figure.
+            starts (np.ndarray): Gene start X-coordinates.
+            ends (np.ndarray): Gene end X-coordinates.
+            strands (np.ndarray): Gene strands (+1 or -1).
+            y_positions (np.ndarray): Baseline Y-coordinates.
+            cluster_keys (Sequence[Any]): Cluster identifiers for color lookup.
+            states (np.ndarray | None): Array of GeneState values per gene.
+            hover_texts (Sequence[str]): Formatted hover text strings per gene.
+            legend_names (Sequence[str] | None): Optional custom legend entry names per gene.
+            dark_mode (bool): Whether dark theme styling is enabled.
+            seen_clusters (set[str] | None): Set of cluster legend names already rendered.
+            showlegend (bool): Whether legend entries should be displayed.
 
         Returns:
-            go.Figure: Interactive Plotly figure.
+            set[str]: Updated set of cluster legend names.
         """
-        pass
+        N = len(starts)
+        if N == 0:
+            return seen_clusters or set()
+
+        if seen_clusters is None:
+            seen_clusters = set()
+
+        if states is None:
+            states = np.zeros(N, dtype=np.int8)
+
+        # Shape logic: rectangle for PARTIAL/TRUNCATED, arrow for NORMAL/NOVEL
+        is_rect = ~((states == GeneState.NORMAL.value) | (states == GeneState.NOVEL.value))
+
+        lengths = ends - starts
+        head_lens = np.minimum(lengths * 0.3, 400.0)
+
+        x_coords, y_coords = cls._generate_gene_coordinates(
+            starts, ends, strands, y_positions, head_lens, is_rect=is_rect
+        )
+
+        if legend_names is None:
+            leg_list = []
+            for ck in cluster_keys:
+                if isinstance(ck, bytes):
+                    ck_val: Any = ck.decode()
+                else:
+                    ck_val = ck
+                if isinstance(ck_val, (int, np.integer)):
+                    leg_list.append(f"Cluster {ck_val}" if ck_val >= 0 else "Unique")
+                else:
+                    leg_list.append(str(ck_val))
+        else:
+            leg_list = list(legend_names)
+
+        # Group genes by (legend_name, cluster_key, state)
+        traces_data = defaultdict(list)
+        for i in range(N):
+            ck = cluster_keys[i]
+            if isinstance(ck, bytes):
+                ck = ck.decode()
+            traces_data[(leg_list[i], ck, states[i])].append(i)
+
+        for (leg_name, ck, st), idxs in traces_data.items():
+            x_vals = x_coords[idxs].flatten().tolist()
+            y_vals = y_coords[idxs].flatten().tolist()
+
+            color = BasePlotter._get_cluster_color(ck)
+            style = GeneStyleManager.get_state_style(st, dark_mode=dark_mode)
+
+            show_leg = showlegend and (leg_name not in seen_clusters)
+            seen_clusters.add(leg_name)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=x_vals,
+                    y=y_vals,
+                    mode="lines",
+                    fill="toself",
+                    fillcolor=color,
+                    line=style["line"],
+                    opacity=style["opacity"],
+                    name=leg_name,
+                    legendgroup=leg_name,
+                    showlegend=show_leg,
+                    hoverinfo="none",
+                )
+            )
+
+        # Add invisible hover markers
+        cx = ((starts + ends) / 2.0).tolist()
+        cy = y_positions.tolist()
+
+        hover_colors = []
+        for ck in cluster_keys:
+            if isinstance(ck, bytes):
+                ck_val_c: Any = ck.decode()
+            else:
+                ck_val_c = ck
+            hover_colors.append(BasePlotter._get_cluster_color(ck_val_c))
+
+        fig.add_trace(
+            go.Scatter(
+                x=cx,
+                y=cy,
+                mode="markers",
+                marker=dict(size=1, color="rgba(0,0,0,0)"),
+                text=list(hover_texts),
+                hoverinfo="text",
+                hoverlabel=dict(bgcolor=hover_colors),
+                showlegend=False,
+            )
+        )
+
+        return seen_clusters
+
+
+class LocusBackbonePlotter:
+    r"""Component for rendering horizontal locus backbone lines in Plotly figures."""
+
+    @classmethod
+    def render(
+        cls,
+        fig: go.Figure,
+        x_coords: list[float | None] | np.ndarray,
+        y_coords: list[float | None] | np.ndarray,
+        line_width: int = 2,
+        dark_mode: bool = False,
+    ) -> None:
+        r"""Render horizontal backbone line segments onto a Plotly figure.
+
+        Args:
+            fig (go.Figure): Target Plotly figure.
+            x_coords (list[float | None] | np.ndarray): X coordinates of backbone segments.
+            y_coords (list[float | None] | np.ndarray): Y coordinates of backbone segments.
+            line_width (int): Stroke width of the backbone line. Defaults to 2.
+            dark_mode (bool): Whether dark mode theme colors should be used. Defaults to False.
+        """
+        line_color = "white" if dark_mode else "gray"
+        fig.add_trace(
+            go.Scatter(
+                x=list(x_coords),
+                y=list(y_coords),
+                mode="lines",
+                line=dict(color=line_color, width=line_width),
+                hoverinfo="none",
+                showlegend=False,
+            )
+        )
 
 
 class SerotypingResultPlotter(BasePlotter):
@@ -181,34 +462,20 @@ class SerotypingResultPlotter(BasePlotter):
     backbones, gene state annotations, and detailed hover metadata.
     """
 
-    STATE_NAMES = {s.value: s.name for s in GeneState}
+    STATE_NAMES: ClassVar[dict[int, str]] = GeneStyleManager.STATE_NAMES
 
     @classmethod
-    def _get_state_styles(cls, dark_mode: bool = False) -> dict:
+    def _get_state_styles(cls, dark_mode: bool = False) -> dict[int, dict[str, Any]]:
         r"""Get line and opacity style mappings for gene states.
 
         Args:
             dark_mode (bool): Whether dark mode palette styles should be used. Defaults to False.
 
         Returns:
-            dict: Dictionary mapping [`GeneState`][kaptive.serotyping.GeneState] values
+            dict[int, dict[str, Any]]: Dictionary mapping [`GeneState`][kaptive.serotyping.GeneState] values
                 to Plotly line and opacity style dicts.
         """
-        line_color = "white" if dark_mode else "black"
-        return {
-            GeneState.NORMAL.value: dict(
-                opacity=1.0, line=dict(width=1, dash="solid", color=line_color)
-            ),
-            GeneState.NOVEL.value: dict(
-                opacity=0.5, line=dict(width=1, dash="dot", color=line_color)
-            ),
-            GeneState.PARTIAL.value: dict(
-                opacity=0.7, line=dict(width=1, dash="dash", color="red")
-            ),
-            GeneState.TRUNCATED.value: dict(
-                opacity=0.7, line=dict(width=1, dash="dash", color="orange")
-            ),
-        }
+        return {st: GeneStyleManager.get_state_style(st, dark_mode) for st in cls.STATE_NAMES}
 
     def __call__(self, result: SerotypingResult, dark_mode: bool = False) -> go.Figure:
         r"""Render an interactive Plotly diagram for a serotyping result.
@@ -289,31 +556,13 @@ class SerotypingResultPlotter(BasePlotter):
             piece_plot_ends[i] = current_x + p_len
             current_x += p_len + gap
 
-        # Generate polygons for genes
-        lengths = plot_ends - plot_starts
-        head_lens = np.minimum(lengths * 0.3, 400.0)
-
-        is_rect = ~((states == GeneState.NORMAL.value) | (states == GeneState.NOVEL.value))
-
-        y_positions = np.zeros(N, dtype=np.float64)
-
-        x_coords, y_coords = self._generate_gene_coordinates(
-            plot_starts, plot_ends, plot_strands, y_positions, head_lens, is_rect
-        )
-
-        # Group traces by cluster and state
-        cluster_names = np.char.decode(genes.cluster_names)
-        traces_data = defaultdict(list)
-        for i in range(N):
-            traces_data[(cluster_names[i], states[i])].append(i)
-
         fig = go.Figure()
 
-        # Add contig backbone
-        piece_x = []
-        piece_y = []
-        tick_vals = []
-        tick_text = []
+        # Add contig backbone via LocusBackbonePlotter
+        piece_x: list[float | None] = []
+        piece_y: list[float | None] = []
+        tick_vals: list[float] = []
+        tick_text: list[str] = []
 
         for i in piece_order:
             p_s = piece_plot_starts[i]
@@ -336,89 +585,58 @@ class SerotypingResultPlotter(BasePlotter):
             else:
                 label = ctg_name
 
-            tick_vals.append((p_s + p_e) / 2)
+            tick_vals.append((p_s + p_e) / 2.0)
             tick_text.append(label)
 
-        fig.add_trace(
-            go.Scatter(
-                x=piece_x,
-                y=piece_y,
-                mode="lines",
-                line=dict(color="white" if dark_mode else "gray", width=4),
-                hoverinfo="none",
-                showlegend=False,
-            )
+        LocusBackbonePlotter.render(
+            fig, piece_x, piece_y, line_width=4, dark_mode=dark_mode
         )
-        seen_clusters = set()
 
-        for (c_name, st), idxs in traces_data.items():
-            x_vals = x_coords[idxs].flatten().tolist()
-            y_vals = y_coords[idxs].flatten().tolist()
+        # Prepare hover texts
+        cluster_names = np.char.decode(genes.cluster_names)
+        gene_ids = np.char.decode(genes.gene_ids)
+        product_descs = np.char.decode(genes.product_descriptions)
+        strands_text = ["+" if st > 0 else "-" for st in genes.strands]
 
-            cluster_name = c_name
-            color = self._get_cluster_color(c_name)
-
-            styles = self._get_state_styles(dark_mode)
-            style = styles.get(st, dict())
-
-            show_leg = cluster_name not in seen_clusters
-            seen_clusters.add(cluster_name)
-
-            fig.add_trace(
-                go.Scatter(
-                    x=x_vals,
-                    y=y_vals,
-                    mode="lines",
-                    fill="toself",
-                    fillcolor=color,
-                    line=style["line"],
-                    opacity=style["opacity"],
-                    name=cluster_name,
-                    legendgroup=cluster_name,
-                    showlegend=show_leg,
-                    hoverinfo="none",
-                )
-            )
-
-        # Add hover markers
-        # Pre-resolve string lookups in list comprehensions which are faster than loops
         hover_texts = [
             f"<b>Gene:</b> {g}<br>"
             f"<b>Cluster:</b> {c}<br>"
             f"<b>Location:</b> {start}-{end} ({strand})<br>"
             f"<b>Coverage:</b> {cov:.1f}%<br>"
             f"<b>Identity:</b> {ident:.1f}%<br>"
-            f"<b>State:</b> {self.STATE_NAMES[s]}<br>"
+            f"<b>State:</b> {GeneStyleManager.STATE_NAMES.get(int(s), 'NORMAL')}<br>"
             f"<b>Product:</b> {d}"
             for g, c, start, end, strand, cov, ident, s, d in zip(
-                np.char.decode(genes.gene_ids),
-                np.char.decode(genes.cluster_names),
+                gene_ids,
+                cluster_names,
                 genes.t_starts,
                 genes.t_ends,
-                ["+" if st > 0 else "-" for st in genes.strands],
+                strands_text,
                 genes.coverages,
                 identities,
                 states,
-                np.char.decode(genes.product_descriptions),
+                product_descs,
             )
         ]
 
-        hover_colors = [self._get_cluster_color(c) for c in np.char.decode(genes.cluster_names)]
+        y_positions = np.zeros(N, dtype=np.float64)
 
-        fig.add_trace(
-            go.Scatter(
-                x=((plot_starts + plot_ends) / 2).tolist(),
-                y=np.zeros(N).tolist(),
-                mode="markers",
-                marker=dict(size=1, color="rgba(0,0,0,0)"),
-                text=hover_texts,
-                hoverinfo="text",
-                hoverlabel=dict(bgcolor=hover_colors),
-                showlegend=False,
-            )
+        # Render gene glyphs & hover markers via GeneGlyphPlotter
+        GeneGlyphPlotter.render(
+            fig=fig,
+            starts=plot_starts,
+            ends=plot_ends,
+            strands=plot_strands,
+            y_positions=y_positions,
+            cluster_keys=cluster_names,
+            states=states,
+            hover_texts=hover_texts,
+            legend_names=cluster_names,
+            dark_mode=dark_mode,
         )
 
-        fig.update_layout(
+        self._apply_standard_layout(
+            fig=fig,
             title=f"Serotype Result: {result.best_locus_name} ({result.phenotype})",
             xaxis=dict(
                 tickmode="array",
@@ -428,10 +646,7 @@ class SerotypingResultPlotter(BasePlotter):
                 zeroline=False,
             ),
             yaxis=dict(showticklabels=False, showgrid=False, zeroline=False, range=[-1, 1]),
-            template="plotly_dark" if dark_mode else "plotly_white",
-            paper_bgcolor="rgba(0,0,0,0)" if dark_mode else "white",
-            plot_bgcolor="rgba(0,0,0,0)" if dark_mode else "white",
-            hovermode="closest",
+            dark_mode=dark_mode,
         )
 
         return fig
@@ -570,11 +785,11 @@ class LocusComparisonPlotter(BasePlotter):
 
         if offsets is None:
             if align_loci:
-                offsets = cls._calculate_alignment_offsets(comparisons)
+                calculated_offsets = self._calculate_alignment_offsets(comparisons)
             else:
-                offsets = np.zeros(n_loci, dtype=np.int32)
+                calculated_offsets = np.zeros(n_loci, dtype=np.int32)
         else:
-            offsets = np.asarray(offsets, dtype=np.int32)
+            calculated_offsets = np.asarray(offsets, dtype=np.int32)
 
         total_genes = len(comparisons.gene_intervals)
         if total_genes == 0:
@@ -584,7 +799,7 @@ class LocusComparisonPlotter(BasePlotter):
 
         # 1. Build Graph and cluster (connected components)
         if len(edges) > 0:
-            labels = cls._connected_components(
+            labels = self._connected_components(
                 total_genes, edges.global_query_indices, edges.global_target_indices
             )
 
@@ -601,39 +816,38 @@ class LocusComparisonPlotter(BasePlotter):
         # 2. Extract spatial arrays
         global_to_locus = np.repeat(np.arange(n_loci, dtype=np.int32), comparisons.locus_lengths)
 
-        starts = comparisons.gene_intervals.starts + offsets[global_to_locus]
-        ends = comparisons.gene_intervals.ends + offsets[global_to_locus]
+        starts = comparisons.gene_intervals.starts + calculated_offsets[global_to_locus]
+        ends = comparisons.gene_intervals.ends + calculated_offsets[global_to_locus]
         strands = comparisons.gene_intervals.strands
 
         y_positions = -np.arange(n_loci, dtype=np.float64) * 2.0
 
-        # 3. Plot Backbones (horizontal lines)
+        # 3. Plot Backbones using LocusBackbonePlotter
+        backbone_x: list[float | None] = []
+        backbone_y: list[float | None] = []
         for i in range(n_loci):
             l_start = comparisons.locus_offsets[i]
             l_len = comparisons.locus_lengths[i]
             if l_len > 0:
                 min_x = np.min(starts[l_start : l_start + l_len])
                 max_x = np.max(ends[l_start : l_start + l_len])
-                fig.add_trace(
-                    go.Scatter(
-                        x=[min_x, max_x],
-                        y=[y_positions[i], y_positions[i]],
-                        mode="lines",
-                        line=dict(color="gray", width=2),
-                        showlegend=False,
-                        hoverinfo="none",
-                    )
-                )
+                backbone_x.extend([min_x, max_x, None])
+                backbone_y.extend([y_positions[i], y_positions[i], None])
+
+        if backbone_x:
+            LocusBackbonePlotter.render(
+                fig, backbone_x, backbone_y, line_width=2, dark_mode=dark_mode
+            )
 
         # 4. Add Homology Links (Polygons with opacity binning)
         if len(edges) > 0:
-            mask = np.ones(len(edges), dtype=bool)
+            link_mask = np.ones(len(edges), dtype=bool)
             if not show_all_links:
-                mask = edges.target_locus_indices == edges.query_locus_indices + 1
+                link_mask = edges.target_locus_indices == edges.query_locus_indices + 1
 
-            q_idx = edges.global_query_indices[mask]
-            t_idx = edges.global_target_indices[mask]
-            pidents = edges.alignments.pidents[mask]
+            q_idx = edges.global_query_indices[link_mask]
+            t_idx = edges.global_target_indices[link_mask]
+            pidents = edges.alignments.pidents[link_mask]
 
             if len(q_idx) > 0:
                 # Opacity binning via digitize
@@ -656,8 +870,8 @@ class LocusComparisonPlotter(BasePlotter):
                     unique_groups[(link_labels[e], binned_idxs[e])].append(e)
 
                 for (cluster_id, bin_idx), e_idxs in unique_groups.items():
-                    color = cls._get_cluster_color(cluster_id)
-                    rgb = cls._hex_to_rgb(color)
+                    color = self._get_cluster_color(cluster_id)
+                    rgb = self._hex_to_rgb(color)
                     opacity = 0.4 + (bin_idx * 0.15)
                     rgba = f"rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {opacity:.2f})"
 
@@ -723,71 +937,34 @@ class LocusComparisonPlotter(BasePlotter):
                         )
                     )
 
-        # 5. Add Vectorised Gene Arrows
-        lengths = ends - starts
-        head_lens = np.minimum(lengths * 0.3, 400.0)
-
+        # 5. Render Vectorised Gene Arrows & Hover Tooltips via GeneGlyphPlotter
         base_y = y_positions[global_to_locus]
+        states_arr = comparisons.gene_states if comparisons.gene_states is not None else np.zeros(total_genes, dtype=np.int8)
 
-        x_coords, y_coords = cls._generate_gene_coordinates(
-            starts, ends, strands, base_y, head_lens, is_rect=None
+        cluster_hover_texts = [
+            f"<b>Locus:</b> {comparisons.locus_names[global_to_locus[i]]}<br>"
+            f"<b>Gene:</b> {comparisons.gene_names[i]}<br>"
+            f"<b>Product:</b> {comparisons.gene_descriptions[i]}<br>"
+            f"<b>Coordinates:</b> {starts[i]}-{ends[i]}<br>"
+            f"<b>State:</b> {GeneStyleManager.STATE_NAMES.get(int(states_arr[i]), 'NORMAL')}<br>"
+            f"<b>Cluster:</b> {labels[i] if labels[i] >= 0 else 'Unique'}"
+            for i in range(total_genes)
+        ]
+
+        GeneGlyphPlotter.render(
+            fig=fig,
+            starts=starts,
+            ends=ends,
+            strands=strands,
+            y_positions=base_y,
+            cluster_keys=labels,
+            states=states_arr,
+            hover_texts=cluster_hover_texts,
+            dark_mode=dark_mode,
         )
 
-        # Group arrows by cluster trace
-        traces_data = defaultdict(list)
-        for i in range(total_genes):
-            traces_data[labels[i]].append(i)
-
-        for cluster_id, idxs in traces_data.items():
-            x_vals = x_coords[idxs].flatten().tolist()
-            y_vals = y_coords[idxs].flatten().tolist()
-
-            color = cls._get_cluster_color(cluster_id)
-            name = f"Cluster {cluster_id}" if cluster_id >= 0 else "Unique"
-
-            fig.add_trace(
-                go.Scatter(
-                    x=x_vals,
-                    y=y_vals,
-                    mode="lines",
-                    fill="toself",
-                    fillcolor=color,
-                    line=dict(color="white" if dark_mode else "black", width=1),
-                    name=name,
-                    legendgroup=name,
-                    showlegend=True,
-                    hoverinfo="none",
-                )
-            )
-
-            # 6. Invisible Hover Markers
-            cx = (starts[idxs] + ends[idxs]) / 2.0
-            cy = base_y[idxs]
-
-            cluster_hover_texts = [
-                f"<b>Locus:</b> {comparisons.locus_names[global_to_locus[i]]}<br>"
-                f"<b>Gene:</b> {comparisons.gene_names[i]}<br>"
-                f"<b>Description:</b> {comparisons.gene_descriptions[i]}<br>"
-                f"<b>Coordinates:</b> {starts[i]}-{ends[i]}<br>"
-                f"<b>Cluster:</b> {cluster_id if cluster_id >= 0 else 'Unique'}"
-                for i in idxs
-            ]
-
-            fig.add_trace(
-                go.Scatter(
-                    x=cx.tolist(),
-                    y=cy.tolist(),
-                    mode="markers",
-                    marker=dict(size=1, color="rgba(0,0,0,0)"),
-                    text=cluster_hover_texts,
-                    hoverinfo="text",
-                    hoverlabel=dict(bgcolor=color),
-                    legendgroup=name,
-                    showlegend=False,
-                )
-            )
-
-        fig.update_layout(
+        self._apply_standard_layout(
+            fig=fig,
             yaxis=dict(
                 tickmode="array",
                 tickvals=y_positions.tolist(),
@@ -796,11 +973,7 @@ class LocusComparisonPlotter(BasePlotter):
                 zeroline=False,
             ),
             xaxis=dict(showgrid=False, zeroline=False),
-            template="plotly_dark" if dark_mode else "plotly_white",
-            paper_bgcolor="rgba(0,0,0,0)" if dark_mode else "white",
-            plot_bgcolor="rgba(0,0,0,0)" if dark_mode else "white",
-            hovermode="closest",
+            dark_mode=dark_mode,
         )
 
         return fig
-

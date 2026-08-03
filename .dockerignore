@@ -1,0 +1,22 @@
+# Ignore virtual environments
+.venv/
+venv/
+env/
+
+# Ignore caches and build artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+site/
+scratch/
+docs/
+
+# Ignore IDE files
+.idea/
+.vscode/
+
+# Keep .git/ so hatch-vcs can extract the package version!
+!.git/

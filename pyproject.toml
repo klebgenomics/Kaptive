@@ -43,7 +43,6 @@ docs = [
     "kaptive[plot,json]",
     "zensical",
     "mkdocstrings[python]",
-    "mkdocs-api-autonav>=0.4.0",
     "deepl>=1.20",
 ]
 dev = [

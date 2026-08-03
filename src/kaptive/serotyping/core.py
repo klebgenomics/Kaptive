@@ -338,13 +338,13 @@ class Serotyper:
                 np.int32
             ),
             expected_strands=self._db.gene_intervals.strands[culled_gene_indices],
-            gene_ids=np.array([self._db.genes.ids[i] for i in culled_gene_indices], dtype="S32"),
+            gene_ids=np.array([self._db.genes.ids[i].encode("utf-8") for i in culled_gene_indices], dtype="S32"),
             cluster_names=np.array([
-                self._db.cluster_keys[self._db.gene_cluster_ids[i]]
+                self._db.cluster_keys[self._db.gene_cluster_ids[i]].encode("utf-8")
                 for i in culled_gene_indices
             ], dtype="S10"),
             product_descriptions=np.array([
-                self._db.description_keys[self._db.gene_description_ids[i]]
+                self._db.description_keys[self._db.gene_description_ids[i]].encode("utf-8")
                 for i in culled_gene_indices
             ], dtype="S64"),
             coverages=coverages,

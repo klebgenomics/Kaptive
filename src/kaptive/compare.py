@@ -149,6 +149,7 @@ class LocusComparisons:
         locus_offsets (npt.NDArray[np.int32]): Global gene index offsets for each locus.
         gene_names (npt.NDArray[np.object_]): Flattened array of gene identifiers.
         gene_descriptions (npt.NDArray[np.object_]): Flattened array of gene descriptions.
+        gene_states (npt.NDArray[np.int8]): Flattened array of gene classification states.
         gene_intervals (Intervals): Pre-normalised physical gene intervals for plotting.
     """
 
@@ -162,6 +163,7 @@ class LocusComparisons:
     # Global flattened arrays for all genes across all loci
     gene_names: npt.NDArray[np.object_]
     gene_descriptions: npt.NDArray[np.object_]
+    gene_states: npt.NDArray[np.int8]
 
     # The physical intervals of all genes, pre-normalised for plotting
     gene_intervals: Intervals
@@ -177,6 +179,8 @@ class LocusData:
         backbone (Intervals): Physical genomic coordinates of genes in the locus.
         pieces (LocusPieces | None): Segmented contig piece layout, if fragmented.
         gene_ctg_indices (npt.NDArray[np.uint32] | None): Contig assignment indices for genes.
+        gene_states (npt.NDArray[np.int8] | None): Array of GeneState integer values for genes in locus.
+        gene_descriptions (npt.NDArray[np.object_] | Sequence[str] | None): Product description strings for genes.
     """
 
     proteins: Sequences
@@ -184,6 +188,8 @@ class LocusData:
     backbone: Intervals
     pieces: "LocusPieces | None" = None
     gene_ctg_indices: npt.NDArray[np.uint32] | None = None
+    gene_states: npt.NDArray[np.int8] | None = None
+    gene_descriptions: npt.NDArray[np.object_] | Sequence[str] | None = None
 
 
 class LocusComparator:
@@ -235,7 +241,62 @@ class LocusComparator:
         # Build global sequences to extract metadata
         global_seqs = Sequences.concat(loci) if n_loci > 0 else Sequences.empty()
         gene_names = np.array(global_seqs.ids, dtype=object)
-        gene_descriptions = np.array([""] * len(global_seqs.ids), dtype=object)
+
+        desc_list = []
+        state_list = []
+        for inp in inputs:
+            n_genes = len(inp.proteins)
+            if len(inp.backbone) != n_genes:
+                raise ValueError(
+                    f"Locus '{inp.name}': backbone length ({len(inp.backbone)}) does not match protein count ({n_genes})"
+                )
+
+            if inp.gene_descriptions is not None:
+                raw_desc = np.asarray(inp.gene_descriptions)
+                if raw_desc.dtype.kind in ("S", "a"):
+                    decoded_desc = np.char.decode(raw_desc, "utf-8")
+                    d_arr = np.asarray(decoded_desc, dtype=object)
+                elif raw_desc.dtype == object or any(
+                    isinstance(x, (bytes, np.bytes_)) for x in raw_desc.flat
+                ):
+                    decoded_list = [
+                        x.decode("utf-8")
+                        if isinstance(x, (bytes, np.bytes_))
+                        else str(x)
+                        if x is not None
+                        else ""
+                        for x in raw_desc.flat
+                    ]
+                    d_arr = np.asarray(decoded_list, dtype=object).reshape(raw_desc.shape)
+                else:
+                    d_arr = np.asarray(raw_desc, dtype=object)
+
+                if len(d_arr) != n_genes:
+                    raise ValueError(
+                        f"Locus '{inp.name}': gene_descriptions length ({len(d_arr)}) does not match protein count ({n_genes})"
+                    )
+                desc_list.append(d_arr)
+            else:
+                desc_list.append(np.array([""] * n_genes, dtype=object))
+
+            if inp.gene_states is not None:
+                s_arr = np.asarray(inp.gene_states, dtype=np.int8)
+                if len(s_arr) != n_genes:
+                    raise ValueError(
+                        f"Locus '{inp.name}': gene_states length ({len(s_arr)}) does not match protein count ({n_genes})"
+                    )
+                state_list.append(s_arr)
+            else:
+                from kaptive.serotyping.models import GeneState
+
+                state_list.append(np.full(n_genes, GeneState.NORMAL.value, dtype=np.int8))
+
+        if n_loci > 0:
+            gene_descriptions = np.concatenate(desc_list, dtype=object)
+            gene_states = np.concatenate(state_list, dtype=np.int8)
+        else:
+            gene_descriptions = np.empty(0, dtype=object)
+            gene_states = np.empty(0, dtype=np.int8)
 
         # Normalise backbones
         norm_backbones = []
@@ -282,13 +343,14 @@ class LocusComparator:
         if n_loci <= 1:
             edges = LocusComparisonEdges.empty()
             return LocusComparisons(
-                edges,
-                tuple(locus_names),
-                locus_lengths,
-                locus_offsets,
-                gene_names,
-                gene_descriptions,
-                global_intervals,
+                edges=edges,
+                locus_names=tuple(locus_names),
+                locus_lengths=locus_lengths,
+                locus_offsets=locus_offsets,
+                gene_names=gene_names,
+                gene_descriptions=gene_descriptions,
+                gene_states=gene_states,
+                gene_intervals=global_intervals,
             )
 
         # Build Randstrobe indices for all loci
@@ -339,6 +401,7 @@ class LocusComparator:
             locus_offsets=locus_offsets,
             gene_names=gene_names,
             gene_descriptions=gene_descriptions,
+            gene_states=gene_states,
             gene_intervals=global_intervals,
         )
 

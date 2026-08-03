@@ -137,6 +137,24 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
     product_descriptions: npt.NDArray[np.bytes_]
     coverages: npt.NDArray[np.float32]
 
+    def __post_init__(self) -> None:
+        for field_name, dtype in (
+            ("gene_ids", "S32"),
+            ("cluster_names", "S10"),
+            ("product_descriptions", "S64"),
+        ):
+            val = getattr(self, field_name)
+            if not isinstance(val, np.ndarray) or val.dtype.kind not in ("S", "a"):
+                if isinstance(val, np.ndarray) and val.dtype.kind == "U":
+                    encoded = [x.encode("utf-8") for x in val.flat]
+                    arr = np.array(encoded, dtype=dtype).reshape(val.shape)
+                elif isinstance(val, (list, tuple)):
+                    encoded = [x.encode("utf-8") if isinstance(x, str) else x for x in val]
+                    arr = np.array(encoded, dtype=dtype)
+                else:
+                    arr = np.asarray(val, dtype=dtype)
+                object.__setattr__(self, field_name, arr)
+
     @classmethod
     def empty(cls) -> "GeneHits":
         r"""Create an empty `GeneHits` container with zero-length arrays and empty tuples.
@@ -288,6 +306,14 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
         Returns:
             GeneHits: Reconstructed [`GeneHits`][kaptive.serotyping.models.GeneHits] instance.
         """
+        def _to_bytes_array(val: Any, dtype: str) -> npt.NDArray[np.bytes_]:
+            if val is None or len(val) == 0:
+                return np.empty(0, dtype=dtype)
+            if isinstance(val, np.ndarray) and val.dtype.kind in ("S", "a"):
+                return val.astype(dtype)
+            encoded = [x.encode("utf-8") if isinstance(x, str) else x for x in val]
+            return np.array(encoded, dtype=dtype)
+
         return cls(
             gene_indices=np.array(data["gene_indices"], dtype=np.int32),
             q_starts=np.array(data["q_starts"], dtype=np.int32),
@@ -303,9 +329,9 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
                 data.get("expected_positions", []), dtype=np.int32
             ),
             expected_strands=np.array(data.get("expected_strands", []), dtype=np.int8),
-            gene_ids=np.array(data.get("gene_ids", []), dtype="S32"),
-            cluster_names=np.array(data.get("cluster_names", []), dtype="S10"),
-            product_descriptions=np.array(data.get("product_descriptions", []), dtype="S64"),
+            gene_ids=_to_bytes_array(data.get("gene_ids", []), "S32"),
+            cluster_names=_to_bytes_array(data.get("cluster_names", []), "S10"),
+            product_descriptions=_to_bytes_array(data.get("product_descriptions", []), "S64"),
             coverages=np.array(data.get("coverages", []), dtype=np.float32),
         )
 
@@ -584,8 +610,8 @@ class SerotypingResult:
     def to_locus_data(self) -> "LocusData":
         r"""Convert result into a `LocusData` container for comparative multi-locus visualization.
 
-        Extracts translations, locus backbone intervals, locus pieces, and contig indices for non-extra
-        inside genes.
+        Extracts translations, locus backbone intervals, locus pieces, contig indices, gene states,
+        and functional product descriptions for non-extra inside genes.
 
         Returns:
             LocusData: A [`LocusData`][kaptive.compare.LocusData] instance for multi-locus alignment plotting.
@@ -593,6 +619,10 @@ class SerotypingResult:
         from kaptive.compare import LocusData
 
         mask = self.gene_hits.is_inside & ~self.gene_hits.is_extra
+        descriptions = np.asarray(
+            np.char.decode(self.gene_hits.product_descriptions[mask], "utf-8"),
+            dtype=object,
+        )
 
         return LocusData(
             proteins=self.translations[mask],
@@ -600,6 +630,8 @@ class SerotypingResult:
             backbone=self.gene_hits.t_intervals[mask],
             pieces=self.locus_pieces,
             gene_ctg_indices=self.gene_hits.t_indices[mask],
+            gene_states=self.gene_states[mask],
+            gene_descriptions=descriptions,
         )
 
     def to_dict(self) -> dict[str, Any]:

@@ -98,13 +98,13 @@ class Database:
     loci_sketches: "FracMinHashIndex"
 
     def get_locus_data(self, locus_name: str) -> "LocusData":
-        r"""Extracts locus data including protein sequences and coordinate backbone for a specific locus.
+        r"""Extracts locus data including protein sequences, coordinate backbone, gene states, and product descriptions for a specific locus.
 
         Args:
             locus_name (str): Identifier of the locus sequence (e.g., 'K1').
 
         Returns:
-            LocusData: Container object populated with locus proteins and coordinate backbone
+            LocusData: Container object populated with locus proteins, coordinate backbone, gene states, and product descriptions
                 ([`LocusData`][kaptive.compare.LocusData]).
 
         Raises:
@@ -114,10 +114,21 @@ class Database:
             [`LocusData`][kaptive.compare.LocusData]
         """
         from kaptive.compare import LocusData
+        from kaptive.serotyping.models import GeneState
 
         locus_idx = self.loci.ids.index(locus_name)
         start = self.locus_gene_offsets[locus_idx]
         length = self.locus_gene_lengths[locus_idx]
+
+        desc_ids = self.gene_description_ids[start : start + length]
+        raw_descs = [
+            self.description_keys[i].decode("utf-8")
+            if isinstance(self.description_keys[i], bytes)
+            else str(self.description_keys[i])
+            for i in desc_ids
+        ]
+        descriptions = np.asarray(raw_descs, dtype=object)
+        states = np.full(length, GeneState.NORMAL.value, dtype=np.int8)
 
         return LocusData(
             proteins=self.translations[start : start + length],
@@ -125,6 +136,8 @@ class Database:
             backbone=self.gene_intervals[start : start + length],
             pieces=None,
             gene_ctg_indices=None,
+            gene_states=states,
+            gene_descriptions=descriptions,
         )
 
     @property
@@ -479,7 +492,7 @@ class Database:
             gene_description_ids=np.array(gene_description_ids, dtype=np.uint16),
             gene_positions=np.array(gene_expected_positions, dtype=np.uint16),
             phenotypes=Phenotypes(
-                ids=np.array(pheno_ids, dtype="S32"),
+                ids=np.array([p.encode("utf-8") for p in pheno_ids], dtype="S32"),
                 locus_masks=locus_masks,
                 extra_masks=extra_masks,
                 inactive_masks=inactive_masks,

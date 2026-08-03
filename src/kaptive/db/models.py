@@ -298,7 +298,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
             Phenotypes: Reconstructed [`Phenotypes`][kaptive.db.models.Phenotypes] container instance.
         """
         return cls(
-            ids=np.array(data["ids"], dtype="S32"),
+            ids=np.array([p.encode("utf-8") for p in data["ids"]], dtype="S32"),
             locus_masks=np.array(data["locus_masks"], dtype=bool),
             extra_masks=np.array(data["extra_masks"], dtype=bool),
             inactive_masks=np.array(data["inactive_masks"], dtype=bool),
