@@ -19,10 +19,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy the rest of the project source
 COPY src ./src
 COPY README.md LICENSE ./
+COPY .git ./.git
 
 # Install the project
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra plot --extra json
+    uv sync --frozen --no-dev --extra plot --extra json && \
+    rm -rf .git
 
 # Add the virtual environment to the PATH so the 'kaptive' command is available globally
 ENV PATH="/app/.venv/bin:$PATH"
