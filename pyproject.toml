@@ -38,7 +38,7 @@ bgc = ["pyfgs"]
 train = ["scikit-learn"]
 
 [dependency-groups]
-test = ["kaptive[plot,json,bgc,train]", "pytest>=9.0.0", "pytest-cov"]
+test = ["kaptive[plot,json,bgc,train]"]
 docs = [
     "kaptive[plot,json]",
     "zensical",
@@ -73,9 +73,6 @@ version-file = "src/kaptive/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/kaptive"]
 
-[tool.pytest.ini_options]
-addopts = "--doctest-modules"
-testpaths = ["tests", "src"]
 
 [tool.ruff]
 line-length = 120

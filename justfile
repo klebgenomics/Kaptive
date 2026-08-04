@@ -11,7 +11,6 @@ default:
 clean:
     rm -rf site .cache .ruff_cache docs/api build dist
     find . -type d -name "__pycache__" -exec rm -rf {} +
-    find . -type d -name ".pytest_cache" -exec rm -rf {} +
     find . -type f -name "*.pyc" -delete
 
 # Deep clean including the virtual environment
@@ -33,7 +32,7 @@ run *args:
 
 # Run the test suite
 test:
-    uv run pytest tests/
+    uvx --python 3.13 --with ".[plot,json,bgc,train]" karva test
 
 # Format all Python code
 fmt:

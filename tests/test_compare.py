@@ -1,7 +1,6 @@
 """Unit tests for kaptive.compare (LocusData, LocusComparisons, LocusComparisonEdges, LocusComparator)."""
 
 import numpy as np
-import pytest
 
 from kaptive.compare import LocusData
 from kaptive.core.interval import Interval, Intervals, Strand
@@ -126,8 +125,11 @@ def test_locus_comparator_shape_validation() -> None:
     )
 
     comparator = LocusComparator()
-    with pytest.raises(ValueError, match="gene_descriptions length"):
+    try:
         comparator([l_bad_desc])
+        assert False, "Expected ValueError due to gene_descriptions length"
+    except ValueError as e:
+        assert "gene_descriptions length" in str(e)
 
     # Mismatched gene_states length
     l_bad_state = LocusData(
@@ -137,8 +139,11 @@ def test_locus_comparator_shape_validation() -> None:
         gene_states=np.array([0, 1], dtype=np.int8),
     )
 
-    with pytest.raises(ValueError, match="gene_states length"):
+    try:
         comparator([l_bad_state])
+        assert False, "Expected ValueError due to gene_states length"
+    except ValueError as e:
+        assert "gene_states length" in str(e)
 
     # Mismatched backbone length
     b_bad = Intervals.from_intervals(
@@ -153,5 +158,8 @@ def test_locus_comparator_shape_validation() -> None:
         backbone=b_bad,
     )
 
-    with pytest.raises(ValueError, match="backbone length"):
+    try:
         comparator([l_bad_bb])
+        assert False, "Expected ValueError due to backbone length"
+    except ValueError as e:
+        assert "backbone length" in str(e)
