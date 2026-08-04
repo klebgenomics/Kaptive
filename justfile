@@ -49,6 +49,7 @@ lint:
 
 # Static type-check Python code
 type-check:
+    uv sync --all-extras --all-groups
     uvx ty check .
 
 # Run all quality checks at once (ideal for local pre-commit testing)
