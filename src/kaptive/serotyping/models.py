@@ -15,7 +15,7 @@ Classes:
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import IntEnum, IntFlag, auto
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -193,7 +193,7 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
         """
         batches_list = list(batches)
         if not batches_list:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         return cls(
             gene_indices=np.concatenate([b.gene_indices for b in batches_list]),
             q_starts=np.concatenate([b.q_starts for b in batches_list]),
@@ -426,7 +426,7 @@ class LocusPieces(BatchedContainer[Any, "LocusPieces"]):
         """
         batches_list = list(batches)
         if not batches_list:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         return cls(
             ctg_indices=np.concatenate([b.ctg_indices for b in batches_list]),
             starts=np.concatenate([b.starts for b in batches_list]),

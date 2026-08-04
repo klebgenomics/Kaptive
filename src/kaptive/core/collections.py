@@ -8,13 +8,13 @@ vectorized containers across Kaptive.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Protocol, Self, TypeVar
+from typing import Any, Protocol, Self, TypeVar
 
 import numpy as np
 import numpy.typing as npt
 
 T = TypeVar("T", covariant=True)
-S = TypeVar("S", bound="BatchedContainer[Any, Any]")  # type: ignore
+S = TypeVar("S", bound="BatchedContainer[Any, Any]")
 
 
 class BatchedContainer(Protocol[T, S]):
@@ -37,7 +37,7 @@ class BatchedContainer(Protocol[T, S]):
         """
         ...
 
-    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[Any]) -> T | S:  # type: ignore
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[Any]) -> T | S:
         r"""Access records by index, slice, or boolean/integer array mask.
 
         Args:

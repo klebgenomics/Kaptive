@@ -15,7 +15,7 @@ Classes:
 from collections.abc import Iterable
 from dataclasses import dataclass
 from re import compile as re_compile
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -259,7 +259,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
         """
         batches = list(batches)
         if not batches:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         return cls(
             ids=np.concatenate([b.ids for b in batches]),
             locus_masks=np.concatenate([b.locus_masks for b in batches]),

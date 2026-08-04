@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cache
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -213,7 +213,7 @@ class PairwiseAlignments(BatchedContainer["PairwiseAlignment", "PairwiseAlignmen
         """
         batches_list = list(batches)
         if not batches_list:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         return cls(
             scores=np.concatenate([b.scores for b in batches_list]),
             matches=np.concatenate([b.matches for b in batches_list]),

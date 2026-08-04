@@ -3,16 +3,16 @@
   <p>The tool for <em>in silico</em> serotyping</p>
   <a href="https://pypi.org/project/kaptive/">
     <img src="https://img.shields.io/pypi/pyversions/kaptive" alt="PyPI - Python Version">
-  </a>&nbsp;
+  </a>
   <a href="https://anaconda.org/bioconda/kaptive">
     <img src="https://img.shields.io/conda/vn/bioconda/kaptive" alt="Conda Version">
-  </a>&nbsp;
+  </a>
   <a href="https://github.com/astral-sh/ruff">
     <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="ruff">
-  </a>&nbsp;
+  </a>
   <a href="https://github.com/astral-sh/ty">
     <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json" alt="ty">
-  </a>&nbsp;
+  </a>
 </div>
 
 ---

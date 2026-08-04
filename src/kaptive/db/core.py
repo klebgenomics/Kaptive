@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from fnmatch import filter as fnmatch_filter
 from pathlib import Path
 from re import compile as re_compile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from kaptive.compare import LocusData
@@ -182,9 +182,9 @@ class Database:
     @staticmethod
     def _parse_phenotype(
         id_: str,
-        data: dict,
+        data: dict[str, Any],
         locus_iterable: Iterable[str],
-        cluster_iterable: Iterable[str],  # type: ignore
+        cluster_iterable: Iterable[str],
     ) -> Phenotype:
         r"""Parses phenotype definition rule dictionary into a structured Phenotype dataclass.
 

@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import IntEnum
 from re import Match
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt

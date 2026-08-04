@@ -12,9 +12,9 @@ Classes:
     [`LocusComparator`][kaptive.compare.LocusComparator]: Vectorised engine for multi-locus pairwise comparisons.
 """
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -123,7 +123,7 @@ class LocusComparisonEdges(BatchedContainer[Any, "LocusComparisonEdges"]):
             LocusComparisonEdges: Concatenated container holding all input batches.
         """
         if not batches:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         return cls(
             query_locus_indices=np.concatenate([b.query_locus_indices for b in batches]),
             target_locus_indices=np.concatenate([b.target_locus_indices for b in batches]),

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cache
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -132,7 +132,7 @@ class Seeds(BatchedContainer[Seed, "Seeds"]):
         """
         batches_list = list(batches)
         if not batches_list:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         return cls(
             np.concatenate([b.query_indices for b in batches_list]),
             np.concatenate([b.target_indices for b in batches_list]),
