@@ -15,6 +15,7 @@ CATEGORY_NAME = "Announcements"
 # GITHUB_TOKEN is automatically provided in GitHub Actions
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
+
 def main():
     query = """
     query {
@@ -40,7 +41,7 @@ def main():
         try:
             with urllib.request.urlopen(req, data=json.dumps({"query": query}).encode("utf-8")) as response:
                 data = json.loads(response.read())
-                
+
                 # Filter the discussions to find the latest one in the target category
                 discussions = data["data"]["repository"]["discussions"]["nodes"]
                 announcement = next((d for d in discussions if d["category"]["name"] == CATEGORY_NAME), None)
@@ -57,5 +58,5 @@ def main():
             print(f"Failed to fetch announcement: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

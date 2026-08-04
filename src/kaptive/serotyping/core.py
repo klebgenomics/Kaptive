@@ -113,16 +113,13 @@ class Serotyper:
                 str(i).encode(),
                 bytes(
                     self._db.genes.seqs[
-                        self._db.genes.offsets[i] : self._db.genes.offsets[i]
-                        + self._db.genes.lengths[i]
+                        self._db.genes.offsets[i] : self._db.genes.offsets[i] + self._db.genes.lengths[i]
                     ]
                 ),
             )
             for i in range(len(self._db.genes))
         ]
-        self._gene_meta = [
-            (str(i), self._db.genes.lengths[i]) for i in range(len(self._db.genes))
-        ]
+        self._gene_meta = [(str(i), self._db.genes.lengths[i]) for i in range(len(self._db.genes))]
 
     def __call__(self, genome: GenomeAssembly | str | Path) -> SerotypingResult | None:
         r"""Perform *in silico* serotyping on a target bacterial genome assembly.
@@ -148,9 +145,7 @@ class Serotyper:
         genome = GenomeAssembly.ensure(genome)
 
         contig_index = genome.get_rammappy_index()
-        aligner = Aligner(
-            index=contig_index, preset=None, do_cigar=True, do_cs=False, do_md=False
-        )
+        aligner = Aligner(index=contig_index, preset=None, do_cigar=True, do_cs=False, do_md=False)
         opts = aligner.options
         opts.filtering.best_n = 50000
         opts.filtering.pri_ratio = 0.0
@@ -200,9 +195,7 @@ class Serotyper:
         # Calculate completeness count per locus (unique expected genes matched per locus)
         locus_counts = np.zeros(len(self._db.loci), dtype=np.float32)
         matched_expected_genes = best_gene_indices[valid_not_extra]
-        np.add.at(
-            locus_counts, self._db.gene_locus_indices[matched_expected_genes], 1.0
-        )
+        np.add.at(locus_counts, self._db.gene_locus_indices[matched_expected_genes], 1.0)
 
         locus_completeness = locus_counts / self._expected_genes_per_locus
         final_locus_scores = locus_scores * (locus_completeness**3)
@@ -220,25 +213,19 @@ class Serotyper:
         valid_indices = valid_alns.q_names.astype(np.int32)
         priority_mask = self._db.gene_locus_indices[valid_indices] == best_locus_idx
 
-        culled_alns = valid_alns.cull_overlaps(
-            by_query=False, priority_mask=priority_mask, max_overlap_fraction=0.1
-        )
+        culled_alns = valid_alns.cull_overlaps(by_query=False, priority_mask=priority_mask, max_overlap_fraction=0.1)
 
         # Re-extract arrays for the culled batch
         culled_gene_indices = culled_alns.q_names.astype(np.int32)
-        t_indices = np.array(
-            [genome.id_map[n] for n in culled_alns.t_names], dtype=np.uint32
-        )
+        t_indices = np.array([genome.id_map[n] for n in culled_alns.t_names], dtype=np.uint32)
         # Cluster intervals by contig using max_locus_length as tolerance
         culled_intervals = culled_alns.to_intervals(by_query=False)
-        piece_ids = culled_intervals.cluster_spatial(
-            tolerance=self._db.max_locus_length, group_by=t_indices
-        )
+        piece_ids = culled_intervals.cluster_spatial(tolerance=self._db.max_locus_length, group_by=t_indices)
 
         # Identify expected genes and the clusters they fall into
-        is_expected = (
-            self._db.gene_locus_indices[culled_gene_indices] == best_locus_idx
-        ) & ~self._db.extra_genes[culled_gene_indices]
+        is_expected = (self._db.gene_locus_indices[culled_gene_indices] == best_locus_idx) & ~self._db.extra_genes[
+            culled_gene_indices
+        ]
         valid_cluster_ids = np.unique(piece_ids[is_expected])
         is_extra = self._db.extra_genes[culled_gene_indices]
 
@@ -287,11 +274,7 @@ class Serotyper:
         for ctg_idx, start, end in zip(l_ctg_indices, l_starts, l_ends):
             on_ctg = t_indices == ctg_idx
             # An alignment is inside if it overlaps the bounding region
-            inside_this = (
-                on_ctg
-                & (culled_intervals.starts <= end)
-                & (culled_intervals.ends >= start)
-            )
+            inside_this = on_ctg & (culled_intervals.starts <= end) & (culled_intervals.ends >= start)
             is_inside |= inside_this
 
         # Sort pieces by expected mean position
@@ -305,22 +288,16 @@ class Serotyper:
         )
 
         # Identify missing expected genes
-        expected_genes_mask = (
-            self._db.gene_locus_indices == best_locus_idx
-        ) & ~self._db.extra_genes
+        expected_genes_mask = (self._db.gene_locus_indices == best_locus_idx) & ~self._db.extra_genes
         expected_gene_indices = np.where(expected_genes_mask)[0]
         # Which ones did we find inside the locus?
         found_expected_gene_indices = culled_gene_indices[is_expected & is_inside]
-        missing_indices = np.setdiff1d(
-            expected_gene_indices, found_expected_gene_indices, assume_unique=True
-        )
+        missing_indices = np.setdiff1d(expected_gene_indices, found_expected_gene_indices, assume_unique=True)
         missing_expected_genes = tuple(self._db.genes.ids[i] for i in missing_indices)
 
         # Calculate actual completeness based on reconstructed locus
         actual_locus_completeness = (
-            1.0 - (len(missing_indices) / len(expected_gene_indices))
-            if len(expected_gene_indices) > 0
-            else 1.0
+            1.0 - (len(missing_indices) / len(expected_gene_indices)) if len(expected_gene_indices) > 0 else 1.0
         )
 
         gene_hits = GeneHits(
@@ -334,19 +311,20 @@ class Serotyper:
             is_expected=is_expected,
             is_inside=is_inside,
             is_extra=is_extra,
-            expected_positions=self._db.gene_positions[culled_gene_indices].astype(
-                np.int32
-            ),
+            expected_positions=self._db.gene_positions[culled_gene_indices].astype(np.int32),
             expected_strands=self._db.gene_intervals.strands[culled_gene_indices],
             gene_ids=np.array([self._db.genes.ids[i].encode("utf-8") for i in culled_gene_indices], dtype="S32"),
-            cluster_names=np.array([
-                self._db.cluster_keys[self._db.gene_cluster_ids[i]].encode("utf-8")
-                for i in culled_gene_indices
-            ], dtype="S10"),
-            product_descriptions=np.array([
-                self._db.description_keys[self._db.gene_description_ids[i]].encode("utf-8")
-                for i in culled_gene_indices
-            ], dtype="S64"),
+            cluster_names=np.array(
+                [self._db.cluster_keys[self._db.gene_cluster_ids[i]].encode("utf-8") for i in culled_gene_indices],
+                dtype="S10",
+            ),
+            product_descriptions=np.array(
+                [
+                    self._db.description_keys[self._db.gene_description_ids[i]].encode("utf-8")
+                    for i in culled_gene_indices
+                ],
+                dtype="S64",
+            ),
             coverages=coverages,
         )
 
@@ -397,16 +375,12 @@ class Serotyper:
         is_truncated = (~is_partial) & (prot_covs < 0.90)
         gene_states[is_partial] = GeneState.PARTIAL.value
         gene_states[is_truncated] = GeneState.TRUNCATED.value
-        prot_alns = self._protein_aligner(
-            prot_seqs, self._db.translations[gene_hits.gene_indices]
-        )
+        prot_alns = self._protein_aligner(prot_seqs, self._db.translations[gene_hits.gene_indices])
         prot_idents = prot_alns.pidents.astype(np.float32)
 
         # Drop genes outside the locus that fall below the identity threshold,
         # mirroring Old Kaptive's behavior of ignoring spurious homologies
-        is_spurious = (~gene_hits.is_inside) & (
-            prot_idents < self._db.metadata.id_threshold
-        )
+        is_spurious = (~gene_hits.is_inside) & (prot_idents < self._db.metadata.id_threshold)
         if np.any(is_spurious):
             keep_mask = ~is_spurious
             gene_hits = gene_hits[keep_mask]
@@ -416,9 +390,7 @@ class Serotyper:
             prot_idents = prot_idents[keep_mask]
 
         # Normal genes that fall below the identity threshold are considered NOVEL
-        below_threshold = (gene_states == GeneState.NORMAL.value) & (
-            prot_idents < self._db.metadata.id_threshold
-        )
+        below_threshold = (gene_states == GeneState.NORMAL.value) & (prot_idents < self._db.metadata.id_threshold)
         gene_states[below_threshold] = GeneState.NOVEL.value
         valid_pidents = prot_idents[gene_states == GeneState.NORMAL.value]
         pident = float(np.mean(valid_pidents)) if valid_pidents.size > 0 else 0.0
@@ -430,34 +402,30 @@ class Serotyper:
         if len(phenotypes) > 0:
             # A cluster is considered 'active' if it's found NORMAL or PARTIAL
             q_active = np.zeros(len(self._db.cluster_keys), dtype=bool)
-            is_active = (gene_states == GeneState.NORMAL.value) | (
-                gene_states == GeneState.PARTIAL.value
-            )
+            is_active = (gene_states == GeneState.NORMAL.value) | (gene_states == GeneState.PARTIAL.value)
             if np.any(is_active):
-                active_clusters = self._db.gene_cluster_ids[
-                    gene_hits.gene_indices[is_active]
-                ]
+                active_clusters = self._db.gene_cluster_ids[gene_hits.gene_indices[is_active]]
                 q_active[active_clusters] = True
 
             # Vectorized rule evaluation using BLAS matrix multiplication
             locus_match = phenotypes.locus_masks[:, best_locus_idx]
             q_active_int = q_active.astype(np.int8)
             extra_match = np.dot(phenotypes.extra_masks, q_active_int) == phenotypes.extra_counts
-            
+
             has_inactive_rule = phenotypes.inactive_masks.sum(axis=1) > 0
-            
+
             expected_mask = np.zeros(len(self._db.cluster_keys), dtype=np.int8)
             offset = self._db.locus_gene_offsets[best_locus_idx]
             length = self._db.locus_gene_lengths[best_locus_idx]
-            expected_clusters = self._db.gene_cluster_ids[offset:offset+length]
+            expected_clusters = self._db.gene_cluster_ids[offset : offset + length]
             expected_mask[expected_clusters] = 1
-            
+
             applicable_inactive_masks = phenotypes.inactive_masks & expected_mask
             has_applicable_inactive = applicable_inactive_masks.sum(axis=1) > 0
-            
+
             q_inactive_int = (~q_active).astype(np.int8)
             inactive_hits = np.dot(applicable_inactive_masks, q_inactive_int)
-            
+
             inactive_match = (~has_inactive_rule) | (has_applicable_inactive & (inactive_hits > 0))
 
             if np.any(valid_mask := locus_match & extra_match & inactive_match):
@@ -465,15 +433,11 @@ class Serotyper:
                 is_suffix = phenotypes.as_suffix[valid_indices]
 
                 if len(replacements := valid_indices[~is_suffix]) > 0:
-                    best_rep_idx = replacements[
-                        np.argmax(phenotypes.priorities[replacements])
-                    ]
+                    best_rep_idx = replacements[np.argmax(phenotypes.priorities[replacements])]
                     base_phenotype = phenotypes.ids[best_rep_idx].decode("utf-8")
 
                 if len(suffixes := valid_indices[is_suffix]) > 0:
-                    sorted_suffixes = suffixes[
-                        np.argsort(-phenotypes.priorities[suffixes])
-                    ]
+                    sorted_suffixes = suffixes[np.argsort(-phenotypes.priorities[suffixes])]
                     suffix_strs = [phenotypes.ids[i].decode("utf-8") for i in sorted_suffixes]
                     base_phenotype = f"{base_phenotype}{''.join(suffix_strs)}"
 
@@ -483,9 +447,7 @@ class Serotyper:
             typeable = False
 
         # Truncated unexpected genes do not count towards the limit, mirroring Old Kaptive
-        is_unexpected = (
-            gene_hits.is_inside & ~gene_hits.is_expected & ~gene_hits.is_extra
-        )
+        is_unexpected = gene_hits.is_inside & ~gene_hits.is_expected & ~gene_hits.is_extra
         is_not_truncated = gene_states != GeneState.TRUNCATED.value
         unexpected_count = np.count_nonzero(is_unexpected & is_not_truncated)
         if unexpected_count > self.max_other_genes:

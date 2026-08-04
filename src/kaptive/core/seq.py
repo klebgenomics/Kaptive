@@ -58,9 +58,7 @@ class SeqRecord:
         """
         return b">%b\n%b\n" % (self.id.encode(), self.seq)
 
-    def extract(
-        self, start: int | IntervalLike, end: int | None = None, strand: Strand = Strand.UNSTRANDED
-    ) -> bytes:
+    def extract(self, start: int | IntervalLike, end: int | None = None, strand: Strand = Strand.UNSTRANDED) -> bytes:
         r"""Extract a sub-sequence based on coordinates and orientation.
 
         If `strand` is negative (e.g. [`Strand`][kaptive.core.interval.Strand]),
@@ -162,15 +160,19 @@ class Sequences(RaggedArrayContainer["SeqRecord", "Sequences"]):
 
         seq_bytes = self.seqs.tobytes()
         if use_indices:
-            return b"".join([
-                b">%d\n%b\n" % (i, seq_bytes[o : o + length_val])
-                for i, (o, length_val) in enumerate(zip(self.offsets.tolist(), self.lengths.tolist()))
-            ])
+            return b"".join(
+                [
+                    b">%d\n%b\n" % (i, seq_bytes[o : o + length_val])
+                    for i, (o, length_val) in enumerate(zip(self.offsets.tolist(), self.lengths.tolist()))
+                ]
+            )
         else:
-            return b"".join([
-                b">%b\n%b\n" % (i.encode(), seq_bytes[o : o + length_val])
-                for i, o, length_val in zip(self.ids, self.offsets.tolist(), self.lengths.tolist())
-            ])
+            return b"".join(
+                [
+                    b">%b\n%b\n" % (i.encode(), seq_bytes[o : o + length_val])
+                    for i, o, length_val in zip(self.ids, self.offsets.tolist(), self.lengths.tolist())
+                ]
+            )
 
     @classmethod
     def empty(cls) -> Sequences:
@@ -346,9 +348,7 @@ class Sequences(RaggedArrayContainer["SeqRecord", "Sequences"]):
         """
         if len(indices) == 0:
             return self.empty()
-        new_ids = new_ids or tuple(
-            f"{self.ids[i]}_{x}_{y}_{z}" for i, x, y, z in zip(indices, starts, ends, strands)
-        )
+        new_ids = new_ids or tuple(f"{self.ids[i]}_{x}_{y}_{z}" for i, x, y, z in zip(indices, starts, ends, strands))
         out_seqs, offsets, lengths = _extract_ragged_kernel(
             self.seqs, self.offsets, indices, starts, ends, strands, BacterialTranslationTable._COMP_MAP
         )

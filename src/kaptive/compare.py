@@ -256,15 +256,9 @@ class LocusComparator:
                 if raw_desc.dtype.kind in ("S", "a"):
                     decoded_desc = np.char.decode(raw_desc, "utf-8")
                     d_arr = np.asarray(decoded_desc, dtype=object)
-                elif raw_desc.dtype == object or any(
-                    isinstance(x, (bytes, np.bytes_)) for x in raw_desc.flat
-                ):
+                elif raw_desc.dtype == object or any(isinstance(x, (bytes, np.bytes_)) for x in raw_desc.flat):
                     decoded_list = [
-                        x.decode("utf-8")
-                        if isinstance(x, (bytes, np.bytes_))
-                        else str(x)
-                        if x is not None
-                        else ""
+                        x.decode("utf-8") if isinstance(x, (bytes, np.bytes_)) else str(x) if x is not None else ""
                         for x in raw_desc.flat
                     ]
                     d_arr = np.asarray(decoded_list, dtype=object).reshape(raw_desc.shape)
@@ -355,13 +349,9 @@ class LocusComparator:
 
         # Build Randstrobe indices for all loci
         # Targets must be sorted for binary search lookups
-        target_indices = [
-            RandstrobeIndex.build(seq_locus, k=self.k, s=self.s, sort_by_hash=True) for seq_locus in loci
-        ]
+        target_indices = [RandstrobeIndex.build(seq_locus, k=self.k, s=self.s, sort_by_hash=True) for seq_locus in loci]
         # Queries must NOT be sorted so they can be streamed positionally
-        query_indices = [
-            RandstrobeIndex.build(seq_locus, k=self.k, s=self.s, sort_by_hash=False) for seq_locus in loci
-        ]
+        query_indices = [RandstrobeIndex.build(seq_locus, k=self.k, s=self.s, sort_by_hash=False) for seq_locus in loci]
 
         edge_batches = []
 
@@ -404,4 +394,3 @@ class LocusComparator:
             gene_states=gene_states,
             gene_intervals=global_intervals,
         )
-

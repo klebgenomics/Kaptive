@@ -7,11 +7,12 @@ sys.argv[0] = "kaptive"
 
 from kaptive.cli import Cli
 
+
 def generate_command_docs(cmd_class, output_path, category, icon):
     cli = Cli()
     cmd = cmd_class()
     cli.add_command(cmd)
-    
+
     cmd_title = cmd.name
     if cmd.aliases:
         cmd_title += f" ({', '.join(cmd.aliases)})"
@@ -25,13 +26,13 @@ def generate_command_docs(cmd_class, output_path, category, icon):
             subcmd_name = subcmd.name
             if subcmd.aliases:
                 subcmd_name += f" ({', '.join(subcmd.aliases)})"
-            
+
             usage += f"### {subcmd_name}\n\n"
             if subcmd.description:
                 usage += f"{subcmd.description}\n\n"
             usage += f"```text\n{subcmd.parser.format_help().strip()}\n```\n\n"
 
-    with open(output_path, 'wt') as doc:
+    with open(output_path, "wt") as doc:
         doc.write(f"""---
 title: {cmd_title}
 author: Tom Stanton
@@ -47,13 +48,17 @@ categories:
 {usage.strip()}
 """)
 
+
 def main():
     from kaptive.db.cli import Database
-    generate_command_docs(Database, 'docs/cli/db.md', 'Databases', 'lucide/database')
+
+    generate_command_docs(Database, "docs/cli/db.md", "Databases", "lucide/database")
 
     from kaptive.serotyping.cli import Type, Convert
-    generate_command_docs(Type, 'docs/cli/serotyping.md', 'Serotyping', 'lucide/syringe')
-    generate_command_docs(Convert, 'docs/cli/convert.md', 'Serotyping', 'lucide/arrow-left-right')
 
-if __name__ == '__main__':
+    generate_command_docs(Type, "docs/cli/serotyping.md", "Serotyping", "lucide/syringe")
+    generate_command_docs(Convert, "docs/cli/convert.md", "Serotyping", "lucide/arrow-left-right")
+
+
+if __name__ == "__main__":
     main()

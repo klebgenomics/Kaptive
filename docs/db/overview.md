@@ -103,9 +103,9 @@ the [`kaptive.db`][kaptive.db] module.
     ```python
     from kaptive.db import Database, DatabaseManager
 
-    db = Database.install("kpsc_k") # (1)!
-    dbs = Database.install("all") # (2)!
-    db = Database.load("kpsc_k") # (3)!
+    db = Database.install("kpsc_k")  # (1)!
+    dbs = Database.install("all")  # (2)!
+    db = Database.load("kpsc_k")  # (3)!
     ```
 
     1. Install a known database (compiles and caches it)
@@ -119,14 +119,14 @@ the [`kaptive.db`][kaptive.db] module.
         owner="klebgenomics",
         repo_name="KpSC_surface_antigen_loci",
         db_name="Klebsiella_pneumoniae_Species_Complex_K",
-        branch="main"
+        branch="main",
     )
     ```
 
 ??? example "Updating"
     ```python
-    updated_dbs = DatabaseManager.update("all") # (1)!
-    updated_db = DatabaseManager.update("kpsc_k") # (2)!
+    updated_dbs = DatabaseManager.update("all")  # (1)!
+    updated_db = DatabaseManager.update("kpsc_k")  # (2)!
     ```
 
     1. Check and update all installed databases

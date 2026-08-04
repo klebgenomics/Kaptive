@@ -40,6 +40,7 @@ def test_genes_soa_edge_cases():
 
 def test_annotator_short_and_empty_contigs():
     from kaptive.db.manager import DatabaseManager
+
     db = DatabaseManager.get("ab_k")
     annotator = Annotator(db=db)
 
@@ -63,12 +64,14 @@ def test_annotator_short_and_empty_contigs():
     # Contigs < 3 bp
     short_genome = GenomeAssembly(
         "short_asm",
-        Sequences.from_records([
-            SeqRecord(id="short_contig_1", seq=b"A"),
-            SeqRecord(id="short_contig_2", seq=b"AT"),
-            SeqRecord(id="short_contig_3", seq=b"CG"),
-            SeqRecord(id="short_contig_4", seq=b""),
-        ]),
+        Sequences.from_records(
+            [
+                SeqRecord(id="short_contig_1", seq=b"A"),
+                SeqRecord(id="short_contig_2", seq=b"AT"),
+                SeqRecord(id="short_contig_3", seq=b"CG"),
+                SeqRecord(id="short_contig_4", seq=b""),
+            ]
+        ),
     )
     res_short = annotator(short_genome)
     assert len(res_short.genes) == 0

@@ -132,12 +132,7 @@ class KaptiveRow(ReportRow):
         Returns:
             bytes: Tab-separated legacy header line ending with a newline (`b"\n"`).
         """
-        headers = [
-            f.name.encode("utf-8")
-            .replace(b"_details", b", details")
-            .replace(b"_", b" ")
-            for f in fields(cls)
-        ]
+        headers = [f.name.encode("utf-8").replace(b"_details", b", details").replace(b"_", b" ") for f in fields(cls)]
         return b"\t".join(headers) + b"\n"
 
     @classmethod
@@ -207,17 +202,11 @@ class KaptiveRow(ReportRow):
         expected_total = n_exp_in + n_exp_out + len(result.missing_expected_genes)
 
         in_comp = (n_exp_in / expected_total * 100.0) if expected_total > 0 else 0.0
-        exp_in_str = (
-            b"%d / %d (%.2f%%)" % (n_exp_in, expected_total, in_comp)
-            if expected_total
-            else b"0 / 0 (0.00%)"
-        )
+        exp_in_str = b"%d / %d (%.2f%%)" % (n_exp_in, expected_total, in_comp) if expected_total else b"0 / 0 (0.00%)"
 
         out_comp = (n_exp_out / expected_total * 100.0) if expected_total > 0 else 0.0
         exp_out_str = (
-            b"%d / %d (%.2f%%)" % (n_exp_out, expected_total, out_comp)
-            if expected_total
-            else b"0 / 0 (0.00%)"
+            b"%d / %d (%.2f%%)" % (n_exp_out, expected_total, out_comp) if expected_total else b"0 / 0 (0.00%)"
         )
 
         # Other counts
@@ -236,9 +225,7 @@ class KaptiveRow(ReportRow):
             Identity=b"%.2f%%" % result.percent_identity,
             Coverage=b"%.2f%%" % result.percent_coverage,
             Length_discrepancy=b"n/a"
-            if (
-                result.length_discrepancy is None or np.isnan(result.length_discrepancy)
-            )
+            if (result.length_discrepancy is None or np.isnan(result.length_discrepancy))
             else b"%d" % int(result.length_discrepancy),
             Expected_genes_in_locus=exp_in_str,
             Expected_genes_in_locus_details=_format_genes(mask_exp_in),
@@ -250,8 +237,7 @@ class KaptiveRow(ReportRow):
             Other_genes_outside_locus=b"%d" % n_unexp_out,
             Other_genes_outside_locus_details=_format_genes(out_loc & unexp),
             Truncated_genes_details=_format_genes(
-                (states == GeneState.TRUNCATED.value)
-                | (states == GeneState.PARTIAL.value)
+                (states == GeneState.TRUNCATED.value) | (states == GeneState.PARTIAL.value)
             ),
             Extra_genes_details=_format_genes(extra),
         )
@@ -262,9 +248,9 @@ class Pha4geRow(ReportRow):
     r"""Report row representation adhering to Public Health Alliance for Genomic Epidemiology (PHA4GE) standards.
 
     Encapsulates sample metadata, taxonomy, software versioning, genotype calls, and confidence values in tab-separated
-    binary format standardized for public health surveillance data exchange. 
-    
-    For more information on the rationale and specifics of the PHA4GE genotyping specification, 
+    binary format standardized for public health surveillance data exchange.
+
+    For more information on the rationale and specifics of the PHA4GE genotyping specification,
     please see: https://github.com/pha4ge/genotyping-specification
 
     Attributes:
@@ -323,14 +309,16 @@ class Pha4geRow(ReportRow):
                 detail_parts.append(b"missing expected gene/s")
             if SerotypingProblem.UNEXPECTED_GENES in result.problems:
                 detail_parts.append(b"unexpected gene/s in locus")
-            details = b"Best locus match: %b. Problems: %b" % (result.best_locus_name.encode(), b", ".join(detail_parts))
+            details = b"Best locus match: %b. Problems: %b" % (
+                result.best_locus_name.encode(),
+                b", ".join(detail_parts),
+            )
         else:
             details = b"Best locus match: %b." % result.best_locus_name.encode()
 
         return cls(
             sample=result.genome.encode(),
-            genotyping_schema_taxon=b"%s [NCBITaxon:%d]"
-            % (result.database_organism.encode(), result.database_taxon),
+            genotyping_schema_taxon=b"%s [NCBITaxon:%d]" % (result.database_organism.encode(), result.database_taxon),
             genotyping_database_name=result.database_name.encode(),
             genotyping_database_version=result.database_version.encode(),
             genotyping_software_version=result.kaptive_version.encode(),

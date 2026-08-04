@@ -20,11 +20,11 @@ def bump_toml_version(file_path: str, bump_type: str):
     ver = semver.Version.parse(current_version)
 
     # 2. Calculate the SemVer bump
-    if bump_type == 'major':
+    if bump_type == "major":
         new_version = str(ver.bump_major())
-    elif bump_type == 'minor':
+    elif bump_type == "minor":
         new_version = str(ver.bump_minor())
-    elif bump_type == 'patch':
+    elif bump_type == "patch":
         new_version = str(ver.bump_patch())
     else:
         raise ValueError(f"Unknown bump type: {bump_type}")
@@ -43,7 +43,7 @@ def bump_toml_version(file_path: str, bump_type: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file", help="Path to TOML file")
-    parser.add_argument("bump", choices=['major', 'minor', 'patch'])
+    parser.add_argument("bump", choices=["major", "minor", "patch"])
     args = parser.parse_args()
 
     bump_toml_version(args.file, args.bump)

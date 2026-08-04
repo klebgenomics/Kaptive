@@ -74,14 +74,18 @@ def test_locus_comparator_bytes_decoding():
     """Test LocusComparator properly decodes bytes and object arrays containing bytes to UTF-8 strings."""
     from kaptive.compare import LocusComparator
 
-    p1 = Sequences.from_records([
-        SeqRecord(id="g1", seq=b"MKTLLILAV"),
-        SeqRecord(id="g2", seq=b"MSKGEELFTG"),
-    ])
-    b1 = Intervals.from_intervals([
-        Interval(10, 100, strand=Strand.FORWARD),
-        Interval(200, 500, strand=Strand.FORWARD),
-    ])
+    p1 = Sequences.from_records(
+        [
+            SeqRecord(id="g1", seq=b"MKTLLILAV"),
+            SeqRecord(id="g2", seq=b"MSKGEELFTG"),
+        ]
+    )
+    b1 = Intervals.from_intervals(
+        [
+            Interval(10, 100, strand=Strand.FORWARD),
+            Interval(200, 500, strand=Strand.FORWARD),
+        ]
+    )
 
     # Case 1: Bytes array (S dtype)
     l1 = LocusData(
@@ -137,10 +141,12 @@ def test_locus_comparator_shape_validation():
         comparator([l_bad_state])
 
     # Mismatched backbone length
-    b_bad = Intervals.from_intervals([
-        Interval(10, 100, strand=Strand.FORWARD),
-        Interval(200, 500, strand=Strand.FORWARD),
-    ])
+    b_bad = Intervals.from_intervals(
+        [
+            Interval(10, 100, strand=Strand.FORWARD),
+            Interval(200, 500, strand=Strand.FORWARD),
+        ]
+    )
     l_bad_bb = LocusData(
         name="Locus_BadBB",
         proteins=p1,
@@ -149,5 +155,3 @@ def test_locus_comparator_shape_validation():
 
     with pytest.raises(ValueError, match="backbone length"):
         comparator([l_bad_bb])
-
-

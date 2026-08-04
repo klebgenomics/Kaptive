@@ -52,7 +52,6 @@ class Database(Command):
         ]
 
 
-
 class List(Command):
     r"""📋 List all currently installed local databases
 
@@ -352,8 +351,7 @@ class Extract(Command):
 
 
 class Loci(Command):
-    r"""🧬 Extract locus nucleotide sequences in FASTA format
-    """
+    r"""🧬 Extract locus nucleotide sequences in FASTA format"""
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Extracts locus FASTA sequences to specified output file or stdout.
@@ -376,8 +374,7 @@ class Loci(Command):
 
 
 class Genes(Command):
-    r"""🧩 Extract gene coding sequences in FASTA format
-    """
+    r"""🧩 Extract gene coding sequences in FASTA format"""
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Extracts gene nucleotide FASTA sequences to output stream.
@@ -400,8 +397,7 @@ class Genes(Command):
 
 
 class Proteins(Command):
-    r"""🧶 Extract translated protein sequences in FASTA format
-    """
+    r"""🧶 Extract translated protein sequences in FASTA format"""
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Extracts translated protein FASTA sequences to output stream.

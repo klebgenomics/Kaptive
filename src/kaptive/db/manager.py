@@ -229,9 +229,7 @@ class DatabaseManager:
                 else:
                     meta = pickle.loads(db_path.read_bytes()).metadata
                 db_name = Path(meta.genbank).with_suffix("").name
-                return cls._fetch_files(
-                    meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta
-                )
+                return cls._fetch_files(meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta)
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 fetched_list = list(executor.map(_fetch_update_one, kwd))
@@ -247,11 +245,7 @@ class DatabaseManager:
             else:
                 meta = pickle.loads(db_path.read_bytes()).metadata
             db_name = Path(meta.genbank).with_suffix("").name
-            if (
-                res := cls.add(
-                    meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta
-                )
-            ) is not None:
+            if (res := cls.add(meta.owner, meta.repo, db_name, branch=meta.branch, local_meta=meta)) is not None:
                 yield res
 
     @classmethod
@@ -291,9 +285,7 @@ class DatabaseManager:
 
             def _fetch_one(k: str):
                 if (known_info := cls._KNOWN.get(k, None)) is None:
-                    raise DatabaseError(
-                        f'"{k}" is not a known database, choose from {list(cls._KNOWN.keys())}'
-                    )
+                    raise DatabaseError(f'"{k}" is not a known database, choose from {list(cls._KNOWN.keys())}')
                 return cls._fetch_files(*known_info)
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -308,9 +300,7 @@ class DatabaseManager:
             return results
 
         if (known_info := cls._KNOWN.get(kwd, None)) is None:
-            raise DatabaseError(
-                f'"{kwd}" is not a known database, choose from {list(cls._KNOWN.keys())}'
-            )
+            raise DatabaseError(f'"{kwd}" is not a known database, choose from {list(cls._KNOWN.keys())}')
         return cls.add(*known_info)
 
     @classmethod
@@ -363,14 +353,12 @@ class DatabaseManager:
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise DatabaseError(
-                    f"Remote file not found: {toml_url}\n"
-                    f"Ensure the repository branch, name, and owner are correct."
+                    f"Remote file not found: {toml_url}\nEnsure the repository branch, name, and owner are correct."
                 ) from e
             raise DatabaseError(f"HTTP Error {e.code} fetching {toml_url}: {e.reason}") from e
         except urllib.error.URLError as e:
             raise DatabaseError(
-                f"Network error: Failed to fetch {toml_url}."
-                f"Ensure you have an active internet connection. ({e.reason})"
+                f"Network error: Failed to fetch {toml_url}.Ensure you have an active internet connection. ({e.reason})"
             ) from e
 
         remote_meta_dict = tomllib.loads(toml_bytes.decode("utf-8"))
@@ -396,14 +384,12 @@ class DatabaseManager:
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 raise DatabaseError(
-                    f"Remote file not found: {gbk_url}\n"
-                    f"Ensure the repository branch, name, and owner are correct."
+                    f"Remote file not found: {gbk_url}\nEnsure the repository branch, name, and owner are correct."
                 ) from e
             raise DatabaseError(f"HTTP Error {e.code} fetching {gbk_url}: {e.reason}") from e
         except urllib.error.URLError as e:
             raise DatabaseError(
-                f"Network error: Failed to fetch {gbk_url}. "
-                f"Ensure you have an active internet connection. ({e.reason})"
+                f"Network error: Failed to fetch {gbk_url}. Ensure you have an active internet connection. ({e.reason})"
             ) from e
 
         return db_name, gbk_bytes, toml_bytes
@@ -489,9 +475,7 @@ class DatabaseManager:
             [`DatabaseMetadata`][kaptive.db.models.DatabaseMetadata],
             [`DatabaseError`][kaptive.db.models.DatabaseError]
         """
-        fetched = cls._fetch_files(
-            owner, repo_name, db_name, branch=branch, local_meta=local_meta
-        )
+        fetched = cls._fetch_files(owner, repo_name, db_name, branch=branch, local_meta=local_meta)
         if fetched is None:
             return None
         return cls._compile_and_save(*fetched)

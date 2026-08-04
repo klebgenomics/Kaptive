@@ -71,6 +71,7 @@ class Strand(IntEnum):
 
 # Classes --------------------------------------------------------------------------------------------------------------
 
+
 @dataclass(frozen=True, slots=True)
 class Interval:
     r"""A single 0-based, half-open genomic interval with strand orientation.
@@ -234,9 +235,7 @@ class Interval:
         return cls(start, stop, strand)
 
     @classmethod
-    def from_item(
-        cls, item: IntervalLike, strand: Strand = Strand.UNSTRANDED, length: int | None = None
-    ) -> Interval:
+    def from_item(cls, item: IntervalLike, strand: Strand = Strand.UNSTRANDED, length: int | None = None) -> Interval:
         r"""Universal factory coercing various representations into an [`Interval`][kaptive.core.interval.Interval].
 
         Args:

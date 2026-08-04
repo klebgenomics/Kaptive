@@ -389,9 +389,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
         return len(self.q_starts)
 
     @classmethod
-    def from_mapping_iterators(
-        cls, queries: list[tuple[str, int]], iterators: Iterable[Any]
-    ) -> Self:
+    def from_mapping_iterators(cls, queries: list[tuple[str, int]], iterators: Iterable[Any]) -> Self:
         r"""Construct an Alignments batch from mapping iterators.
 
         Args:

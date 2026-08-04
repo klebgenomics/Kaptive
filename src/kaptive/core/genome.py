@@ -102,9 +102,7 @@ class GenomeAssembly:
         rammappy_index (Any): Lazy-cached `rammappy.Index` object for sequence lookups.
     """
 
-    _SEQUENCE_FILE_REGEX = re_compile(
-        r"\.(?P<ext>f(asta|a|na|fn|as))(\.(?P<compression>gz|bz2|xz))?$"
-    )
+    _SEQUENCE_FILE_REGEX = re_compile(r"\.(?P<ext>f(asta|a|na|fn|as))(\.(?P<compression>gz|bz2|xz))?$")
     _OPENERS: ClassVar[dict[str, Callable]] = {"gz": gzopen, "bz2": bzopen, "xz": lzopen}
     id: str
     contigs: Sequences

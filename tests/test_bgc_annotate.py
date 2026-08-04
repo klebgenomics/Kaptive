@@ -148,9 +148,7 @@ def test_annotator_mock_run():
     db = create_sample_db()
     annotator = Annotator(db=db, align=False, whole_genome=False)
 
-    genome_seqs = Sequences.from_records(
-        [SeqRecord(id="chr1", seq=b"ATGAAAACTCTGCTGATCCTGGCTGTCTAA")]
-    )
+    genome_seqs = Sequences.from_records([SeqRecord(id="chr1", seq=b"ATGAAAACTCTGCTGATCCTGGCTGTCTAA")])
     assembly = GenomeAssembly(id="assembly1", contigs=genome_seqs)
 
     result = annotator(assembly)

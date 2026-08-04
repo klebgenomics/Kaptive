@@ -176,18 +176,10 @@ class GeneStyleManager:
 
         line_color = "white" if dark_mode else "black"
         styles = {
-            GeneState.NORMAL.value: dict(
-                opacity=1.0, line=dict(width=1, dash="solid", color=line_color)
-            ),
-            GeneState.NOVEL.value: dict(
-                opacity=0.5, line=dict(width=1, dash="dot", color=line_color)
-            ),
-            GeneState.PARTIAL.value: dict(
-                opacity=0.7, line=dict(width=1, dash="dash", color="red")
-            ),
-            GeneState.TRUNCATED.value: dict(
-                opacity=0.7, line=dict(width=1, dash="dash", color="orange")
-            ),
+            GeneState.NORMAL.value: dict(opacity=1.0, line=dict(width=1, dash="solid", color=line_color)),
+            GeneState.NOVEL.value: dict(opacity=0.5, line=dict(width=1, dash="dot", color=line_color)),
+            GeneState.PARTIAL.value: dict(opacity=0.7, line=dict(width=1, dash="dash", color="red")),
+            GeneState.TRUNCATED.value: dict(opacity=0.7, line=dict(width=1, dash="dash", color="orange")),
         }
         return styles.get(st_val, dict(opacity=1.0, line=dict(width=1, dash="solid", color=line_color)))
 
@@ -588,9 +580,7 @@ class SerotypingResultPlotter(BasePlotter):
             tick_vals.append((p_s + p_e) / 2.0)
             tick_text.append(label)
 
-        LocusBackbonePlotter.render(
-            fig, piece_x, piece_y, line_width=4, dark_mode=dark_mode
-        )
+        LocusBackbonePlotter.render(fig, piece_x, piece_y, line_width=4, dark_mode=dark_mode)
 
         # Prepare hover texts
         cluster_names = np.char.decode(genes.cluster_names)
@@ -715,9 +705,7 @@ class LocusComparisonPlotter(BasePlotter):
             return offsets.astype(np.int32)
 
         for i in range(1, n_loci):
-            mask = (comparisons.edges.query_locus_indices == i - 1) & (
-                comparisons.edges.target_locus_indices == i
-            )
+            mask = (comparisons.edges.query_locus_indices == i - 1) & (comparisons.edges.target_locus_indices == i)
             if not np.any(mask):
                 found = False
                 for prev_i in range(i - 1, -1, -1):
@@ -748,10 +736,7 @@ class LocusComparisonPlotter(BasePlotter):
             l_start = comparisons.locus_offsets[i]
             l_len = comparisons.locus_lengths[i]
             if l_len > 0:
-                min_coords.append(
-                    np.min(comparisons.gene_intervals.starts[l_start : l_start + l_len])
-                    + offsets[i]
-                )
+                min_coords.append(np.min(comparisons.gene_intervals.starts[l_start : l_start + l_len]) + offsets[i])
 
         if min_coords:
             offsets -= np.min(min_coords)
@@ -799,9 +784,7 @@ class LocusComparisonPlotter(BasePlotter):
 
         # 1. Build Graph and cluster (connected components)
         if len(edges) > 0:
-            labels = self._connected_components(
-                total_genes, edges.global_query_indices, edges.global_target_indices
-            )
+            labels = self._connected_components(total_genes, edges.global_query_indices, edges.global_target_indices)
 
             # Find which clusters are actually non-singletons (Components with >1 nodes)
             unique, counts = np.unique(labels, return_counts=True)
@@ -835,9 +818,7 @@ class LocusComparisonPlotter(BasePlotter):
                 backbone_y.extend([y_positions[i], y_positions[i], None])
 
         if backbone_x:
-            LocusBackbonePlotter.render(
-                fig, backbone_x, backbone_y, line_width=2, dark_mode=dark_mode
-            )
+            LocusBackbonePlotter.render(fig, backbone_x, backbone_y, line_width=2, dark_mode=dark_mode)
 
         # 4. Add Homology Links (Polygons with opacity binning)
         if len(edges) > 0:
@@ -939,7 +920,9 @@ class LocusComparisonPlotter(BasePlotter):
 
         # 5. Render Vectorised Gene Arrows & Hover Tooltips via GeneGlyphPlotter
         base_y = y_positions[global_to_locus]
-        states_arr = comparisons.gene_states if comparisons.gene_states is not None else np.zeros(total_genes, dtype=np.int8)
+        states_arr = (
+            comparisons.gene_states if comparisons.gene_states is not None else np.zeros(total_genes, dtype=np.int8)
+        )
 
         cluster_hover_texts = [
             f"<b>Locus:</b> {comparisons.locus_names[global_to_locus[i]]}<br>"

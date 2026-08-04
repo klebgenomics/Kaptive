@@ -9,7 +9,7 @@ Attributes:
 
 try:
     import importlib.metadata
+
     __version__ = importlib.metadata.version("kaptive")
 except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
-

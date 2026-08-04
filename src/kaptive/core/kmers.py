@@ -21,18 +21,22 @@ from kaptive.core.interval import Intervals
 from kaptive.core.seq import Sequences
 
 # Constants ------------------------------------------------------------------------------------------------------------
-MINHASH_DTYPE = np.dtype([
-    ("hash", np.uint64),
-    ("seq_idx", np.uint32),
-    ("pos1", np.uint32),
-])
+MINHASH_DTYPE = np.dtype(
+    [
+        ("hash", np.uint64),
+        ("seq_idx", np.uint32),
+        ("pos1", np.uint32),
+    ]
+)
 
-RANDSTROBE_DTYPE = np.dtype([
-    ("hash", np.uint64),
-    ("seq_idx", np.uint32),
-    ("pos1", np.uint32),
-    ("pos2", np.uint32),
-])
+RANDSTROBE_DTYPE = np.dtype(
+    [
+        ("hash", np.uint64),
+        ("seq_idx", np.uint32),
+        ("pos1", np.uint32),
+        ("pos2", np.uint32),
+    ]
+)
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
@@ -366,9 +370,7 @@ class BaseKmerIndex:
         q_offsets = _compute_query_offsets(queries_idx.records, queries_idx.n_seqs)
 
         seeds = Seeds(
-            *_intersect_top_hit_kernel(
-                queries_idx.records, q_offsets, queries_idx.n_seqs, self.records, self.n_seqs
-            )
+            *_intersect_top_hit_kernel(queries_idx.records, q_offsets, queries_idx.n_seqs, self.records, self.n_seqs)
         )
 
         if min_score > 0:

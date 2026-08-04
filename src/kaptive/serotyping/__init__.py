@@ -42,4 +42,3 @@ __all__ = [
     "KaptiveRow",
     "Pha4geRow",
 ]
-

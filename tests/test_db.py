@@ -106,5 +106,3 @@ def test_database_get_locus_data_metadata():
     assert locus_data.gene_descriptions is not None
     assert locus_data.gene_descriptions[0] == "Pyruvate dehydrogenase"
     assert locus_data.gene_descriptions.dtype == object
-
-

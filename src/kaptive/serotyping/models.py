@@ -306,6 +306,7 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
         Returns:
             GeneHits: Reconstructed [`GeneHits`][kaptive.serotyping.models.GeneHits] instance.
         """
+
         def _to_bytes_array(val: Any, dtype: str) -> npt.NDArray[np.bytes_]:
             if val is None or len(val) == 0:
                 return np.empty(0, dtype=dtype)
@@ -325,9 +326,7 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
             is_expected=np.array(data["is_expected"], dtype=bool),
             is_inside=np.array(data["is_inside"], dtype=bool),
             is_extra=np.array(data["is_extra"], dtype=bool),
-            expected_positions=np.array(
-                data.get("expected_positions", []), dtype=np.int32
-            ),
+            expected_positions=np.array(data.get("expected_positions", []), dtype=np.int32),
             expected_strands=np.array(data.get("expected_strands", []), dtype=np.int8),
             gene_ids=_to_bytes_array(data.get("gene_ids", []), "S32"),
             cluster_names=_to_bytes_array(data.get("cluster_names", []), "S10"),
@@ -472,9 +471,7 @@ class LocusPieces(BatchedContainer[Any, "LocusPieces"]):
         Returns:
             dict[str, Any]: Dictionary mapping field names to NumPy array data.
         """
-        return {
-            k: getattr(self, k) for k in ("ctg_indices", "starts", "ends", "strands")
-        }
+        return {k: getattr(self, k) for k in ("ctg_indices", "starts", "ends", "strands")}
 
 
 @dataclass(slots=True, frozen=True)
@@ -543,32 +540,21 @@ class SerotypingResult:
         if len(self.locus_pieces) > 1:
             p |= SerotypingProblem.FRAGMENTED
         # Unexpected genes from other loci (not expected and not an allowed extra gene)
-        if np.any(
-            self.gene_hits.is_inside
-            & ~self.gene_hits.is_expected
-            & ~self.gene_hits.is_extra
-        ):
+        if np.any(self.gene_hits.is_inside & ~self.gene_hits.is_expected & ~self.gene_hits.is_extra):
             p |= SerotypingProblem.UNEXPECTED_GENES
         # Missing genes: Overall completeness is not 100%, or expected genes are found but outside the locus boundary
-        if self.best_locus_completeness < 1.0 or np.any(
-            ~self.gene_hits.is_inside & self.gene_hits.is_expected
-        ):
+        if self.best_locus_completeness < 1.0 or np.any(~self.gene_hits.is_inside & self.gene_hits.is_expected):
             p |= SerotypingProblem.MISSING_GENES
         # Novel genes: inside boundary but below identity threshold
-        if np.any(
-            self.gene_hits.is_inside & (self.gene_states == GeneState.NOVEL.value)
-        ):
+        if np.any(self.gene_hits.is_inside & (self.gene_states == GeneState.NOVEL.value)):
             p |= SerotypingProblem.NOVEL_GENES
         # Truncated genes: inside boundary but partial or truncated
         if np.any(
             self.gene_hits.is_inside
-            & (
-                (self.gene_states == GeneState.TRUNCATED.value)
-                | (self.gene_states == GeneState.PARTIAL.value)
-            )
+            & ((self.gene_states == GeneState.TRUNCATED.value) | (self.gene_states == GeneState.PARTIAL.value))
         ):
             p |= SerotypingProblem.TRUNCATED_GENES
-            
+
         object.__setattr__(self, "problems", p)
 
     @classmethod

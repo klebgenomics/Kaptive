@@ -37,7 +37,7 @@ class ResultExporter:
         Inspects output flags in `args` and registers appropriate serialization callbacks
         for TSV, PHA4GE TSV, JSON, locus nucleotide FASTA, gene nucleotide FASTA,
         translated protein FASTA, and interactive HTML plots.
-        
+
         The PHA4GE TSV output adheres to the Public Health Alliance for Genomic Epidemiology
         genotyping specification (https://github.com/pha4ge/genotyping-specification).
 
@@ -72,30 +72,22 @@ class ResultExporter:
                 cli.exit("orjson not installed. Please run: pip install kaptive[json]")
             json_handle = cli.open_file(json_file, mode="wb")
             self.writers.append(
-                lambda r: json_handle.write(
-                    dumps(r.to_dict(), option=OPT_SERIALIZE_NUMPY | OPT_APPEND_NEWLINE)
-                )
+                lambda r: json_handle.write(dumps(r.to_dict(), option=OPT_SERIALIZE_NUMPY | OPT_APPEND_NEWLINE))
             )
 
         if loci_dir := getattr(args, "loci", None):
             self.writers.append(
-                lambda r: (loci_dir / f"{r.genome}_{self.file_suffix}.fna").write_bytes(
-                    r.locus_seqs.to_fasta()
-                )
+                lambda r: (loci_dir / f"{r.genome}_{self.file_suffix}.fna").write_bytes(r.locus_seqs.to_fasta())
             )
 
         if genes_dir := getattr(args, "genes", None):
             self.writers.append(
-                lambda r: (genes_dir / f"{r.genome}_{self.file_suffix}.ffn").write_bytes(
-                    r.gene_seqs.to_fasta()
-                )
+                lambda r: (genes_dir / f"{r.genome}_{self.file_suffix}.ffn").write_bytes(r.gene_seqs.to_fasta())
             )
 
         if proteins_dir := getattr(args, "proteins", None):
             self.writers.append(
-                lambda r: (proteins_dir / f"{r.genome}_{self.file_suffix}.faa").write_bytes(
-                    r.translations.to_fasta()
-                )
+                lambda r: (proteins_dir / f"{r.genome}_{self.file_suffix}.faa").write_bytes(r.translations.to_fasta())
             )
 
         if plot_dir := getattr(args, "plots", None):
@@ -150,9 +142,7 @@ class Type(Command):
         opts = self.parser.add_argument_group(Colors.wrap("📤 Outputs", Colors.BOLD))
         self.add_output_arguments(opts, tsv_flags=("-o", "--out"), include_json=True)
 
-        opts = self.parser.add_argument_group(
-            Colors.wrap("🔬 Confidence options", Colors.BOLD)
-        )
+        opts = self.parser.add_argument_group(Colors.wrap("🔬 Confidence options", Colors.BOLD))
         opts.add_argument(
             "--max-other-genes",
             type=int,
@@ -173,9 +163,7 @@ class Type(Command):
             help="Typeable if any genes in locus are below threshold (default: False)",
         )
 
-        opts = self.parser.add_argument_group(
-            Colors.wrap("🔧 Other options", Colors.BOLD)
-        )
+        opts = self.parser.add_argument_group(Colors.wrap("🔧 Other options", Colors.BOLD))
         opts.add_argument(
             "-t",
             "--threads",

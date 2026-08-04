@@ -116,5 +116,3 @@ def test_gene_hits_utf8_encoding():
 
     reconstructed = GeneHits.from_dict(d)
     assert reconstructed.to_dict() == d
-
-

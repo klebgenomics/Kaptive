@@ -181,4 +181,3 @@ class KaptiveWebClient:
         endpoint = "/serotype/results/download/jsonl"
         data = json.dumps({"genome_ids": genome_ids}).encode("utf-8")
         return self._request(endpoint, method="POST", data=data, headers={"Content-Type": "application/json"})
-

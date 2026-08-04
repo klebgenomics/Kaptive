@@ -97,7 +97,7 @@ class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
         result = super()._format_usage(usage, positionals, groups, prefix)
 
         # Replace the subcommand set {add,install,...} with [subcommand]
-        result = re.sub(r'\{[a-zA-Z0-9_,\.-]+\}', Colors.wrap('[subcommand]', Colors.BOLD_CYAN), result)
+        result = re.sub(r"\{[a-zA-Z0-9_,\.-]+\}", Colors.wrap("[subcommand]", Colors.BOLD_CYAN), result)
 
         actual_prefix = prefix if prefix is not None else "usage: "
         target = f"{actual_prefix}{self._prog}"
@@ -105,7 +105,7 @@ class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
         if result.startswith(target):
             # Inject [options] cleanly if any optional actions exist
             if any(a.option_strings for a in actions):
-                colored_options = Colors.wrap('[options]', Colors.BOLD_CYAN)
+                colored_options = Colors.wrap("[options]", Colors.BOLD_CYAN)
                 result = result.replace(target, f"{target} {colored_options}", 1)
             # Colorize prefix
             result = result.replace(actual_prefix, Colors.wrap(actual_prefix, Colors.BOLD_CYAN), 1)
@@ -133,8 +133,8 @@ class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
         """
         result = super()._format_action(action)
         # Remove the set string (e.g. {add,install,...}) from the subcommands header
-        if type(action).__name__ == '_SubParsersAction':
-            lines = result.split('\n', 1)
+        if type(action).__name__ == "_SubParsersAction":
+            lines = result.split("\n", 1)
             if len(lines) > 1:
                 result = lines[1]
         return result
@@ -160,6 +160,7 @@ class HelpOnErrorParser(argparse.ArgumentParser):
             invalid = match.group(1)
             choices = [c.strip("'").strip() for c in match.group(2).split(", ")]
             from difflib import get_close_matches
+
             if matches := get_close_matches(invalid, choices):
                 message += f"\n    💡 Did you mean '{Colors.wrap(matches[0], Colors.BOLD_CYAN)}'?"
 
@@ -189,14 +190,10 @@ class Cli:
         """
         self.verbose = False
         self.global_parser = HelpOnErrorParser(add_help=False)
-        self.global_parser.add_argument(
-            "-V", "--verbose", action="store_true", help="Enable verbose output/progress"
-        )
+        self.global_parser.add_argument("-V", "--verbose", action="store_true", help="Enable verbose output/progress")
 
         self.parser = HelpOnErrorParser(
-            description=Colors.wrap(description, Colors.BOLD)
-            if description
-            else description,
+            description=Colors.wrap(description, Colors.BOLD) if description else description,
             epilog=Colors.wrap(epilog, Colors.BOLD) if epilog else epilog,
             parents=[self.global_parser],
             formatter_class=KaptiveHelpFormatter,
@@ -243,6 +240,7 @@ class Cli:
         if hasattr(parsed_args, "func"):
             from kaptive.client import KaptiveWebClientError
             from kaptive.db import DatabaseError
+
             try:
                 parsed_args.func(parsed_args)
             except (DatabaseError, KaptiveWebClientError) as e:
@@ -575,9 +573,7 @@ def main() -> None:
     from kaptive.db.cli import Database
     from kaptive.serotyping.cli import Convert, Type
 
-    description = (
-        "🦠 Kaptive: The tool for in silico serotyping of surface antigen loci."
-    )
+    description = "🦠 Kaptive: The tool for in silico serotyping of surface antigen loci."
     epilog = "📚 For more information and documentation, visit https://klebgenomics.github.io/Kaptive/"
 
     with Cli(description=description, epilog=epilog) as app:
@@ -589,4 +585,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
