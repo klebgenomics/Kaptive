@@ -10,7 +10,22 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Install just
+        uses: extractions/setup-just@v2
+      - name: Run CI
+        run: just ci
+
   build-and-push-image:
+    needs: test
     runs-on: ubuntu-latest
     # Required permissions to push to ghcr.io
     permissions:

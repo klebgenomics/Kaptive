@@ -94,3 +94,15 @@ build: clean
 # Publish the Python package to PyPI
 publish: build
     uv publish
+
+# Build the standalone Docker image
+docker-build:
+    docker build -t kaptive:latest .
+
+# Build the Apptainer (.sif) image
+apptainer-build:
+    apptainer build kaptive.sif Apptainer.def
+
+# Build the Singularity (.sif) image
+singularity-build:
+    singularity build kaptive.sif Apptainer.def

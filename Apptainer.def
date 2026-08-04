@@ -1,0 +1,23 @@
+BootStrap: docker
+From: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+%files
+    . /app
+
+%post
+    export UV_COMPILE_BYTECODE=1
+    export UV_LINK_MODE=copy
+    
+    cd /app
+    uv sync --frozen --no-dev --extra plot --extra json
+
+%environment
+    export LC_ALL=C
+    export PATH="/app/.venv/bin:$PATH"
+
+%runscript
+    exec kaptive "$@"
+
+%labels
+    Author Tom Stanton
+    Description Kaptive Apptainer Container

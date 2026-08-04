@@ -79,7 +79,7 @@ testpaths = ["tests", "src"]
 
 [tool.ruff]
 line-length = 120
-exclude = [".agents", ".git", ".venv", "__pycache__"]
+exclude = [".agents", ".git", ".venv", "__pycache__", "src/kaptive/_version.py"]
 target-version = "py311"
 
 [tool.ruff.lint]
