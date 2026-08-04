@@ -71,7 +71,7 @@ class LocusComparisonEdges(BatchedContainer[Any, "LocusComparisonEdges"]):
         """
         return len(self.query_locus_indices)
 
-    def __getitem__(self, item: int | slice | npt.NDArray | list) -> "Any | LocusComparisonEdges":
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[int]) -> "Any | LocusComparisonEdges":
         r"""Slice or filter alignment edges using a slice or array mask.
 
         Args:
@@ -92,7 +92,7 @@ class LocusComparisonEdges(BatchedContainer[Any, "LocusComparisonEdges"]):
             target_indices=self.target_indices[item],
             global_query_indices=self.global_query_indices[item],
             global_target_indices=self.global_target_indices[item],
-            alignments=self.alignments[item],
+            alignments=self.alignments[item],  # type: ignore
         )
 
     @classmethod
@@ -113,7 +113,7 @@ class LocusComparisonEdges(BatchedContainer[Any, "LocusComparisonEdges"]):
         )
 
     @classmethod
-    def concat(cls, batches: list["LocusComparisonEdges"]) -> "LocusComparisonEdges":
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple `LocusComparisonEdges` batches into a single container.
 
         Args:
@@ -205,7 +205,7 @@ class LocusComparator:
         k: int = 10,
         s: int = 5,
         min_score: int = 1,
-        aligner_kwargs: dict | None = None,
+        aligner_kwargs: dict | None = None,  # type: ignore
     ) -> None:
         r"""Initialise the multi-locus comparator engine.
 
@@ -299,18 +299,18 @@ class LocusComparator:
                 lp = locus_pieces[i]
                 # Determine piece indices for each gene
                 p_idx = np.zeros(len(bb), dtype=np.int32)
-                for p in range(len(lp)):
-                    mask = (bb.starts >= lp.starts[p]) & (bb.ends <= lp.ends[p])
+                for p in range(len(lp)):  # type: ignore
+                    mask = (bb.starts >= lp.starts[p]) & (bb.ends <= lp.ends[p])  # type: ignore
                     if gene_ctg_indices is not None and gene_ctg_indices[i] is not None:
-                        mask &= gene_ctg_indices[i] == lp.ctg_indices[p]
+                        mask &= gene_ctg_indices[i] == lp.ctg_indices[p]  # type: ignore
                     p_idx[mask] = p
                 # Assume piece_order is linear 0..N-1 as Serotyper.__call__ builds them in expected order
-                p_order = np.arange(len(lp), dtype=np.int32)
-                bb_norm = bb.arrange(p_idx, p_order, lp.starts, lp.ends, lp.strands)
+                p_order = np.arange(len(lp), dtype=np.int32)  # type: ignore
+                bb_norm = bb.arrange(p_idx, p_order, lp.starts, lp.ends, lp.strands)  # type: ignore
                 norm_backbones.append(bb_norm)
             else:
                 if len(bb) > 0:
-                    bb_norm = bb.shift(-np.min(bb.starts))
+                    bb_norm = bb.shift(-np.min(bb.starts))  # type: ignore
                 else:
                     bb_norm = bb
                 norm_backbones.append(bb_norm)

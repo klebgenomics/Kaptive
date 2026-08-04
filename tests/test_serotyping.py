@@ -82,7 +82,7 @@ def test_serotyping_result_to_locus_data_metadata() -> None:
     assert locus_data.gene_states[0] == GeneState.TRUNCATED.value
     assert locus_data.gene_descriptions is not None
     assert locus_data.gene_descriptions[0] == "UDP-glucose dehydrogenase"
-    assert locus_data.gene_descriptions.dtype == object
+    assert locus_data.gene_descriptions.dtype == object  # type: ignore
 
 
 def test_gene_hits_utf8_encoding() -> None:
@@ -102,9 +102,9 @@ def test_gene_hits_utf8_encoding() -> None:
         is_extra=np.array([False], dtype=bool),
         expected_positions=np.array([1], dtype=np.int32),
         expected_strands=np.array([1], dtype=np.int8),
-        gene_ids=["gene_α"],
-        cluster_names=["cluster_β"],
-        product_descriptions=["synthase_é"],
+        gene_ids=["gene_α"],  # type: ignore
+        cluster_names=["cluster_β"],  # type: ignore
+        product_descriptions=["synthase_é"],  # type: ignore
         coverages=np.array([1.0], dtype=np.float32),
     )
 

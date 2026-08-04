@@ -103,4 +103,4 @@ def test_database_get_locus_data_metadata() -> None:
     assert locus_data.gene_states[0] == GeneState.NORMAL.value
     assert locus_data.gene_descriptions is not None
     assert locus_data.gene_descriptions[0] == "Pyruvate dehydrogenase"
-    assert locus_data.gene_descriptions.dtype == object
+    assert locus_data.gene_descriptions.dtype == object  # type: ignore

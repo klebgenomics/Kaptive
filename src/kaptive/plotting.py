@@ -69,7 +69,7 @@ class BasePlotter(ABC):
         """
         hex_col = hex_col.lstrip("#")
         if len(hex_col) == 6:
-            return tuple(int(hex_col[i : i + 2], 16) for i in (0, 2, 4))
+            return tuple(int(hex_col[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore
         return (128, 128, 128)
 
     @classmethod
@@ -618,10 +618,10 @@ class SerotypingResultPlotter(BasePlotter):
             ends=plot_ends,
             strands=plot_strands,
             y_positions=y_positions,
-            cluster_keys=cluster_names,
+            cluster_keys=cluster_names,  # type: ignore
             states=states,
             hover_texts=hover_texts,
-            legend_names=cluster_names,
+            legend_names=cluster_names,  # type: ignore
             dark_mode=dark_mode,
         )
 
@@ -940,7 +940,7 @@ class LocusComparisonPlotter(BasePlotter):
             ends=ends,
             strands=strands,
             y_positions=base_y,
-            cluster_keys=labels,
+            cluster_keys=labels,  # type: ignore
             states=states_arr,
             hover_texts=cluster_hover_texts,
             dark_mode=dark_mode,

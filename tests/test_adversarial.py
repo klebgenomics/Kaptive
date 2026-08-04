@@ -95,8 +95,8 @@ def test_bed_tag_formatting_and_zero_hits() -> None:
 
     syn_res = AnnotationResult(
         genes=syn_genes,
-        translations_idx=None,
-        seeds=None,
+        translations_idx=None,  # type: ignore
+        seeds=None,  # type: ignore
         hits_mask=np.array([True, False], dtype=bool),
         top_hit_names=np.array(["wzi_1", ""], dtype=object),
         top_hit_scores=np.array([98.543, 0.0], dtype=np.float32),
@@ -133,8 +133,8 @@ def test_score_boundary_formatting() -> None:
 
     syn_res_boundary = AnnotationResult(
         genes=syn_genes,
-        translations_idx=None,
-        seeds=None,
+        translations_idx=None,  # type: ignore
+        seeds=None,  # type: ignore
         hits_mask=np.array([True, True], dtype=bool),
         top_hit_names=np.array(["geneA", "geneB"], dtype=object),
         top_hit_scores=np.array([0.0, 100.0], dtype=np.float32),

@@ -168,10 +168,10 @@ class Serotyper:
 
         valid_alns = gene_alns[valid_cov_mask]
         valid_q_covs = q_covs[valid_cov_mask]
-        valid_gene_indices = valid_alns.q_names.astype(np.int32)
+        valid_gene_indices = valid_alns.q_names.astype(np.int32)  # type: ignore
 
         # Sort to find the best alignment per gene (highest q_cov, tie-breaker: highest score)
-        order = np.lexsort((-valid_alns.scores, -valid_q_covs, valid_gene_indices))
+        order = np.lexsort((-valid_alns.scores, -valid_q_covs, valid_gene_indices))  # type: ignore
         valid_alns = valid_alns[order]
         valid_gene_indices = valid_gene_indices[order]
         valid_q_covs = valid_q_covs[order]
@@ -331,7 +331,7 @@ class Serotyper:
         # Locus extraction phase ---------------------------------------------------------------------------------------
         if len(locus_pieces) > 0:  # Extract locus sequences using the batched SoA locus pieces
             locus_seqs = genome.contigs.extract(
-                locus_pieces.ctg_indices,
+                locus_pieces.ctg_indices,  # type: ignore
                 locus_pieces.starts,
                 locus_pieces.ends,
                 locus_pieces.strands,
@@ -357,7 +357,7 @@ class Serotyper:
         # Translate nucleotides to amino acids, compensating for the reading frames of the alignments
         # Truncate at the first stop codon to match Old Kaptive's behavior, which prevents frameshifts
         # from pulling down the identity score of the valid upstream alignment.
-        prot_seqs = gene_seqs.translate(frames=gene_hits.frames, to_stop=True)
+        prot_seqs = gene_seqs.translate(frames=gene_hits.frames, to_stop=True)  # type: ignore
 
         # Initialize states
         gene_states = np.full(len(gene_hits), GeneState.NORMAL.value, dtype=np.int8)
@@ -375,7 +375,7 @@ class Serotyper:
         is_truncated = (~is_partial) & (prot_covs < 0.90)
         gene_states[is_partial] = GeneState.PARTIAL.value
         gene_states[is_truncated] = GeneState.TRUNCATED.value
-        prot_alns = self._protein_aligner(prot_seqs, self._db.translations[gene_hits.gene_indices])
+        prot_alns = self._protein_aligner(prot_seqs, self._db.translations[gene_hits.gene_indices])  # type: ignore
         prot_idents = prot_alns.pidents.astype(np.float32)
 
         # Drop genes outside the locus that fall below the identity threshold,
@@ -475,8 +475,8 @@ class Serotyper:
             gene_states=gene_states,
             locus_pieces=locus_pieces,
             locus_seqs=locus_seqs,
-            gene_seqs=gene_seqs,
-            translations=prot_seqs,
+            gene_seqs=gene_seqs,  # type: ignore
+            translations=prot_seqs,  # type: ignore
             percent_identity=pident,
             percent_coverage=pcov,
             protein_identities=prot_idents,

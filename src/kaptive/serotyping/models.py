@@ -182,7 +182,7 @@ class GeneHits(BatchedContainer[Any, "GeneHits"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable["GeneHits"]) -> "GeneHits":
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple `GeneHits` batches into a single container.
 
         Args:
@@ -392,7 +392,7 @@ class LocusPieces(BatchedContainer[Any, "LocusPieces"]):
         """
         return len(self.ctg_indices)
 
-    def __getitem__(self, item: int | slice | npt.NDArray | list) -> "Any | LocusPieces":
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[int]) -> "Any | LocusPieces":
         r"""Slice or array-mask all parallel fields of locus pieces simultaneously.
 
         Args:
@@ -414,7 +414,7 @@ class LocusPieces(BatchedContainer[Any, "LocusPieces"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable["LocusPieces"]) -> "LocusPieces":
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple `LocusPieces` batches into a single container.
 
         Args:
@@ -611,9 +611,9 @@ class SerotypingResult:
         )
 
         return LocusData(
-            proteins=self.translations[mask],
+            proteins=self.translations[mask],  # type: ignore
             name=self.genome,
-            backbone=self.gene_hits.t_intervals[mask],
+            backbone=self.gene_hits.t_intervals[mask],  # type: ignore
             pieces=self.locus_pieces,
             gene_ctg_indices=self.gene_hits.t_indices[mask],
             gene_states=self.gene_states[mask],

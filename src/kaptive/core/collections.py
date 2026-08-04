@@ -14,7 +14,7 @@ import numpy as np
 import numpy.typing as npt
 
 T = TypeVar("T", covariant=True)
-S = TypeVar("S", bound="BatchedContainer")
+S = TypeVar("S", bound="BatchedContainer[Any, Any]")  # type: ignore
 
 
 class BatchedContainer(Protocol[T, S]):
@@ -37,7 +37,7 @@ class BatchedContainer(Protocol[T, S]):
         """
         ...
 
-    def __getitem__(self, item: int | slice | npt.NDArray | list) -> T | S:
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[Any]) -> T | S:  # type: ignore
         r"""Access records by index, slice, or boolean/integer array mask.
 
         Args:

@@ -180,7 +180,7 @@ class Interval:
         return Interval(length - self.end, length - self.start, Strand(self.strand * -1))
 
     @classmethod
-    def from_match(cls, item: Match, strand: Strand = Strand.UNSTRANDED) -> Interval:
+    def from_match(cls, item: Match, strand: Strand = Strand.UNSTRANDED) -> Interval:  # type: ignore
         r"""Create an [`Interval`][kaptive.core.interval.Interval] from a regular expression match object.
 
         Args:
@@ -333,7 +333,7 @@ class Intervals(BatchedContainer[Interval, "Intervals"]):
         """
         return len(self.starts)
 
-    def to_dict(self) -> dict[str, list]:
+    def to_dict(self) -> dict[str, list]:  # type: ignore
         r"""Serialize the interval batch into a dictionary of python lists.
 
         Returns:
@@ -342,7 +342,7 @@ class Intervals(BatchedContainer[Interval, "Intervals"]):
         return {"starts": self.starts.tolist(), "ends": self.ends.tolist(), "strands": self.strands.tolist()}
 
     @classmethod
-    def from_dict(cls, d: dict) -> Intervals:
+    def from_dict(cls, d: dict) -> Intervals:  # type: ignore
         r"""Deserialize an [`Intervals`][kaptive.core.interval.Intervals] collection from a dictionary.
 
         Args:
@@ -385,7 +385,7 @@ class Intervals(BatchedContainer[Interval, "Intervals"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Intervals]) -> Intervals:
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple [`Intervals`][kaptive.core.interval.Intervals] collections into a single batch.
 
         Args:

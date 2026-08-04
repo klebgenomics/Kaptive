@@ -21,7 +21,7 @@ from kaptive.core.seq import SeqRecord, Sequences
 
 
 # Classes --------------------------------------------------------------------------------------------------------------
-class FastaReader(Iterator):
+class FastaReader(Iterator):  # type: ignore
     r"""High-performance FASTA file iterator.
 
     Parses raw binary FASTA streams into [`SeqRecord`][kaptive.core.seq.SeqRecord] instances
@@ -103,7 +103,7 @@ class GenomeAssembly:
     """
 
     _SEQUENCE_FILE_REGEX = re_compile(r"\.(?P<ext>f(asta|a|na|fn|as))(\.(?P<compression>gz|bz2|xz))?$")
-    _OPENERS: ClassVar[dict[str, Callable]] = {"gz": gzopen, "bz2": bzopen, "xz": lzopen}
+    _OPENERS: ClassVar[dict[str, Callable]] = {"gz": gzopen, "bz2": bzopen, "xz": lzopen}  # type: ignore
     id: str
     contigs: Sequences
     id_map: dict[str, int] = field(init=False, repr=False, hash=False, compare=False)

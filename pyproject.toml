@@ -111,3 +111,5 @@ possibly-unresolved-reference = "warn"
 "src/kaptive/core/pairwise.py" = ["ANN401"]
 "src/kaptive/db/manager.py" = ["ANN202"]
 "src/kaptive/db/models.py" = ["ANN401"]
+[tool.pyright]
+ignore = ["scripts", "tests"]

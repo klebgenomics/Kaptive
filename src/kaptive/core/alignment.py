@@ -100,7 +100,7 @@ class Cigars(RaggedArrayContainer[npt.NDArray[np.uint32], "Cigars"]):
         """
         return len(self.offsets)
 
-    def __getitem__(self, item: int | slice | npt.NDArray | list) -> npt.NDArray[np.uint32] | Cigars:
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[int]) -> npt.NDArray[np.uint32] | Cigars:
         r"""Access CIGAR data by index, slice, or boolean mask.
 
         - If `item` is an integer, returns a NumPy array of encoded CIGAR operations for that alignment.
@@ -119,7 +119,7 @@ class Cigars(RaggedArrayContainer[npt.NDArray[np.uint32], "Cigars"]):
         """
         if isinstance(item, (int, np.integer)):
             if item < 0:
-                item += len(self)
+                item += len(self)  # type: ignore
             if item < 0 or item >= len(self):
                 raise IndexError("Batch index out of range")
             offset_val, length_val = self.offsets[item], self.lengths[item]
@@ -156,7 +156,7 @@ class Cigars(RaggedArrayContainer[npt.NDArray[np.uint32], "Cigars"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Cigars]) -> Cigars:
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple Cigars objects into a single, larger batch.
 
         Args:
@@ -167,7 +167,7 @@ class Cigars(RaggedArrayContainer[npt.NDArray[np.uint32], "Cigars"]):
         """
         batches_list = list(batches)
         if not batches_list:
-            return cls.empty()
+            return cls.empty()  # type: ignore
         lengths = np.concatenate([b.lengths for b in batches_list])
         offsets = np.zeros(len(lengths), dtype=np.int32)
         if len(lengths) > 1:
@@ -445,7 +445,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
                 else:
                     cigar_lists.append(np.empty(0, dtype=np.uint32))
         if not qn_ids:
-            return cls.empty()
+            return cls.empty()  # type: ignore
 
         return cls(
             q_name_ids=np.array(qn_ids, dtype=np.int32),
@@ -474,7 +474,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Alignments]) -> Self:
+    def concat(cls, batches: Iterable[Alignments]) -> Self:  # type: ignore
         r"""Concatenate multiple Alignments objects into a single larger batch.
 
         Args:
@@ -532,9 +532,9 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
                     raise ValueError(f"Cannot concatenate batches with mismatched '{field_name}' values")
                 kwargs[field_name] = first_val
 
-        return cls(**kwargs)
+        return cls(**kwargs)  # type: ignore
 
-    def __getitem__(self, item: int | slice | npt.NDArray | list) -> Alignment | Alignments:
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[int]) -> Alignment | Alignments:
         r"""Access alignment records by index, slice, or boolean array mask.
 
         Args:
@@ -549,11 +549,11 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
         """
         if isinstance(item, (int, np.integer)):
             if item < 0:
-                item += len(self)
+                item += len(self)  # type: ignore
             if item < 0 or item >= len(self):
                 raise IndexError("Batch index out of range")
             return Alignment(
-                idx=item,
+                idx=item,  # type: ignore
                 q_name=self.q_names_dict[self.q_name_ids[item]],
                 q_length=self.q_lengths[item],
                 q_start=self.q_starts[item],
@@ -568,7 +568,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
                 mismatch=self.mismatches[item],
                 score=self.scores[item],
                 quality=self.qualities[item],
-                cigar=self.cigars[item],
+                cigar=self.cigars[item],  # type: ignore
                 is_primary=self.is_primary[item],
                 is_supplementary=self.is_supplementary[item],
                 is_spliced=self.is_spliced[item],
@@ -594,7 +594,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
             mismatches=self.mismatches[item],
             scores=self.scores[item],
             qualities=self.qualities[item],
-            cigars=self.cigars[item],
+            cigars=self.cigars[item],  # type: ignore
             is_primary=self.is_primary[item],
             is_supplementary=self.is_supplementary[item],
             is_spliced=self.is_spliced[item],
@@ -638,7 +638,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
         # Sort indices to maintain the original relative order from the batch
         best_indices.sort()
 
-        return self[best_indices]
+        return self[best_indices]  # type: ignore
 
     def cull_overlaps(
         self,
@@ -683,7 +683,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
             group_by=name_ints,
             secondary_group_by=group_by,
         )
-        return self[kept_mask]
+        return self[kept_mask]  # type: ignore
 
     def swap_sides(self) -> Alignments:
         r"""Return a new Alignments batch with query and target roles swapped.

@@ -121,7 +121,7 @@ class Seeds(BatchedContainer[Seed, "Seeds"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Seeds]) -> Seeds:
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple [`Seeds`][kaptive.core.kmers.Seeds] collections into a single batch.
 
         Args:

@@ -131,9 +131,9 @@ class Database:
         states = np.full(length, GeneState.NORMAL.value, dtype=np.int8)
 
         return LocusData(
-            proteins=self.translations[start : start + length],
+            proteins=self.translations[start : start + length],  # type: ignore
             name=locus_name,
-            backbone=self.gene_intervals[start : start + length],
+            backbone=self.gene_intervals[start : start + length],  # type: ignore
             pieces=None,
             gene_ctg_indices=None,
             gene_states=states,
@@ -181,7 +181,7 @@ class Database:
 
     @staticmethod
     def _parse_phenotype(
-        id_: str, data: dict, locus_iterable: Iterable[str], cluster_iterable: Iterable[str]
+        id_: str, data: dict, locus_iterable: Iterable[str], cluster_iterable: Iterable[str]  # type: ignore
     ) -> Phenotype:
         r"""Parses phenotype definition rule dictionary into a structured Phenotype dataclass.
 
@@ -347,21 +347,21 @@ class Database:
 
                 # Iterate over notes to extract locus and type names, or whether the locus is an "Extra genes" locus
                 for note in notes:
-                    if match := _EXTRA_REGEX.search(note):
+                    if match := _EXTRA_REGEX.search(note):  # type: ignore
                         extra = True
                         locus_name = match.group(1)
                         break
 
-                    if not locus_name and (match := _LOCUS_REGEX.search(note)):
+                    if not locus_name and (match := _LOCUS_REGEX.search(note)):  # type: ignore
                         locus_name = match.group(1)
 
-                    if not serotype and (match := _SEROTYPE_REGEX.search(note)):
+                    if not serotype and (match := _SEROTYPE_REGEX.search(note)):  # type: ignore
                         serotype = match.group(1)
 
                 if not locus_name:
                     raise DatabaseError(f'Locus has no valid "locus" qualifiers: {rec.name}')
 
-                locus_record = SeqRecord(locus_name, rec.sequence.upper())
+                locus_record = SeqRecord(locus_name, rec.sequence.upper())  # type: ignore
 
                 # Local trackers for the current locus
                 starts, ends, strands = [], [], []
@@ -397,8 +397,8 @@ class Database:
 
                     # Coordinate parsing
                     loc = feat.location
-                    start, end = sorted((loc.start, loc.end))
-                    strand_val = -1 if loc.strand in (-1, "-") else 1
+                    start, end = sorted((loc.start, loc.end))  # type: ignore
+                    strand_val = -1 if loc.strand in (-1, "-") else 1  # type: ignore
 
                     # Append to flat gene arrays
                     starts.append(start)

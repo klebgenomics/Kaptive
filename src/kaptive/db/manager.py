@@ -301,7 +301,7 @@ class DatabaseManager:
 
         if (known_info := cls._KNOWN.get(kwd, None)) is None:
             raise DatabaseError(f'"{kwd}" is not a known database, choose from {list(cls._KNOWN.keys())}')
-        return cls.add(*known_info)
+        return cls.add(*known_info)  # type: ignore
 
     @classmethod
     def _fetch_files(

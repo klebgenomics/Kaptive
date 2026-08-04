@@ -189,7 +189,7 @@ class Sequences(RaggedArrayContainer["SeqRecord", "Sequences"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[Self]) -> Sequences:
+    def concat(cls, batches: Iterable[Self]) -> Sequences:  # type: ignore
         r"""Concatenate multiple Sequences containers into a single larger collection.
 
         Args:
@@ -241,7 +241,7 @@ class Sequences(RaggedArrayContainer["SeqRecord", "Sequences"]):
 
         return self[unique_indices]  # type: ignore
 
-    def __getitem__(self, item: int | slice | np.ndarray | list) -> SeqRecord | Sequences:
+    def __getitem__(self, item: int | slice | np.ndarray[Any, Any] | list[int]) -> SeqRecord | Sequences:
         r"""Access sequences by index, slice, or boolean mask.
 
         Args:

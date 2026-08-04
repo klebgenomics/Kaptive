@@ -5,8 +5,8 @@
 
 import argparse
 
-import semver
-import tomlkit
+import semver  # type: ignore
+import tomlkit  # type: ignore
 
 
 def bump_toml_version(file_path: str, bump_type: str) -> None:

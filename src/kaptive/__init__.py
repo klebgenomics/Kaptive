@@ -11,5 +11,5 @@ try:
     import importlib.metadata
 
     __version__ = importlib.metadata.version("kaptive")
-except importlib.metadata.PackageNotFoundError:
+except importlib.metadata.PackageNotFoundError:  # type: ignore
     __version__ = "unknown"

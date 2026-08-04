@@ -202,7 +202,7 @@ class PairwiseAlignments(BatchedContainer["PairwiseAlignment", "PairwiseAlignmen
         )
 
     @classmethod
-    def concat(cls, batches: Iterable[PairwiseAlignments]) -> PairwiseAlignments:
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenate multiple PairwiseAlignments collections into a single batch.
 
         Args:

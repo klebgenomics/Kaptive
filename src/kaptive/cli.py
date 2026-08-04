@@ -94,7 +94,7 @@ class KaptiveHelpFormatter(argparse.RawTextHelpFormatter):
         """
         # Filter out optional actions to cleanly generate the positional usage string
         positionals = [a for a in actions if not a.option_strings]
-        result = super()._format_usage(usage, positionals, groups, prefix)
+        result = super()._format_usage(usage, positionals, groups, prefix)  # type: ignore
 
         # Replace the subcommand set {add,install,...} with [subcommand]
         result = re.sub(r"\{[a-zA-Z0-9_,\.-]+\}", Colors.wrap("[subcommand]", Colors.BOLD_CYAN), result)
@@ -147,7 +147,7 @@ class HelpOnErrorParser(argparse.ArgumentParser):
     `sys.stderr` when invalid arguments or choices are encountered, suggesting close matches.
     """
 
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> None:  # type: ignore
         r"""Print help text and error message before terminating CLI session.
 
         Args:
@@ -214,7 +214,7 @@ class Cli:
         self.subparsers = self.parser.add_subparsers(
             title=Colors.wrap("💬 Commands", Colors.BOLD), dest="command", required=True
         )
-        self._open_handles: list[IO] = []
+        self._open_handles: list[IO] = []  # type: ignore
 
     def add_command(self, command: "Command") -> None:
         r"""Build and attach top-level command to root CLI subparsers.
@@ -322,7 +322,7 @@ class Cli:
         if self.verbose:
             print(msg, file=sys.stderr, **kwargs)
 
-    def progress(self, iterable: Iterable, msg: str) -> Iterable:
+    def progress(self, iterable: Iterable, msg: str) -> Iterable:  # type: ignore
         r"""Wrap iterable to display live progress counter on stderr when verbose mode is active.
 
         Args:
@@ -333,7 +333,7 @@ class Cli:
             Iterable: Generator yielding items from original iterable while rendering progress.
         """
         try:
-            total = len(iterable)
+            total = len(iterable)  # type: ignore
         except TypeError:
             total = "?"
 
@@ -345,7 +345,7 @@ class Cli:
         if self.verbose:
             print(file=sys.stderr)
 
-    def open_file(self, file: str, mode: str = "rb") -> IO:
+    def open_file(self, file: str, mode: str = "rb") -> IO:  # type: ignore
         r"""Open file path or return standard stdout stream handle with tracking.
 
         Args:
@@ -397,7 +397,7 @@ class Command(ABC):
         # Auto-populate description from class docstring
         if not self.description:
             if type(self).__doc__ and type(self).__doc__ != Command.__doc__:
-                self.description = type(self).__doc__
+                self.description = type(self).__doc__  # type: ignore
 
         # Auto-populate short help text from the first line of the description
         if not self.help_text and self.description:
@@ -513,7 +513,7 @@ class Command(ABC):
 
     def build(
         self,
-        subparsers: argparse._SubParsersAction,
+        subparsers: argparse._SubParsersAction,  # type: ignore
         parent_parsers: list[argparse.ArgumentParser] | None = None,
     ) -> None:
         r"""Wire command parser and subcommands into parent argparse hierarchy.

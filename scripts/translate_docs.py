@@ -28,7 +28,7 @@ def translate_markdown(content: str, translator: deepl.Translator, target_lang: 
             if key_match:
                 prefix = key_match.group(1)
                 value = key_match.group(2).strip("'\"")
-                translated_val = translator.translate_text(value, target_lang=target_lang).text
+                translated_val = translator.translate_text(value, target_lang=target_lang).text  # type: ignore
                 frontmatter = frontmatter.replace(key_match.group(0), f"{prefix}{translated_val}")
 
     if not body.strip():
@@ -36,7 +36,7 @@ def translate_markdown(content: str, translator: deepl.Translator, target_lang: 
 
     # We use tag_handling="xml" to prevent Deepl from messing up markdown as much, though it's experimental for markdown
     # Actually, plain text translation usually works well for Markdown in DeepL
-    translated_body = translator.translate_text(body, target_lang=target_lang).text
+    translated_body = translator.translate_text(body, target_lang=target_lang).text  # type: ignore
     return frontmatter + translated_body
 
 

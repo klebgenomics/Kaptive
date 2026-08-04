@@ -44,7 +44,7 @@ def test_interval_and_intervals() -> None:
     assert np.array_equal(ivs.ends, np.array([50, 80]))
 
     sliced = ivs[1]
-    assert sliced.start == 30
+    assert sliced.start == 30  # type: ignore
 
     empty_ivs = Intervals.empty()
     assert len(empty_ivs) == 0
@@ -66,8 +66,8 @@ def test_sequences_and_seqrecord() -> None:
     assert seqs.ids == ("seq1", "seq2")
 
     extracted = seqs[0]
-    assert extracted.id == "seq1"
-    assert extracted.seq == b"ATGCGTACTA"
+    assert extracted.id == "seq1"  # type: ignore
+    assert extracted.seq == b"ATGCGTACTA"  # type: ignore
 
     empty_seqs = Sequences.empty()
     assert len(empty_seqs) == 0

@@ -76,9 +76,9 @@ class DatabaseMetadata:
     owner: str
     repo: str
     branch: str
-    contact: dict
-    phenotype_logic: dict
-    antigenic_units: dict
+    contact: dict  # type: ignore
+    phenotype_logic: dict  # type: ignore
+    antigenic_units: dict  # type: ignore
 
     @property
     def parsed_version(self) -> tuple[int, ...]:
@@ -94,7 +94,7 @@ class DatabaseMetadata:
         return tuple(int(x) for x in pat.findall(str(self.version)))
 
     @classmethod
-    def from_dict(cls, data: dict) -> "DatabaseMetadata":
+    def from_dict(cls, data: dict) -> "DatabaseMetadata":  # type: ignore
         r"""Instantiates a `DatabaseMetadata` object from a dictionary.
 
         Validates required fields, casts numeric types, and sets default fallback dictionaries for
@@ -201,7 +201,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
         """
         return len(self.ids)
 
-    def __getitem__(self, item: int | slice | npt.NDArray | list) -> "Any | Phenotypes":
+    def __getitem__(self, item: int | slice | npt.NDArray[Any] | list[int]) -> "Any | Phenotypes":
         r"""Slices or masks the `Phenotypes` container batch along the primary dimension.
 
         Args:
@@ -246,7 +246,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
         )
 
     @classmethod
-    def concat(cls, batches: Iterable["Phenotypes"]) -> "Phenotypes":
+    def concat(cls, batches: Iterable[Self]) -> Self:  # type: ignore
         r"""Concatenates multiple `Phenotypes` batch containers into a single `Phenotypes` instance.
 
         Args:
@@ -270,7 +270,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
             as_suffix=np.concatenate([b.as_suffix for b in batches]),
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict:  # type: ignore
         r"""Converts the `Phenotypes` container attributes into a dictionary representation.
 
         Returns:
@@ -288,7 +288,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Phenotypes":
+    def from_dict(cls, data: dict) -> "Phenotypes":  # type: ignore
         r"""Reconstructs a `Phenotypes` batch container from a dictionary of array data.
 
         Args:
@@ -297,7 +297,7 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
         Returns:
             Phenotypes: Reconstructed [`Phenotypes`][kaptive.db.models.Phenotypes] container instance.
         """
-        return cls(
+        return cls(  # type: ignore
             ids=np.array([p.encode("utf-8") for p in data["ids"]], dtype="S32"),
             locus_masks=np.array(data["locus_masks"], dtype=bool),
             extra_masks=np.array(data["extra_masks"], dtype=bool),

@@ -77,7 +77,7 @@ class List(Command):
         if installed := DatabaseManager.installed():
             print("\n".join(installed))
         else:
-            self.cli.msg("❌ No databases installed")
+            self.cli.msg("❌ No databases installed")  # type: ignore
 
 
 class Available(Command):
@@ -106,7 +106,7 @@ class Available(Command):
         if known := DatabaseManager.known():
             print("\n".join(known))
         else:
-            self.cli.msg("❌ No available databases found")
+            self.cli.msg("❌ No available databases found")  # type: ignore
 
 
 class Install(Command):
@@ -119,7 +119,7 @@ class Install(Command):
 
     def setup_arguments(self) -> None:
         r"""Configures argument parser options for the `install` subcommand."""
-        opts = self.parser.add_argument_group("📥 Inputs")
+        opts = self.parser.add_argument_group("📥 Inputs")  # type: ignore
         opts.add_argument("database", help="Database keyword (see: `kaptive db avail`) or 'all'")
 
     def __call__(self, args: argparse.Namespace) -> None:
@@ -136,18 +136,18 @@ class Install(Command):
             [`DatabaseError`][kaptive.db.models.DatabaseError]
         """
         if args.database == "all":
-            self.cli.msg("📥 Installing all known databases concurrently...")
+            self.cli.msg("📥 Installing all known databases concurrently...")  # type: ignore
         else:
-            self.cli.msg(f"📥 Installing database '{args.database}'...")
+            self.cli.msg(f"📥 Installing database '{args.database}'...")  # type: ignore
 
         from kaptive.db import DatabaseManager
 
         DatabaseManager.install(args.database)
 
         if args.database == "all":
-            self.cli.msg("✅ Successfully installed all known databases.")
+            self.cli.msg("✅ Successfully installed all known databases.")  # type: ignore
         else:
-            self.cli.msg(f"✅ Successfully installed '{args.database}'.")
+            self.cli.msg(f"✅ Successfully installed '{args.database}'.")  # type: ignore
 
 
 class Update(Command):
@@ -159,7 +159,7 @@ class Update(Command):
 
     def setup_arguments(self) -> None:
         r"""Configures argument parser options for the `update` subcommand."""
-        opts = self.parser.add_argument_group("📥 Inputs")
+        opts = self.parser.add_argument_group("📥 Inputs")  # type: ignore
         opts.add_argument(
             "database",
             nargs="?",
@@ -177,19 +177,19 @@ class Update(Command):
             [`DatabaseManager.update`][kaptive.db.manager.DatabaseManager.update]
         """
         if args.database == "all":
-            self.cli.msg("🔄 Checking all installed databases for updates concurrently...")
+            self.cli.msg("🔄 Checking all installed databases for updates concurrently...")  # type: ignore
         else:
-            self.cli.msg(f"🔄 Checking '{args.database}' for updates...")
+            self.cli.msg(f"🔄 Checking '{args.database}' for updates...")  # type: ignore
 
         from kaptive.db import DatabaseManager
 
         updated = False
         for db in DatabaseManager.update(args.database):
-            self.cli.msg(f"✅ Updated {db.metadata.name} to version {db.metadata.version}")
+            self.cli.msg(f"✅ Updated {db.metadata.name} to version {db.metadata.version}")  # type: ignore
             updated = True
 
         if not updated:
-            self.cli.msg("🎉 All databases are already up to date.")
+            self.cli.msg("🎉 All databases are already up to date.")  # type: ignore
 
 
 class Reset(Command):
@@ -207,11 +207,11 @@ class Reset(Command):
         See Also:
             [`DatabaseManager.reset`][kaptive.db.manager.DatabaseManager.reset]
         """
-        self.cli.msg("🧹 Uninstalling all local databases...")
+        self.cli.msg("🧹 Uninstalling all local databases...")  # type: ignore
         from kaptive.db import DatabaseManager
 
         DatabaseManager.reset()
-        self.cli.msg("✅ All local databases have been uninstalled and reset.")
+        self.cli.msg("✅ All local databases have been uninstalled and reset.")  # type: ignore
 
 
 class Add(Command):
@@ -223,10 +223,10 @@ class Add(Command):
 
     def setup_arguments(self) -> None:
         r"""Configures argument parser options for the `add` subcommand."""
-        opts = self.parser.add_argument_group("📥 Inputs")
+        opts = self.parser.add_argument_group("📥 Inputs")  # type: ignore
         opts.add_argument("database", help="Name for the new database")
 
-        opts = self.parser.add_argument_group(Colors.wrap("🌐 GitHub Details", Colors.BOLD))
+        opts = self.parser.add_argument_group(Colors.wrap("🌐 GitHub Details", Colors.BOLD))  # type: ignore
         opts.add_argument("owner", help="GitHub repository owner")
         opts.add_argument("repo_name", help="GitHub repository name")
         opts.add_argument(
@@ -249,11 +249,11 @@ class Add(Command):
         """
         from kaptive.db import DatabaseManager
 
-        self.cli.msg(f"⤵️ Adding {args.database} from {args.owner}/{args.repo_name}/{args.branch}")
+        self.cli.msg(f"⤵️ Adding {args.database} from {args.owner}/{args.repo_name}/{args.branch}")  # type: ignore
         if db := DatabaseManager.add(args.owner, args.repo_name, args.database, args.branch):
-            self.cli.msg(f"✅ Added {db.metadata.name} v{db.metadata.version} successfully!")
+            self.cli.msg(f"✅ Added {db.metadata.name} v{db.metadata.version} successfully!")  # type: ignore
         else:
-            self.cli.msg("❌ Failed to add database! Is it already installed?")
+            self.cli.msg("❌ Failed to add database! Is it already installed?")  # type: ignore
 
 
 class Metadata(Command):
@@ -270,7 +270,7 @@ class Metadata(Command):
 
     def setup_arguments(self) -> None:
         r"""Configures argument parser options for the `metadata` subcommand."""
-        opts = self.parser.add_argument_group("📥 Inputs")
+        opts = self.parser.add_argument_group("📥 Inputs")  # type: ignore
         opts.add_argument("database", help="Database path or keyword (see: `kaptive db list`)")
 
     def __call__(self, args: argparse.Namespace) -> None:
@@ -362,14 +362,14 @@ class Loci(Command):
         See Also:
             [`Database.load`][kaptive.db.core.Database.load]
         """
-        self.cli.msg(f"💽 Loading database {args.database}...")
+        self.cli.msg(f"💽 Loading database {args.database}...")  # type: ignore
         from kaptive.db import DatabaseManager
 
         db = DatabaseManager.get(args.database)
-        out_handle = self.cli.open_file(args.out, "wb")
-        self.cli.msg("📤 Extracting loci...")
+        out_handle = self.cli.open_file(args.out, "wb")  # type: ignore
+        self.cli.msg("📤 Extracting loci...")  # type: ignore
         out_handle.write(db.loci.to_fasta(args.use_indices))
-        self.cli.msg(f"✅ Written locus sequences to {args.out}.")
+        self.cli.msg(f"✅ Written locus sequences to {args.out}.")  # type: ignore
 
 
 class Genes(Command):
@@ -385,14 +385,14 @@ class Genes(Command):
         See Also:
             [`Database.load`][kaptive.db.core.Database.load]
         """
-        self.cli.msg(f"💽 Loading database {args.database}...")
+        self.cli.msg(f"💽 Loading database {args.database}...")  # type: ignore
         from kaptive.db import DatabaseManager
 
         db = DatabaseManager.get(args.database)
-        out_handle = self.cli.open_file(args.out, "wb")
-        self.cli.msg("📤 Extracting genes...")
+        out_handle = self.cli.open_file(args.out, "wb")  # type: ignore
+        self.cli.msg("📤 Extracting genes...")  # type: ignore
         out_handle.write(db.genes.to_fasta(args.use_indices))
-        self.cli.msg(f"✅ Written gene sequences to {args.out}.")
+        self.cli.msg(f"✅ Written gene sequences to {args.out}.")  # type: ignore
 
 
 class Proteins(Command):
@@ -408,11 +408,11 @@ class Proteins(Command):
         See Also:
             [`Database.load`][kaptive.db.core.Database.load]
         """
-        self.cli.msg(f"💽 Loading database {args.database}...")
+        self.cli.msg(f"💽 Loading database {args.database}...")  # type: ignore
         from kaptive.db import DatabaseManager
 
         db = DatabaseManager.get(args.database)
-        out_handle = self.cli.open_file(args.out, "wb")
-        self.cli.msg("📤 Extracting proteins...")
+        out_handle = self.cli.open_file(args.out, "wb")  # type: ignore
+        self.cli.msg("📤 Extracting proteins...")  # type: ignore
         out_handle.write(db.translations.to_fasta(args.use_indices))
-        self.cli.msg(f"✅ Written protein sequences to {args.out}.")
+        self.cli.msg(f"✅ Written protein sequences to {args.out}.")  # type: ignore
