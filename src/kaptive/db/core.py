@@ -181,7 +181,10 @@ class Database:
 
     @staticmethod
     def _parse_phenotype(
-        id_: str, data: dict, locus_iterable: Iterable[str], cluster_iterable: Iterable[str]  # type: ignore
+        id_: str,
+        data: dict,
+        locus_iterable: Iterable[str],
+        cluster_iterable: Iterable[str],  # type: ignore
     ) -> Phenotype:
         r"""Parses phenotype definition rule dictionary into a structured Phenotype dataclass.
 
