@@ -8,7 +8,7 @@ vectorized containers across Kaptive.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Protocol, TypeVar
+from typing import Protocol, Self, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -53,7 +53,7 @@ class BatchedContainer(Protocol[T, S]):
         ...
 
     @classmethod
-    def empty(cls: type[S]) -> S:
+    def empty(cls) -> Self:
         r"""Create an empty, 0-length collection with correctly typed arrays.
 
         Returns:
@@ -62,7 +62,7 @@ class BatchedContainer(Protocol[T, S]):
         ...
 
     @classmethod
-    def concat(cls: type[S], batches: Iterable[S]) -> S:
+    def concat(cls, batches: Iterable[Self]) -> Self:
         r"""Concatenate multiple collections into a single, larger collection.
 
         Args:

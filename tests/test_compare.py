@@ -1,14 +1,14 @@
 """Unit tests for kaptive.compare (LocusData, LocusComparisons, LocusComparisonEdges, LocusComparator)."""
 
-import pytest
 import numpy as np
+import pytest
 
-from kaptive.compare import LocusComparisonEdges, LocusComparisons, LocusData
+from kaptive.compare import LocusData
 from kaptive.core.interval import Interval, Intervals, Strand
 from kaptive.core.seq import SeqRecord, Sequences
 
 
-def test_locus_data_creation():
+def test_locus_data_creation() -> None:
     """Test LocusData creation and property evaluation."""
     proteins = Sequences.from_records(
         [
@@ -36,7 +36,7 @@ def test_locus_data_creation():
     assert locus_data.gene_descriptions is None
 
 
-def test_locus_comparator_metadata_propagation():
+def test_locus_comparator_metadata_propagation() -> None:
     """Test LocusComparator concatenating gene_states and gene_descriptions."""
     from kaptive.compare import LocusComparator
     from kaptive.serotyping import GeneState
@@ -70,7 +70,7 @@ def test_locus_comparator_metadata_propagation():
     assert comp.gene_descriptions[1] == ""
 
 
-def test_locus_comparator_bytes_decoding():
+def test_locus_comparator_bytes_decoding() -> None:
     """Test LocusComparator properly decodes bytes and object arrays containing bytes to UTF-8 strings."""
     from kaptive.compare import LocusComparator
 
@@ -110,7 +110,7 @@ def test_locus_comparator_bytes_decoding():
     assert list(comp.gene_descriptions) == ["wzi_α", "wza_β", "wzi_α", "wza_β"]
 
 
-def test_locus_comparator_shape_validation():
+def test_locus_comparator_shape_validation() -> None:
     """Test LocusComparator raises ValueError when array shapes mismatch len(proteins)."""
     from kaptive.compare import LocusComparator
 

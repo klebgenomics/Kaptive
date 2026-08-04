@@ -1,14 +1,15 @@
 import tempfile
 from pathlib import Path
+
 import numpy as np
-from kaptive.core.seq import Sequences, SeqRecord
-from kaptive.core.interval import Intervals
+
+from kaptive.bgc.annotate import AnnotationResult, Annotator, Genes
 from kaptive.core.genome import GenomeAssembly
-from kaptive.db import Database
-from kaptive.bgc.annotate import Annotator, Genes, AnnotationResult
+from kaptive.core.interval import Intervals
+from kaptive.core.seq import SeqRecord, Sequences
 
 
-def test_genes_soa_edge_cases():
+def test_genes_soa_edge_cases() -> None:
     empty_genes = Genes(
         intervals=Intervals.empty(),
         translations=Sequences.empty(),
@@ -38,7 +39,7 @@ def test_genes_soa_edge_cases():
     assert len(slice_empty) == 0
 
 
-def test_annotator_short_and_empty_contigs():
+def test_annotator_short_and_empty_contigs() -> None:
     from kaptive.db.manager import DatabaseManager
 
     db = DatabaseManager.get("ab_k")
@@ -81,7 +82,7 @@ def test_annotator_short_and_empty_contigs():
     out_path.unlink()
 
 
-def test_bed_tag_formatting_and_zero_hits():
+def test_bed_tag_formatting_and_zero_hits() -> None:
     syn_genes = Genes(
         intervals=Intervals(
             np.array([100, 500], dtype=np.int32),
@@ -119,7 +120,7 @@ def test_bed_tag_formatting_and_zero_hits():
     out_path.unlink()
 
 
-def test_score_boundary_formatting():
+def test_score_boundary_formatting() -> None:
     syn_genes = Genes(
         intervals=Intervals(
             np.array([100, 500], dtype=np.int32),

@@ -2,7 +2,6 @@ r"""Unit tests for kaptive.plotting (GeneStyleManager, GeneGlyphPlotter, LocusBa
 
 import numpy as np
 import plotly.graph_objects as go
-import pytest
 
 from kaptive.compare import LocusComparisonEdges, LocusComparisons
 from kaptive.core.interval import Intervals
@@ -17,7 +16,7 @@ from kaptive.plotting import (
 from kaptive.serotyping import GeneState
 
 
-def test_gene_style_manager():
+def test_gene_style_manager() -> None:
     """Test GeneStyleManager state mapping and line styling."""
     assert GeneStyleManager.STATE_NAMES[GeneState.NORMAL.value] == "NORMAL"
     assert GeneStyleManager.STATE_NAMES[GeneState.PARTIAL.value] == "PARTIAL"
@@ -45,7 +44,7 @@ def test_gene_style_manager():
     assert novel_style["line"]["color"] == "white"
 
 
-def test_gene_glyph_plotter_coordinate_generation():
+def test_gene_glyph_plotter_coordinate_generation() -> None:
     """Test GeneGlyphPlotter vectorized coordinate generation for arrows and rectangles."""
     starts = np.array([100, 500], dtype=np.float64)
     ends = np.array([400, 800], dtype=np.float64)
@@ -70,7 +69,7 @@ def test_gene_glyph_plotter_coordinate_generation():
     assert np.isnan(x_rect[0, 5])  # Rectangles use 5 vertices
 
 
-def test_locus_backbone_plotter():
+def test_locus_backbone_plotter() -> None:
     """Test LocusBackbonePlotter trace rendering onto figure."""
     fig = go.Figure()
     LocusBackbonePlotter.render(
@@ -86,7 +85,7 @@ def test_locus_backbone_plotter():
     assert fig.data[0].line.color == "gray"
 
 
-def test_locus_comparison_plotter_gene_states_and_tooltips():
+def test_locus_comparison_plotter_gene_states_and_tooltips() -> None:
     """Verify LocusComparisonPlotter renders gene states and hover tooltips accurately."""
     edges = LocusComparisonEdges.empty()
     locus_names = ("Locus_A", "Locus_B")
@@ -151,9 +150,9 @@ def test_locus_comparison_plotter_gene_states_and_tooltips():
     assert any("<b>Product:</b> Polymerase D" in txt and "<b>State:</b> NOVEL" in txt for txt in hover_texts)
 
 
-def test_serotyping_result_plotter_empty():
+def test_serotyping_result_plotter_empty() -> None:
     """Verify SerotypingResultPlotter handles empty gene hits gracefully."""
-    plotter = SerotypingResultPlotter()
+    SerotypingResultPlotter()
     # BasePlotter _get_cluster_color and layout tests
     assert BasePlotter._get_cluster_color("test_cluster").startswith("#")
     assert BasePlotter._hex_to_rgb("#FF0000") == (255, 0, 0)

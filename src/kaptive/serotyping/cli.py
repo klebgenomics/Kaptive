@@ -116,7 +116,7 @@ class ResultExporter:
 
 # Type command ---------------------------------------------------------------------------------------------------------
 class Type(Command):
-    r"""💉 In silico serotyping of genome assemblies
+    r"""💉 In silico serotyping of genome assemblies.
 
     Aliases:
         assembly
@@ -212,7 +212,7 @@ class Type(Command):
 
 # Client command -------------------------------------------------------------------------------------------------------
 class Convert(Command):
-    r"""🔄 Convert serialized Kaptive results into different formats
+    r"""🔄 Convert serialized Kaptive results into different formats.
 
     Reads serialized JSON-lines serotyping output records and converts them into tabular
     TSV, PHA4GE TSV, or sequence FASTA files without re-running the serotyping pipeline.

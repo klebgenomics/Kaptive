@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 modules_to_exclude = ["kaptive.cli", "kaptive.client", "kaptive.plotting", "kaptive.bgc", "kaptive._version"]

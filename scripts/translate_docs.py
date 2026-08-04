@@ -4,9 +4,10 @@
 # ///
 
 import os
-import shutil
 import re
+import shutil
 from pathlib import Path
+
 import deepl
 
 LANGUAGES = {"ES": "es", "FR": "fr", "ZH": "zh", "JA": "ja"}
@@ -39,7 +40,7 @@ def translate_markdown(content: str, translator: deepl.Translator, target_lang: 
     return frontmatter + translated_body
 
 
-def main():
+def main() -> None:
     api_key = os.environ.get("DEEPL_API_KEY")
     if not api_key:
         print("Error: DEEPL_API_KEY environment variable is not set.")
@@ -65,7 +66,7 @@ def main():
             if "reference" in md_file.parts:
                 continue
 
-            with open(md_file, "r", encoding="utf-8") as f:
+            with open(md_file, encoding="utf-8") as f:
                 content = f.read()
 
             translated_content = translate_markdown(content, translator, lang_code)

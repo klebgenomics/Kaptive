@@ -3,8 +3,8 @@
 # dependencies = []
 # ///
 
-import os
 import json
+import os
 import urllib.request
 
 # Configuration
@@ -16,22 +16,22 @@ CATEGORY_NAME = "Announcements"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
 
-def main():
-    query = """
-    query {
-      repository(owner: "%s", name: "%s") {
-        discussions(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
-          nodes {
+def main() -> None:
+    query = f"""
+    query {{
+      repository(owner: "{REPO_OWNER}", name: "{REPO_NAME}") {{
+        discussions(first: 20, orderBy: {{field: CREATED_AT, direction: DESC}}) {{
+          nodes {{
             title
             url
-            category {
+            category {{
               name
-            }
-          }
-        }
-      }
-    }
-    """ % (REPO_OWNER, REPO_NAME)
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
 
     if GITHUB_TOKEN:
         req = urllib.request.Request("https://api.github.com/graphql", method="POST")

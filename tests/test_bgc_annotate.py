@@ -1,8 +1,8 @@
 """Unit tests for kaptive.bgc.annotate (Annotator, Genes, AnnotationResult)."""
 
 from pathlib import Path
+
 import numpy as np
-import pytest
 
 from kaptive.bgc.annotate import AnnotationResult, Annotator, Genes
 from kaptive.core.genome import GenomeAssembly
@@ -75,7 +75,7 @@ def create_sample_db() -> Database:
     )
 
 
-def test_genes_basic_operations():
+def test_genes_basic_operations() -> None:
     """Test len, indexing, empty, and concat on Genes container."""
     genes = create_sample_genes()
     assert len(genes) == 2
@@ -108,7 +108,7 @@ def test_genes_basic_operations():
     assert len(empty_concat) == 0
 
 
-def test_annotation_result_bed_export(tmp_path: Path):
+def test_annotation_result_bed_export(tmp_path: Path) -> None:
     """Test BED file generation from AnnotationResult."""
     genes = create_sample_genes()
     seqs = Sequences.from_records([SeqRecord(id="g1", seq=b"MKTLLILAV")])
@@ -143,7 +143,7 @@ def test_annotation_result_bed_export(tmp_path: Path):
     assert len(lines_all) == 2
 
 
-def test_annotator_mock_run():
+def test_annotator_mock_run() -> None:
     """Test Annotator initialization and annotation call on synthetic genome."""
     db = create_sample_db()
     annotator = Annotator(db=db, align=False, whole_genome=False)

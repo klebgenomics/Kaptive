@@ -142,7 +142,7 @@ class Database:
 
     @property
     def max_locus_length(self) -> int:
-        r"""Returns the length of the longest locus sequence in the database.
+        r"""Length of the longest locus sequence in the database.
 
         Useful for pre-allocating memory buffers of sufficient size when aligning against the database.
 
@@ -346,7 +346,7 @@ class Database:
                     raise DatabaseError(f'Locus has no "note" qualifiers: {rec.name}')
 
                 # Iterate over notes to extract locus and type names, or whether the locus is an "Extra genes" locus
-                for note in notes:  # type: str
+                for note in notes:
                     if match := _EXTRA_REGEX.search(note):
                         extra = True
                         locus_name = match.group(1)

@@ -13,7 +13,7 @@ import sys
 from abc import ABC
 from collections.abc import Iterable
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, Any, Self
 
 from kaptive import __version__
 
@@ -249,7 +249,7 @@ class Cli:
         else:
             self.parser.print_help()
 
-    def __enter__(self) -> "Cli":
+    def __enter__(self) -> Self:
         r"""Enter context manager scope returning CLI instance.
 
         Returns:

@@ -20,14 +20,13 @@ Classes:
 """
 
 import argparse
-import sys
 
 from kaptive.cli import Colors, Command
 
 
 # Database command -----------------------------------------------------------------------------------------------------
 class Database(Command):
-    r"""📦 Manage local and remote Kaptive databases
+    r"""📦 Manage local and remote Kaptive databases.
 
     Aggregates subcommands for listing, installing, updating, resetting, adding,
     extracting, and displaying metadata for Kaptive databases.
@@ -53,7 +52,7 @@ class Database(Command):
 
 
 class List(Command):
-    r"""📋 List all currently installed local databases
+    r"""📋 List all currently installed local databases.
 
     Displays the keywords of all compiled `.pkl` databases found in the user's
     local Kaptive directory (`~/.kaptive`).
@@ -82,7 +81,7 @@ class List(Command):
 
 
 class Available(Command):
-    r"""🌐 List all available official databases for installation
+    r"""🌐 List all available official databases for installation.
 
     Displays the keywords of all officially supported databases curated in GitHub repositories
     that can be installed via `kaptive db install <keyword>`.
@@ -111,7 +110,7 @@ class Available(Command):
 
 
 class Install(Command):
-    r"""📦 Install known reference databases via keyword
+    r"""📦 Install known reference databases via keyword.
 
     Downloads GenBank and TOML definition files from official repositories, compiles
     them into vectorized [`Database`][kaptive.db.core.Database] objects, and caches
@@ -152,7 +151,7 @@ class Install(Command):
 
 
 class Update(Command):
-    r"""🔄 Update installed local databases from remote repositories
+    r"""🔄 Update installed local databases from remote repositories.
 
     Checks installed databases against their source GitHub repositories for newer
     versions defined in TOML metadata and re-compiles modified databases.
@@ -194,7 +193,7 @@ class Update(Command):
 
 
 class Reset(Command):
-    r"""🧹 Uninstall all local databases and reset local cache
+    r"""🧹 Uninstall all local databases and reset local cache.
 
     Deletes all compiled `.pkl` and metadata `.json` files from the local Kaptive cache directory.
     """
@@ -216,7 +215,7 @@ class Reset(Command):
 
 
 class Add(Command):
-    r"""🔗 Add a custom reference database from a GitHub repository
+    r"""🔗 Add a custom reference database from a GitHub repository.
 
     Fetches GenBank and TOML metadata files from any specified GitHub owner/repo/branch,
     compiles the database, and registers it in the local cache.
@@ -258,7 +257,7 @@ class Add(Command):
 
 
 class Metadata(Command):
-    r"""📊 Print detailed metadata of a Kaptive database
+    r"""📊 Print detailed metadata of a Kaptive database.
 
     Displays summary information including organism, taxon ID, antigen type, synthesis pathway,
     version, identity threshold, GenBank filename, DOIs, repository URL, and curator contacts.
@@ -313,7 +312,7 @@ class Metadata(Command):
 
 
 class Extract(Command):
-    r"""📤 Extract database records in FASTA format
+    r"""📤 Extract database records in FASTA format.
 
     Aggregates subcommands for extracting locus nucleotide sequences (`loci`), gene
     coding sequences (`genes`), and translated amino acid sequences (`proteins`).
@@ -351,7 +350,7 @@ class Extract(Command):
 
 
 class Loci(Command):
-    r"""🧬 Extract locus nucleotide sequences in FASTA format"""
+    r"""🧬 Extract locus nucleotide sequences in FASTA format."""
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Extracts locus FASTA sequences to specified output file or stdout.
@@ -374,7 +373,7 @@ class Loci(Command):
 
 
 class Genes(Command):
-    r"""🧩 Extract gene coding sequences in FASTA format"""
+    r"""🧩 Extract gene coding sequences in FASTA format."""
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Extracts gene nucleotide FASTA sequences to output stream.
@@ -397,7 +396,7 @@ class Genes(Command):
 
 
 class Proteins(Command):
-    r"""🧶 Extract translated protein sequences in FASTA format"""
+    r"""🧶 Extract translated protein sequences in FASTA format."""
 
     def __call__(self, args: argparse.Namespace) -> None:
         r"""Extracts translated protein FASTA sequences to output stream.

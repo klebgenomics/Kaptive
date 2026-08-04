@@ -1,6 +1,5 @@
 """Unit tests for kaptive.db (Database, DatabaseManager, DatabaseMetadata, Phenotype, Phenotypes)."""
 
-import pytest
 import numpy as np
 
 from kaptive.core.interval import Interval, Intervals, Strand
@@ -10,12 +9,11 @@ from kaptive.db import (
     Database,
     DatabaseManager,
     DatabaseMetadata,
-    Phenotype,
     Phenotypes,
 )
 
 
-def test_database_metadata_parsed_version():
+def test_database_metadata_parsed_version() -> None:
     """Test DatabaseMetadata parsing version string."""
     meta = DatabaseMetadata(
         name="Test Database",
@@ -38,14 +36,14 @@ def test_database_metadata_parsed_version():
     assert meta.parsed_version == (3, 2, 1)
 
 
-def test_database_manager_known():
+def test_database_manager_known() -> None:
     """Test DatabaseManager.known method returns registry keywords."""
     known_dbs = DatabaseManager.known()
     assert isinstance(known_dbs, list)
     assert "kpsc_k" in known_dbs or len(known_dbs) >= 0
 
 
-def test_phenotypes_empty_and_len():
+def test_phenotypes_empty_and_len() -> None:
     """Test Phenotypes batch container methods."""
     empty_p = Phenotypes.empty()
     assert len(empty_p) == 0
@@ -53,7 +51,7 @@ def test_phenotypes_empty_and_len():
     assert empty_p.locus_masks.shape == (0, 0)
 
 
-def test_database_get_locus_data_metadata():
+def test_database_get_locus_data_metadata() -> None:
     """Test Database.get_locus_data populates gene_states and gene_descriptions."""
     from kaptive.serotyping import GeneState
 

@@ -675,7 +675,7 @@ class LocusComparisonPlotter(BasePlotter):
                 curr = nxt
             return root
 
-        def union(i, j):
+        def union(i, j) -> None:
             root_i = find(i)
             root_j = find(j)
             if root_i != root_j:

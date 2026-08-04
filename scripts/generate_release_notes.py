@@ -1,10 +1,10 @@
 import json
-import urllib.request
-from urllib.error import URLError, HTTPError
 import sys
+import urllib.request
+from urllib.error import HTTPError, URLError
 
 
-def generate_release_notes(output_path):
+def generate_release_notes(output_path) -> None:
     repo = "klebgenomics/Kaptive"
     url = f"https://api.github.com/repos/{repo}/releases"
 
@@ -16,7 +16,7 @@ def generate_release_notes(output_path):
         with urllib.request.urlopen(req) as response:
             releases = json.loads(response.read().decode("utf-8"))
 
-            with open(output_path, "wt") as doc:
+            with open(output_path, "w") as doc:
                 doc.write("""---
 title: Release Notes
 author: Tom Stanton
@@ -49,7 +49,7 @@ categories:
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     generate_release_notes("docs/releases.md")
 
 

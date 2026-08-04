@@ -1,14 +1,14 @@
 import os
 import sys
 
+from kaptive.cli import Cli
+
 # Disable colors for markdown generation
 os.environ["NO_COLOR"] = "1"
 sys.argv[0] = "kaptive"
 
-from kaptive.cli import Cli
 
-
-def generate_command_docs(cmd_class, output_path, category, icon):
+def generate_command_docs(cmd_class, output_path, category, icon) -> None:
     cli = Cli()
     cmd = cmd_class()
     cli.add_command(cmd)
@@ -32,7 +32,7 @@ def generate_command_docs(cmd_class, output_path, category, icon):
                 usage += f"{subcmd.description}\n\n"
             usage += f"```text\n{subcmd.parser.format_help().strip()}\n```\n\n"
 
-    with open(output_path, "wt") as doc:
+    with open(output_path, "w") as doc:
         doc.write(f"""---
 title: {cmd_title}
 author: Tom Stanton
@@ -49,12 +49,12 @@ categories:
 """)
 
 
-def main():
+def main() -> None:
     from kaptive.db.cli import Database
 
     generate_command_docs(Database, "docs/cli/db.md", "Databases", "lucide/database")
 
-    from kaptive.serotyping.cli import Type, Convert
+    from kaptive.serotyping.cli import Convert, Type
 
     generate_command_docs(Type, "docs/cli/serotyping.md", "Serotyping", "lucide/syringe")
     generate_command_docs(Convert, "docs/cli/convert.md", "Serotyping", "lucide/arrow-left-right")

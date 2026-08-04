@@ -67,7 +67,7 @@ class FastaReader(Iterator):
         r"""Clean up resources by closing the underlying binary handle if still open."""
         self._handle.close()
 
-    def __iter__(self) -> Iterator[SeqRecord]:
+    def __iter__(self) -> Self:
         r"""Return the iterator object itself.
 
         Returns:

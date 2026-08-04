@@ -1,12 +1,11 @@
 """Unit tests for kaptive.serotyping (LocusPieces, SerotypingResult, GeneState)."""
 
-import pytest
 import numpy as np
 
 from kaptive.serotyping import GeneState, LocusPieces
 
 
-def test_locus_pieces_creation():
+def test_locus_pieces_creation() -> None:
     """Test LocusPieces creation."""
     pieces = LocusPieces(
         ctg_indices=np.array([0, 1], dtype=np.uint32),
@@ -19,7 +18,7 @@ def test_locus_pieces_creation():
     assert pieces.ctg_indices[0] == 0
 
 
-def test_gene_state_enum():
+def test_gene_state_enum() -> None:
     """Test GeneState enum values."""
     assert GeneState.NORMAL == 0
     assert GeneState.PARTIAL == 1
@@ -27,7 +26,7 @@ def test_gene_state_enum():
     assert GeneState.NOVEL == 3
 
 
-def test_serotyping_result_to_locus_data_metadata():
+def test_serotyping_result_to_locus_data_metadata() -> None:
     """Test SerotypingResult.to_locus_data metadata fields."""
     from kaptive.core.seq import SeqRecord, Sequences
     from kaptive.serotyping import GeneHits, SerotypingResult
@@ -86,7 +85,7 @@ def test_serotyping_result_to_locus_data_metadata():
     assert locus_data.gene_descriptions.dtype == object
 
 
-def test_gene_hits_utf8_encoding():
+def test_gene_hits_utf8_encoding() -> None:
     """Test GeneHits properly encodes non-ASCII UTF-8 characters like α, β, é."""
     from kaptive.serotyping import GeneHits
 

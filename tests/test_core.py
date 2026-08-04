@@ -1,17 +1,14 @@
 """Unit tests for kaptive.core (interval, seq, kmers, pairwise, collections, genome)."""
 
-import pytest
 import numpy as np
 
-from kaptive.core.collections import BatchedContainer
 from kaptive.core.genome import GenomeAssembly
 from kaptive.core.interval import Interval, Intervals, Strand
 from kaptive.core.kmers import FracMinHashIndex, RandstrobeIndex
-from kaptive.core.pairwise import PairwiseAligner
 from kaptive.core.seq import SeqRecord, Sequences
 
 
-def test_strand_coercion():
+def test_strand_coercion() -> None:
     """Test Strand enum creation and string coercion."""
     assert Strand("+") == Strand.FORWARD
     assert Strand("-") == Strand.REVERSE
@@ -21,7 +18,7 @@ def test_strand_coercion():
     assert int(Strand.UNSTRANDED) == 0
 
 
-def test_interval_and_intervals():
+def test_interval_and_intervals() -> None:
     """Test Interval object and vectorized Intervals collection."""
     iv1 = Interval(10, 50, strand=Strand.FORWARD)
     iv2 = Interval(30, 80, strand=Strand.FORWARD)
@@ -56,7 +53,7 @@ def test_interval_and_intervals():
     assert len(concatenated) == 2
 
 
-def test_sequences_and_seqrecord():
+def test_sequences_and_seqrecord() -> None:
     """Test SeqRecord and vectorized Sequences collection."""
     rec1 = SeqRecord(id="seq1", seq=b"ATGCGTACTA")
     rec2 = SeqRecord(id="seq2", seq=b"ATGAAATAG")
@@ -79,7 +76,7 @@ def test_sequences_and_seqrecord():
     assert len(concatenated) == 2
 
 
-def test_kmers_indexing():
+def test_kmers_indexing() -> None:
     """Test FracMinHashIndex and RandstrobeIndex k-mer construction."""
     seqs = Sequences.from_records(
         [
@@ -96,7 +93,7 @@ def test_kmers_indexing():
     assert strobemer.n_seqs == 2
 
 
-def test_genome_assembly():
+def test_genome_assembly() -> None:
     """Test GenomeAssembly container properties."""
     seqs = Sequences.from_records([SeqRecord(id="chr1", seq=b"ATGCGT")])
     assembly = GenomeAssembly(id="asm1", contigs=seqs)

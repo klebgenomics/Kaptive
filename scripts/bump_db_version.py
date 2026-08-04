@@ -4,13 +4,14 @@
 # ///
 
 import argparse
+
 import semver
 import tomlkit
 
 
-def bump_toml_version(file_path: str, bump_type: str):
+def bump_toml_version(file_path: str, bump_type: str) -> None:
     # 1. Read the TOML file while preserving all formatting and comments
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         doc = tomlkit.load(f)
 
     if "version" not in doc:

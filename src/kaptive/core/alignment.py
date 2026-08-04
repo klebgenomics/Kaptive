@@ -59,7 +59,7 @@ class CigarOp(IntEnum):
 
     @property
     def char(self) -> str:
-        r"""Return the single-character string representation of the CIGAR operation.
+        r"""Single-character string representation of the CIGAR operation.
 
         Returns:
             str: Single character such as `'M'`, `'I'`, or `'D'`.
@@ -318,7 +318,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
 
     @property
     def q_names(self) -> npt.NDArray[np.object_]:
-        r"""Return array of query sequence names for each alignment.
+        r"""Array of query sequence names for each alignment.
 
         Returns:
             npt.NDArray[np.object_]: 1D object array of decoded query name strings.
@@ -327,7 +327,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
 
     @property
     def t_names(self) -> npt.NDArray[np.object_]:
-        r"""Return array of target sequence names for each alignment.
+        r"""Array of target sequence names for each alignment.
 
         Returns:
             npt.NDArray[np.object_]: 1D object array of decoded target name strings.
@@ -336,7 +336,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
 
     @property
     def q_aln_lens(self) -> npt.NDArray[np.int32]:
-        r"""Return query alignment span lengths.
+        r"""Query alignment span lengths.
 
         Returns:
             npt.NDArray[np.int32]: Alignment spans calculated as `q_ends - q_starts`.
@@ -345,7 +345,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
 
     @property
     def t_aln_lens(self) -> npt.NDArray[np.int32]:
-        r"""Return target alignment span lengths.
+        r"""Target alignment span lengths.
 
         Returns:
             npt.NDArray[np.int32]: Alignment spans calculated as `t_ends - t_starts`.
@@ -354,7 +354,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
 
     @property
     def q_covs(self) -> npt.NDArray[np.float64]:
-        r"""Return query alignment coverage fractions.
+        r"""Query alignment coverage fractions.
 
         Returns:
             npt.NDArray[np.float64]: Coverage ratios computed as `q_aln_lens / q_lengths`.
@@ -368,7 +368,7 @@ class Alignments(BatchedContainer[Alignment, "Alignments"]):
 
     @property
     def t_covs(self) -> npt.NDArray[np.float64]:
-        r"""Return target alignment coverage fractions.
+        r"""Target alignment coverage fractions.
 
         Returns:
             npt.NDArray[np.float64]: Coverage ratios computed as `t_aln_lens / t_lengths`.
