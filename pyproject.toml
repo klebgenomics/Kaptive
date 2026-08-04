@@ -38,7 +38,7 @@ bgc = ["pyfgs"]
 train = ["scikit-learn"]
 
 [dependency-groups]
-test = ["kaptive[plot,json]", "pytest>=9.0.0", "pytest-cov"]
+test = ["kaptive[plot,json,bgc,train]", "pytest>=9.0.0", "pytest-cov"]
 docs = [
     "kaptive[plot,json]",
     "zensical",

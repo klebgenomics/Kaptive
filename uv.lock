@@ -327,7 +327,7 @@ train = [
 [package.dev-dependencies]
 dev = [
     { name = "deepl" },
-    { name = "kaptive", extra = ["json", "plot"] },
+    { name = "kaptive", extra = ["bgc", "json", "plot", "train"] },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -340,7 +340,7 @@ docs = [
     { name = "zensical" },
 ]
 test = [
-    { name = "kaptive", extra = ["json", "plot"] },
+    { name = "kaptive", extra = ["bgc", "json", "plot", "train"] },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -362,6 +362,7 @@ provides-extras = ["bgc", "json", "plot", "train"]
 dev = [
     { name = "deepl", specifier = ">=1.20" },
     { name = "kaptive", extras = ["plot", "json"] },
+    { name = "kaptive", extras = ["plot", "json", "bgc", "train"] },
     { name = "mkdocstrings", extras = ["python"] },
     { name = "pytest", specifier = ">=9.0.0" },
     { name = "pytest-cov" },
@@ -374,7 +375,7 @@ docs = [
     { name = "zensical" },
 ]
 test = [
-    { name = "kaptive", extras = ["plot", "json"] },
+    { name = "kaptive", extras = ["plot", "json", "bgc", "train"] },
     { name = "pytest", specifier = ">=9.0.0" },
     { name = "pytest-cov" },
 ]
