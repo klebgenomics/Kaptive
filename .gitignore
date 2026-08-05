@@ -214,3 +214,4 @@ scratch/
 docs/javascripts/deepl-api-config.js
 docs/kaptive_web/
 scripts/train_ml_model.py
+.karva_cache/

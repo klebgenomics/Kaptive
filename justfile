@@ -9,7 +9,7 @@ default:
 
 # Clean caches and build artifacts
 clean:
-    rm -rf site .cache .ruff_cache docs/api build dist
+    rm -rf site .cache .ruff_cache .karva_cache docs/api build dist
     find . -type d -name "__pycache__" -exec rm -rf {} +
     find . -type f -name "*.pyc" -delete
 
