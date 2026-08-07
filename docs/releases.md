@@ -8,6 +8,49 @@ categories:
   - Development
 ---
 
+# 🐋 Kaptive is containerized!
+*Published on 2026-08-03*
+
+## What's Changed
+* Merge pull request #2 from klebgenomics/master by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/69
+
+
+**Full Changelog**: https://github.com/klebgenomics/Kaptive/compare/v3.3.0...v3.3.1
+
+---
+
+# Database Decentralisation 📦
+*Published on 2026-07-31*
+
+## What's new?
+
+### Decentralised databases 📦
+
+- Kaptive v3.3.0 fully decouples databases from the tool.
+- Fully versioned databases.
+- Only install the databases you need.
+- Easier for curators to maintain their databases.
+
+### A new core 🍎
+ 
+- Kaptive v3.3.0 is built around a new ultra fast API-first core.
+- Allows for easier integration of new modules like plotting and annotation.
+- Objects are structured with a data-oriented-design approach leveraging numpy for SoA (structure of arrays) batching.
+- Designed for vectorised computation.
+- Easier integration of machine learning in the future.
+- Results are stored in frozen, slotted dataclasses - designed for efficiency, thread-safety and integration with web APIs. 
+- Extremely fast with numba!
+
+### Introduction of [rammappy](https://github.com/tomdstanton/rammappy) 🚀
+
+- Kaptive is now 100% pip installable.
+- No more background sub-processes, all computation happens directly in Kaptive.
+- Safe for Web APIs.
+
+**Full Changelog**: https://github.com/klebgenomics/Kaptive/compare/v3.2.2...v3.3.0
+
+---
+
 # v3.2.2
 *Published on 2026-07-16*
 
@@ -47,37 +90,6 @@ categories:
 * @pvanheus made their first contribution in https://github.com/klebgenomics/Kaptive/pull/43
 
 **Full Changelog**: https://github.com/klebgenomics/Kaptive/compare/v3.1.0...v3.2.0
-
----
-
-# v3.1.0
-*Published on 2025-04-10*
-
-## What's Changed
-* Kaptive 3 by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/28
-* - Bump to version 3.0.0b1 by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/30
-* Fixed `TypingResult.from_dict` class method when extra genes are pres… by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/32
-* Update to typing pipeline for close A.baumannii K-loci by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/33
-* Merge pull request #33 from klebgenomics/development by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/34
-* Bump to v3.0.0b4 for PyPI/Conda push by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/35
-* Bump to v3.0.0b5 by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/36
-* Update version to v3.1.0 by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/41
-* Bump to v3.1.0 by @tomdstanton in https://github.com/klebgenomics/Kaptive/pull/42
-
-## New Contributors
-* @tomdstanton made their first contribution in https://github.com/klebgenomics/Kaptive/pull/28
-
-**Full Changelog**: https://github.com/klebgenomics/Kaptive/compare/v2.0.9...v3.1.0
-
----
-
-# v3.0.0b6
-*Published on 2024-10-28*
-
-- Fixes #37 and #39: thanks @katholt and @CorinYeatsCGPS!
-- Removed the _K. pnuemoniae_ variant database.
-
-**Full Changelog**: https://github.com/klebgenomics/Kaptive/compare/v3.0.0b5...v3.0.0b6
 
 ---
 

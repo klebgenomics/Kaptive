@@ -19,3 +19,15 @@ repos:
     language: system
     types: [python]
     pass_filenames: false
+  - id: karva-test
+    name: karva test
+    entry: uvx --python 3.13 --with ".[plot,json,bgc,train]" karva test
+    language: system
+    types: [python]
+    pass_filenames: false
+  # - id: zenzic-check
+  #   name: Zenzic Audit
+  #   entry: uvx zenzic check all
+  #   language: system
+  #   pass_filenames: false
+  #   files: \.(md|toml)$

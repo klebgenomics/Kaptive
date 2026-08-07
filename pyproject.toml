@@ -36,9 +36,9 @@ plot = ["plotly"]
 json = ["orjson"]
 bgc = ["pyfgs"]
 train = ["scikit-learn"]
+all = ["kaptive[plot,json,bgc,train]"]
 
 [dependency-groups]
-test = ["kaptive[plot,json,bgc,train]"]
 docs = [
     "kaptive[plot,json]",
     "zensical",
@@ -46,7 +46,7 @@ docs = [
     "deepl>=1.20",
 ]
 dev = [
-    { include-group = "test" },
+    "kaptive[all]",
     { include-group = "docs" },
 ]
 
@@ -73,7 +73,6 @@ version-file = "src/kaptive/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/kaptive"]
 
-
 [tool.ruff]
 line-length = 120
 exclude = [".agents", ".git", ".venv", "__pycache__", "src/kaptive/_version.py"]
@@ -87,9 +86,6 @@ preview = true
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ty.rules]
-missing-type-argument = "error"
-possibly-unresolved-reference = "warn"
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "ANN", "E501"]
 "scripts/*" = ["D", "ANN", "E501", "UP031"]
@@ -108,5 +104,10 @@ possibly-unresolved-reference = "warn"
 "src/kaptive/core/pairwise.py" = ["ANN401"]
 "src/kaptive/db/manager.py" = ["ANN202"]
 "src/kaptive/db/models.py" = ["ANN401"]
-[tool.pyright]
-ignore = ["scripts", "tests"]
+
+[tool.ty.rules]
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
+
+[tool.karva.profile.default.coverage]
+branch = true

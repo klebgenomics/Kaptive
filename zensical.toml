@@ -6,15 +6,12 @@ site_author = "Tom Stanton"
 repo_url = "https://github.com/klebgenomics/Kaptive"
 repo_name = "klebgenomics/Kaptive"
 edit_uri = "edit/master/docs/"
-language = "en"
 copyright = """
 Copyright &copy; 2026 <a href="https://tomdstanton.com" target="_blank">Tom Stanton</a>
 """
 docs_dir = "docs"
 site_dir = "site"
 watch = ["src"]
-generator = false
-
 nav = [
     { Home = "index.md" },
     { Databases = [
@@ -67,7 +64,6 @@ nav = [
         "releases.md",
       ] },
 ]
-
 plugins = [
     "search",
     { reading-time = { words_per_minute = 200 } },
@@ -75,8 +71,6 @@ plugins = [
     "offline",
     { mkdocstrings = { handlers = { python = { paths = ["src"], inventories = ["https://docs.python.org/3/objects.inv"], options = { docstring_style = "google", docstring_section_style = "list", relative_crossrefs = true, scoped_crossrefs = true, signature_crossrefs = true, unwrap_annotated = true, filters = "public", inherited_members = true, summary = true, heading_level = 2, parameter_headings = true, type_parameter_headings = true, show_root_heading = false, show_root_full_path = false, show_symbol_type_heading = true, show_symbol_type_toc = true, line_length = 88, merge_init_into_class = true, separate_signature = true, show_signature_annotations = true, show_signature_type_parameters = true, backlinks = "tree", show_bases = false, show_inheritance_diagram = true, docstring_options = { ignore_init_summary = true } } } } } }
 ]
-
-
 extra_javascript = [
     "javascripts/mathjax.js",
     "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
@@ -86,17 +80,14 @@ extra_javascript = [
 name = "material"
 logo = "assets/logo.png"
 favicon = "assets/favicon.png"
-custom_dir = "overrides"
+custom_dir = "docs/overrides"
+language = "en"
 icon.repo = "fontawesome/brands/github"
-# font.text = "Roboto Slab"
-# font.code = "JetBrains Mono"
-
 palette = [
     { media = "(prefers-color-scheme)", toggle = { icon = "lucide/sun-moon", name = "Switch to light mode" } },
     { media = "(prefers-color-scheme: light)", scheme = "default", toggle = { icon = "lucide/sun", name = "Switch to dark mode" }, primary = "purple", accent = "purple" },
     { media = "(prefers-color-scheme: dark)", scheme = "slate", toggle = { icon = "lucide/moon", name = "Switch to system preference" }, primary = "purple", accent = "purple" }
 ]
-
 features = [
     "announce.dismiss",
     "content.action.edit",
@@ -130,7 +121,7 @@ social = [
     { icon = "lucide/book-open-text", link = "https://klebgenomics.github.io/Kaptive" },
     { icon = "lucide/globe", link = "https://kaptive-web.erc.monash.edu/" },
 ]
-
+generator = false
 alternate = [
     { name = "English", link = "/Kaptive/", lang = "en" },
     { name = "Español", link = "/Kaptive/es/", lang = "es" },
@@ -149,7 +140,7 @@ toc = { permalink = true, title = "On this page" }
 "pymdownx.arithmatex" = { generic = true }
 "pymdownx.details" = {}
 "pymdownx.emoji" = { emoji_index = "zensical.extensions.emoji.twemoji", emoji_generator = "zensical.extensions.emoji.to_svg" }
-"pymdownx.highlight" = { anchor_linenums = true, use_pygments = true }
+"pymdownx.highlight" = { anchor_linenums = true, use_pygments = true, linenums = true, auto_title = true }
 "pymdownx.inlinehilite" = {}
 "pymdownx.snippets" = { base_path = ["."] }
 "pymdownx.superfences" = { custom_fences = [ { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" } ] }

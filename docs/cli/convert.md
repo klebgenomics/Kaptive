@@ -8,24 +8,25 @@ categories:
   - Serotyping
 ---
 
-🔄 Convert serialized Kaptive results into different formats
+🔄 Convert serialized Kaptive results into different formats.
 
 Reads serialized JSON-lines serotyping output records and converts them into tabular
 TSV, PHA4GE TSV, or sequence FASTA files without re-running the serotyping pipeline.
 
 
 ```text
-usage: kaptive convert [options] jsonl
+[1;36musage: [0m[1;36m[0mkaptive convert [1;36m[options][0m jsonl
 
-🔄 Convert serialized Kaptive results into different formats
+[1m🔄 Convert serialized Kaptive results into different formats.
 
 Reads serialized JSON-lines serotyping output records and converts them into tabular
 TSV, PHA4GE TSV, or sequence FASTA files without re-running the serotyping pipeline.
+[0m
 
-📥 Inputs:
+[1;36m[1m📥 Inputs[0m[0m:
   jsonl                 Serialised results in JSON-lines format (default: stdin)
 
-📤 Outputs:
+[1;36m[1m📤 Outputs[0m[0m:
   -t, --tsv [FILE]      Write serotyping results as a TSV report to a file (default: stdout)
   -l, --loci [DIR]      Write locus nucleotide fasta files to a directory (default: ./)
   -g, --genes [DIR]     Write gene nucleotide fasta files to a directory (default: ./)
@@ -33,7 +34,7 @@ TSV, PHA4GE TSV, or sequence FASTA files without re-running the serotyping pipel
   --pha4ge [FILE]       Write PHA4GE-compliant serotyping report to a TSV file (default: kaptive_results.pha4ge)
   --plots [DIR]         Generate interactive locus plots to a directory (default: ./)
 
-🌎 Global options:
+[1;36m[1m🌎 Global options[0m[0m:
   -h, --help            show this help message and exit
   -V, --verbose         Enable verbose output/progress
 ```

@@ -7,6 +7,7 @@ report files adhering to original Kaptive or standard PHA4GE reporting formats.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, fields
 from typing import Self
 
@@ -55,6 +56,45 @@ class ReportRow(ABC):
                 populated with result fields.
         """
         ...
+
+    @classmethod
+    def _parse_header_line(cls, header_line: bytes) -> list[str]:
+        r"""Parse a raw TSV header line into dataclass field names.
+
+        Args:
+            header_line (bytes): The raw UTF-8 encoded header bytes.
+
+        Returns:
+            list[str]: Ordered list of field names.
+        """
+        return header_line.rstrip(b"\r\n").decode("utf-8").split("\t")
+
+    @classmethod
+    def read_tsv(cls, lines: Iterable[bytes]) -> Iterator[Self]:
+        r"""Parse an iterable of TSV byte lines into report row instances.
+
+        Args:
+            lines (Iterable[bytes]): An iterable of byte strings (e.g. an open binary file).
+
+        Yields:
+            Self: Parsed instances of the concrete [`ReportRow`][kaptive.serotyping.io.ReportRow] subclass.
+        """
+        line_iter = iter(lines)
+        try:
+            header_line = next(line_iter)
+        except StopIteration:
+            return
+
+        field_names = cls._parse_header_line(header_line)
+        expected_fields = {f.name for f in fields(cls)}
+
+        for line in line_iter:
+            line = line.rstrip(b"\r\n")
+            if not line:
+                continue
+            values = line.split(b"\t")
+            kwargs = {name: val for name, val in zip(field_names, values) if name in expected_fields}
+            yield cls(**kwargs)
 
 
 @dataclass(slots=True, frozen=True)
@@ -134,6 +174,19 @@ class KaptiveRow(ReportRow):
         """
         headers = [f.name.encode("utf-8").replace(b"_details", b", details").replace(b"_", b" ") for f in fields(cls)]
         return b"\t".join(headers) + b"\n"
+
+    @classmethod
+    def _parse_header_line(cls, header_line: bytes) -> list[str]:
+        r"""Parse a legacy Kaptive TSV header line back into dataclass field names.
+
+        Args:
+            header_line (bytes): The raw UTF-8 encoded header bytes.
+
+        Returns:
+            list[str]: Ordered list of dataclass field names.
+        """
+        headers = header_line.rstrip(b"\r\n").split(b"\t")
+        return [h.replace(b", details", b"_details").replace(b" ", b"_").decode("utf-8") for h in headers]
 
     @classmethod
     def from_result(cls, result: SerotypingResult) -> "KaptiveRow":

@@ -213,6 +213,12 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "orjson" },
+    { name = "plotly" },
+    { name = "pyfgs" },
+    { name = "scikit-learn" },
+]
 bgc = [
     { name = "pyfgs" },
 ]
@@ -229,7 +235,7 @@ train = [
 [package.dev-dependencies]
 dev = [
     { name = "deepl" },
-    { name = "kaptive", extra = ["bgc", "json", "plot", "train"] },
+    { name = "kaptive", extra = ["all", "json", "plot"] },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "zensical" },
 ]
@@ -239,28 +245,29 @@ docs = [
     { name = "mkdocstrings", extra = ["python"] },
     { name = "zensical" },
 ]
-test = [
-    { name = "kaptive", extra = ["bgc", "json", "plot", "train"] },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "gb-io", specifier = ">=0.4" },
     { name = "numba", specifier = ">=0.62" },
     { name = "numpy", specifier = ">=2.4" },
+    { name = "orjson", marker = "extra == 'all'" },
     { name = "orjson", marker = "extra == 'json'" },
+    { name = "plotly", marker = "extra == 'all'" },
     { name = "plotly", marker = "extra == 'plot'" },
+    { name = "pyfgs", marker = "extra == 'all'" },
     { name = "pyfgs", marker = "extra == 'bgc'" },
     { name = "rammappy", specifier = ">=0.1.3" },
+    { name = "scikit-learn", marker = "extra == 'all'" },
     { name = "scikit-learn", marker = "extra == 'train'" },
 ]
-provides-extras = ["bgc", "json", "plot", "train"]
+provides-extras = ["all", "bgc", "json", "plot", "train"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "deepl", specifier = ">=1.20" },
+    { name = "kaptive", extras = ["all"] },
     { name = "kaptive", extras = ["plot", "json"] },
-    { name = "kaptive", extras = ["plot", "json", "bgc", "train"] },
     { name = "mkdocstrings", extras = ["python"] },
     { name = "zensical" },
 ]
@@ -270,7 +277,6 @@ docs = [
     { name = "mkdocstrings", extras = ["python"] },
     { name = "zensical" },
 ]
-test = [{ name = "kaptive", extras = ["plot", "json", "bgc", "train"] }]
 
 [[package]]
 name = "llvmlite"

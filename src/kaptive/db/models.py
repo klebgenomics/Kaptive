@@ -302,6 +302,6 @@ class Phenotypes(BatchedContainer[Any, "Phenotypes"]):
             locus_masks=np.array(data["locus_masks"], dtype=bool),
             extra_masks=np.array(data["extra_masks"], dtype=bool),
             inactive_masks=np.array(data["inactive_masks"], dtype=bool),
-            priorities=np.array(data["priorities"], dtype=np.int32),
+            priorities=np.array(data["priorities"], dtype=np.int8),
             as_suffix=np.array(data["as_suffix"], dtype=bool),
         )
