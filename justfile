@@ -32,7 +32,7 @@ run *args:
 
 # Run the test suite
 test:
-    uvx karva test
+    uvx --python 3.13 --with ".[plot,json,bgc,train]" karva test
 
 # Format all Python code
 fmt:
