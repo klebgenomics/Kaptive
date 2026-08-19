@@ -97,7 +97,8 @@ Here are the most critical columns to keep an eye on in your `results.tsv` file:
 
 * **Assembly**: The name of your input genome file.
 * **Best match locus**: The best-matching serotype or locus found in the database (e.g., `KL1`).
-* **Confidence**: How confident Kaptive is in this call - this is either "Typeable" or "Untypeable"
+* **Best match type**: The predicted phenotype based on the best-matching locus and any special phenotype logic (e.g. taking into account any other genes elsewhere in the genome that are known to impact the phenotype, and/or gene truncations that can inhibit polysaccharide production).
+* **Confidence**: How confident Kaptive is in the call - this is either "Typeable" or "Untypeable"
 
 For a deeper dive into all the other columns and more advanced outputs, check out the full [Outputs documentation](serotyping/outputs.md). Happy serotyping!
 
