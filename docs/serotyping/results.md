@@ -100,13 +100,9 @@ variation in more detail. Interesting features include:
   present in the assembly. For *Klebsiella* K loci, positive length
   discrepancies of \>700bp often indicate insertion sequence insertions
   resulting in so called 'IS variants' of the locus.
-- Other genes inside the locus may indicate a novel locus (with some
-  exceptions, see the FAQs)
+- Other genes inside the locus may indicate a novel locus  
 - Truncated genes may have an impact on the resultant phenotype. Kaptive
-  will consider truncations when reporting predicting phenotypes, but it
-  currently considers only gene truncations for which there is good
-  supporting evidence in the literature, and such evidence is very
-  limited.
+  will consider truncations when reporting predicting phenotypes if these are specified in the database metadata files.
 
 See the [tutorials](https://klebnet.org/training/) for our tips on
 investigating loci in more detail outside of Kaptive.
