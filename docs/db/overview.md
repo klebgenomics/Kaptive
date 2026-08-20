@@ -74,7 +74,7 @@ Kaptive provides a dedicated command group, [`kaptive db`](../cli/db.md), for ma
         ```bash
         kaptive db update kpsc_k
         ```
-    === "Specific database"
+    === "All databases"
         ```bash
         kaptive db update
         ```
