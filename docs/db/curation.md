@@ -93,11 +93,11 @@ with a `.toml` extension in place of the `.gbk` extension.
     prefix = "K"
     version = "3.2.1"
     id_threshold = 82.5
-    doi = ["TBD"]
+    doi = ["10.1099/mgen.0.000102", "10.1099/mgen.0.000800"]
     owner = "klebgenomics"
     repo = "KpSC_surface_antigen_loci"
     branch = "main"
-    contact = { "Kelly Wyres" = "kaptive.typing@gmail.com" }
+    contact = { "Wyres lab, wyreslab.com" = "kaptive.typing@gmail.com" }
     ```
 
 ### :lucide-network: Phenotype Logic
