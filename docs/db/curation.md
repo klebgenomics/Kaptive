@@ -157,7 +157,7 @@ For these reasons, it also made sense to define the phenotype logic here too!
     "O11αβ,2β" = { loci = ["OL2α*"], extra_genes = ["gmlA", "gmlB", "gmlC", "wbmV", "wbmW", "wbmX"] }
     ```
 
-    Here, the first line states that if *orf8* is present in a genome carrying any of the OL2α.1, OL2α.2 or OL2α.3 loci, the phenotype will be predicted as 'O2αγ'.
+    Here, the first line states that if *gmlA*, *gmlB* and *gmlC* are present in a genome carrying any of the OL2α.1, OL2α.2 or OL2α.3 loci, the phenotype will be predicted as 'O2β'. All genes must be present and detected without truncations in order for this phenotype to apply. If only a subset of genes are detected and/or if one or more of the genes includes a nonsense or frameshift mutation, the phenotype will be reported as the default type specified in the `O type:` label in the O locus `source` qualifier (in this case it would be O2α). 
 
 !!! tip
     We developed an [app](https://kaptive-database-validator.streamlit.app/) to help you validate your database GenBank file, generate the metadata TOML and create phenotype logic.
