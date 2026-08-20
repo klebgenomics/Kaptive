@@ -13,9 +13,16 @@ categories:
 
 Kaptive performs _in silico_ serotyping on bacterial whole genome assemblies. Your input genome assemblies should be in FASTA format (they can be gzip-compressed), with one assembly per file.
 
+```
+  >contig1
+  ATGAAAAAATGCGCGTATGACT
+  >contig2
+  TTCGACTCCTGACTGACTGACTTTTATTT
+```
+
 ## :lucide-dna: Go serotyping!
 
-Once you have [installed Kaptive](../index.md#1-install-kaptive) and your chosen database you are ready to serotype.
+Once you have [installed Kaptive](../index.md#1-install-kaptive) and your chosen database, you are ready to serotype.
 
 To run Kaptive on your assemblies you can run: 
 
@@ -23,10 +30,11 @@ To run Kaptive on your assemblies you can run:
 kaptive type kpsc_k -o results.tsv *.fasta 
 ```
 
-This assumes your input files have the `.fasta` file extenion and are avialable in the current directory.   Kaptive will run on each assembly and print the output to a tab-delimted file called `results.tsv`.  
+This assumes your input files have the `.fasta` file extenion and are avialable in the current directory.  
+Kaptive will run on each assembly and print the output to a tab-delimted file called `results.tsv`.    
 `kpsc_k` is the database keyword, and points to the _Klebsiella pneumoniae_ Species Complex K database. For a full list of supported key words see [here](../db/overview.md#available-databases). You can also run Kaptive on a custom database by following [these instructions](../db/overview.md#managing-databases-via-the-cli). 
 
-## Outputs
+## :lucide-files: Outputs
 
 ### :lucide-table: Tabular
 
@@ -83,7 +91,7 @@ or for a single file, both are valid:
 
 <a id="json"></a>
 
-### Locus plots
+### :lucide-arrow-big-right: Locus plots
 
 Kaptive can generate interative plots showing the locus pieces and genes present in your input assemblies.
 
@@ -97,7 +105,7 @@ If no directory is specified, Kaptive will generate the plots in the current dir
     Make sure you have installed the correct [dependencies](../index.md#optional-dependencies) to support plotting. 
 
 
-### PHA4GE genotyping spec
+### :lucide-notebook-tabs: PHA4GE genotyping spec
 
 The [Public Health Alliance for Genomic Epidemiology](https://pha4ge.org/) has developed the [PHA4GE Microbial Genotyping Data Specification](https://github.com/pha4ge/genotyping-specification#about), which represents a standardised format for communicating genotyping methods and results. Kaptive can optionally output results in this format:
 
