@@ -79,7 +79,7 @@ manual exploration of the data.
 ## :lucide-alert-triangle: Problems
 
 - `?` = the match was in a multiple pieces, possibly due to a poor match
-  or discontiguous assembly. The number of pieces is indicated by the
+  or discontiguous assembly. (The number of pieces is indicated by the
   integer directly following the `?` symbol).
 - `-` = genes expected in the locus were not found.
 - `+` = extra genes were found in the locus.
