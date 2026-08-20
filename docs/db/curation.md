@@ -182,7 +182,7 @@ When you install or update a database, Kaptive performs the following sequence o
 
 
 ## :lucide-git-branch: Database Versioning & Release Workflow
-This repository uses a fully automated Continuous Integration / Continuous Deployment (CI/CD) pipeline to manage database versions.
+We have generated a [template Github repository](https://github.com/tomdstanton/kaptive-db-template) that includes a fully automated Continuous Integration / Continuous Deployment (CI/CD) pipeline to manage database versions.  
 
 You do not need to manually edit version numbers or create Git tags. The pipeline relies on Semantic Versioning (SemVer) and reads your 
 commit messages to automatically calculate the correct version bump, update the corresponding .toml files, and generate 
@@ -200,6 +200,14 @@ We follow the [Conventional Commits standard](https://www.conventionalcommits.or
 !!! note
     Any commit missing the above tags will be skipped by the release automation.
 
+### :lucide-square-plus: Establish your database
+
+Setting up your database is easy, just: 
+
+1. Copy the [template repo](https://github.com/tomdstanton/kaptive-db-template)
+2. Add your database files  
+3. [Customise](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) the `READme` 
+(You can see an example customised repo [here](https://github.com/klebgenomics/KpSC_surface_antigen_loci/tree/main).) 
 
 ### :lucide-workflow: Example Workflows
 
