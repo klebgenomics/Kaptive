@@ -26,7 +26,7 @@ by pairwise alignment, and must fall under a defined percent identity
 threshold to be considered 'unique'. Some genes (such as the core
 assembly machinery) will be highly similar, however the genes
 responsible for the polysaccharide structural diversity are expected to
-be more variable. The specific identity thresholds vary across species.
+be more variable. The default identity thresholds vary across species and are defined by the database curators within the database [metadata file](./curation.md).
 
 
 ## :lucide-database: Available Databases
