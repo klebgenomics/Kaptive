@@ -8,6 +8,11 @@ categories:
   - Serotyping
 ---
 
+Kaptive's main function is _in silico_ serotyping via `kaptive type`.
+
+Basic usage is outlined below and full instructions, including all command line options, are detailed on the `CLI Usage` pages.
+
+
 
 ## :lucide-file-text: Inputs
 
