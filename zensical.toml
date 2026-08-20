@@ -19,8 +19,8 @@ nav = [
         "db/curation.md",
     ] },
     { Serotyping = [
+        "serotyping/how_to_run.md",
         "serotyping/method.md",
-        "serotyping/outputs.md",
         "serotyping/results.md",
     ] },
     { "CLI Usage" = [
