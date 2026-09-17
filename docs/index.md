@@ -100,7 +100,7 @@ Here are the most critical columns to keep an eye on in your `results.tsv` file:
 * **Best match type**: The predicted phenotype based on the best-matching locus and any special phenotype logic (e.g. taking into account any other genes elsewhere in the genome that are known to impact the phenotype, and/or gene truncations that can inhibit polysaccharide production).
 * **Confidence**: How confident Kaptive is in the call - this is either "Typeable" or "Untypeable"
 
-For a deeper dive into all the other columns and more advanced outputs, check out the full [Outputs documentation](serotyping/outputs.md). Happy serotyping!
+For a deeper dive into the other columns see [here](https://klebgenomics.github.io/Kaptive/serotyping/results.html). Happy serotyping!
 
 
 ## :lucide-graduation-cap: Tutorial
