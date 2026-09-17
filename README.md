@@ -22,7 +22,7 @@ For full **documentation**, including install and usage instructions, **click [h
 ## :arrow_forward: Tutorial
 
 Step-by-step [video](https://klebnet.org/training/) and
-[documented](https://docs.google.com/document/d/1aggwBCGu1CfsduOoKI0e6TRYOGtwwSceSBdKKkjCisA/edit?usp=sharing)
+[documented](https://docs.google.com/document/d/1EXZanC6uCbhAniVyJn91HOVD8JF6DLRZxmFPGs_nlME/edit?usp=sharing)
 tutorials are available, covering:
 
 - Kaptive's features and their scientific rationale
@@ -30,7 +30,7 @@ tutorials are available, covering:
 - Examples, illustrating how to run and interpret results
 - Further investigations (e.g. exploring novel loci, IS insertions)
 
-> **Note**: The tutorials are based on Kaptive 2.0, but the principles are similar
+> **Note**: The video tutorials are based on Kaptive 2.0, but the principles are similar
 > for Kaptive 3.0.
 
 ## :mortar_board: Citation
