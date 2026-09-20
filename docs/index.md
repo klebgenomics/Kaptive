@@ -106,7 +106,7 @@ For a deeper dive into the other columns see [here](https://klebgenomics.github.
 ## :lucide-graduation-cap: Tutorial
 
 Step-by-step [video](https://klebnet.org/training/) and
-[documented](https://docs.google.com/document/d/1aggwBCGu1CfsduOoKI0e6TRYOGtwwSceSBdKKkjCisA/edit?usp=sharing)
+[documented](https://docs.google.com/document/d/1EXZanC6uCbhAniVyJn91HOVD8JF6DLRZxmFPGs_nlME/edit?usp=sharing)
 tutorials are available, covering:
 
 - Kaptive's features and their scientific rationale
@@ -126,7 +126,7 @@ tutorials are available, covering:
 
 !!! note
 
-    The tutorials are based on Kaptive 2.0, but the principles are similar for Kaptive 3.0.
+    The video tutorials are based on Kaptive 2.0, but the principles are similar for Kaptive 3.0.
 
 
 ## :lucide-blocks: Dependencies
